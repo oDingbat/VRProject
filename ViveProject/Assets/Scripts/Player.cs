@@ -68,15 +68,15 @@ public class Player : MonoBehaviour {
 		//characterController.Move(velocityCurrent * Time.deltaTime);
 
 		RaycastHit hit;
-
-
+		
+		// Step 1: HMD movement	
 		float furthestHeadCollisionDistance = 0;
 
 		for (int i = 0; i < 15; i++) {			// Vertical Slices
 			for (int j = 0; j < 15; j++) {      // Rings
 				Vector3 origin = hmdPositionLastFrame + Quaternion.Euler(0, (360 / 15) * i, 0) * Quaternion.Euler((360 / 15) * j, 0, 0) * new Vector3(0, 0, headRadius / 2);
 				Vector3 endingPos = hmd.transform.position + Quaternion.Euler(0, (360 / 15) * i, 0) * Quaternion.Euler((360 / 15) * j, 0, 0) * new Vector3(0, 0, headRadius / 2);
-				Debug.DrawLine(origin, origin + new Vector3(0, 0.001f, 0), Color.red);
+				//Debug.DrawLine(origin, origin + new Vector3(0, 0.001f, 0), Color.red);
 				if (Physics.Raycast(origin, (hmd.transform.position - hmdPositionLastFrame).normalized, out hit, Vector3.Distance(hmd.transform.position, hmdPositionLastFrame), hmdLayerMask)) {
 					if (hit.transform) {
 						float headCollisionDistance = Vector3.Distance(hit.point, endingPos);
@@ -94,7 +94,11 @@ public class Player : MonoBehaviour {
 			rig.transform.position += direction * (furthestHeadCollisionDistance + 0.001f);
 		}
 
-		
+		Vector3 netHmdMovement = (hmd.transform.position - hmdPositionLastFrame);
+		netHmdMovement = new Vector3(netHmdMovement.x, 0, netHmdMovement.z);
+		characterController.Move(netHmdMovement);
+
+		Debug.DrawLine(hmd.transform.position, new Vector3(characterController.transform.position.x, hmd.transform.position.y, characterController.transform.position.z), Color.red, 0, false);
 
 
 		hmdPositionLastFrame = hmd.transform.position;
