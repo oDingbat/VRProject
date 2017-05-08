@@ -28,7 +28,8 @@ public class Player : MonoBehaviour {
 	public Vector3					characterControllerPositionLastFrame;
 	public Vector3					hmdPositionLastFrame;
 	public float					leanDistance;
-	float							headRadius = 0.15f;
+	float							maxLeanDistance = 0.6f;
+	float							headRadius = 0.1f;
 
 	public Vector3					velocityCurrent;		// The current velocity of the player
 	public Vector3					velocityDesired;        // The desired velocity of the player
@@ -45,6 +46,9 @@ public class Player : MonoBehaviour {
 	 * step 7: Move character controller to velocity
 	 * step 8: Check again if we can compensate for leanDistance
 	 * step 9: Move camera rig to compensate
+	 * 
+	 * // Todo: account for gravity
+	 * 
 	 */
 
 	void Start () {
@@ -61,6 +65,8 @@ public class Player : MonoBehaviour {
 
 	void UpdateControllerInput () {
 		velocityDesired = new Vector3(controllerDeviceLeft.GetAxis(Valve.VR.EVRButtonId.k_EButton_SteamVR_Touchpad).x, 0, controllerDeviceLeft.GetAxis(Valve.VR.EVRButtonId.k_EButton_SteamVR_Touchpad).y);
+		Debug.Log(controllerDeviceLeft.GetAxis(Valve.VR.EVRButtonId.k_EButton_SteamVR_Touchpad));
+		Debug.Log(controllerDeviceLeft.GetHairTrigger());
 	}
 
 	void UpdatePlayerMovement () {
@@ -98,11 +104,38 @@ public class Player : MonoBehaviour {
 		netHmdMovement = new Vector3(netHmdMovement.x, 0, netHmdMovement.z);
 		characterController.Move(netHmdMovement);
 
+		// Step 3: Attempt to move the characterController to the HMD
+		Vector3 hmdCCDifference = (hmd.transform.position - characterController.transform.position);
+		hmdCCDifference = new Vector3(hmdCCDifference.x, 0, hmdCCDifference.z);
+		characterController.Move(hmdCCDifference);
+
+		// Lean Distance Debug
 		Debug.DrawLine(hmd.transform.position, new Vector3(characterController.transform.position.x, hmd.transform.position.y, characterController.transform.position.z), Color.red, 0, false);
 
+		// Step 4: If HMD leanDistance is too far (greater than maxLeanDistance) then pull back the HMD (by moving the camera rig)
+		leanDistance = Vector3.Distance(new Vector3(hmd.transform.position.x, 0, hmd.transform.position.z), new Vector3(characterController.transform.position.x, 0, characterController.transform.position.z));
+
+		if (leanDistance > maxLeanDistance) {
+			Vector3 leanPullBack = (characterController.transform.position - hmd.transform.position); // The direction to pull the hmd back
+			leanPullBack = new Vector3(leanPullBack.x, 0, leanPullBack.z).normalized;
+			rig.transform.position += leanPullBack * (leanDistance - maxLeanDistance);
+		}
+
+		SetCharacterControllerHeight (hmd.transform.position.y - 0.1f);
+
+		// Step 6: Get secondary controller trackpad input as character controller velocity
+		Vector3 ccPositionBeforePad = characterController.transform.position;
+		characterController.Move(velocityDesired * Time.deltaTime);
+		Vector3 netCCMovement = (characterController.transform.position - ccPositionBeforePad);
+		rig.transform.position += netCCMovement;
 
 		hmdPositionLastFrame = hmd.transform.position;
 		characterControllerPositionLastFrame = transform.position;
+	}
+
+	void SetCharacterControllerHeight (float desiredHeight) {
+		characterController.transform.position = new Vector3(characterController.transform.position.x, rig.transform.position.y + (desiredHeight / 2), characterController.transform.position.z);
+		characterController.height = desiredHeight;
 	}
 
 }
