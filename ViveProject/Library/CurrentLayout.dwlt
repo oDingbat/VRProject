@@ -20,7 +20,7 @@ MonoBehaviour:
   m_ShowMode: 4
   m_Title: 
   m_RootView: {fileID: 3}
-  m_MinSize: {x: 950, y: 300}
+  m_MinSize: {x: 950, y: 663}
   m_MaxSize: {x: 10000, y: 10000}
 --- !u!114 &2
 MonoBehaviour:
@@ -356,8 +356,8 @@ MonoBehaviour:
     m_VAllowExceedBaseRangeMin: 1
     m_VAllowExceedBaseRangeMax: 1
     m_ScaleWithWindow: 0
-    m_HSlider: 0
-    m_VSlider: 0
+    m_HSlider: 1
+    m_VSlider: 1
     m_IgnoreScrollWheelUntilClicked: 0
     m_EnableMouseInput: 1
     m_EnableSliderZoom: 0
@@ -369,18 +369,18 @@ MonoBehaviour:
       y: 17
       width: 613
       height: 333
-    m_Scale: {x: 1, y: 1}
-    m_Translation: {x: 306.5, y: 166.5}
+    m_Scale: {x: 1.1255087, y: 1.1255087}
+    m_Translation: {x: 269.05527, y: 185.37318}
     m_MarginLeft: 0
     m_MarginRight: 0
     m_MarginTop: 0
     m_MarginBottom: 0
     m_LastShownAreaInsideMargins:
       serializedVersion: 2
-      x: -306.5
-      y: -166.5
-      width: 613
-      height: 333
+      x: -239.05215
+      y: -164.70169
+      width: 544.64264
+      height: 295.8662
     m_MinimalGUI: 1
   m_defaultScale: 1
   m_TargetTexture: {fileID: 0}
@@ -419,21 +419,21 @@ MonoBehaviour:
     scrollPos: {x: 0, y: 0}
     m_SelectedIDs: 
     m_LastClickedID: 0
-    m_ExpandedIDs: e4fbffff00000000d0290000
+    m_ExpandedIDs: 3c12fcff5012fcff5612fcffc444fcffca44fcff5845fcffba47fcff1863fcffe2fbffffe4fbffff00000000d0290000f235000004360000
     m_RenameOverlay:
       m_UserAcceptedRename: 0
-      m_Name: 
-      m_OriginalName: 
+      m_Name: Sphere
+      m_OriginalName: Sphere
       m_EditFieldRect:
         serializedVersion: 2
         x: 0
         y: 0
         width: 0
         height: 0
-      m_UserData: 0
+      m_UserData: 13848
       m_IsWaitingForDelay: 0
       m_IsRenaming: 0
-      m_OriginalEventType: 11
+      m_OriginalEventType: 0
       m_IsRenamingFilename: 0
       m_ClientGUIView: {fileID: 9}
     m_SearchString: 
@@ -469,14 +469,14 @@ MonoBehaviour:
     width: 660
     height: 350
   m_SceneLighting: 1
-  lastFramingTime: 3846.146089476751
+  lastFramingTime: 28767.369106192895
   m_2DMode: 0
   m_isRotationLocked: 0
   m_AudioPlay: 0
   m_Position:
-    m_Target: {x: 4.3767376, y: -0.76397586, z: 2.0360186}
+    m_Target: {x: 0.6339424, y: -0.10062097, z: 0.4436412}
     speed: 2
-    m_Value: {x: 4.3767376, y: -0.76397586, z: 2.0360186}
+    m_Value: {x: 0.6339424, y: -0.10062097, z: 0.4436412}
   m_RenderMode: 0
   m_ValidateTrueMetals: 0
   m_SceneViewState:
@@ -499,13 +499,13 @@ MonoBehaviour:
       speed: 2
       m_Value: 0
   m_Rotation:
-    m_Target: {x: 0.2583712, y: 0.24102221, z: -0.066804856, w: 0.93310755}
+    m_Target: {x: -0.07892753, y: -0.12456647, z: 0.010004131, w: -0.9890165}
     speed: 2
-    m_Value: {x: -0.2583712, y: -0.24102221, z: 0.066804856, w: -0.9331076}
+    m_Value: {x: -0.07892753, y: -0.12456647, z: 0.010004131, w: -0.9890165}
   m_Size:
-    m_Target: 6.4578853
+    m_Target: 4.206443
     speed: 2
-    m_Value: 6.4578853
+    m_Value: 4.206443
   m_Ortho:
     m_Target: 0
     speed: 2
@@ -553,18 +553,18 @@ MonoBehaviour:
     m_ShowAllHits: 0
     m_SearchArea: 0
     m_Folders:
-    - Assets/Materials
+    - Assets/Scripts
   m_ViewMode: 1
   m_StartGridSize: 75
   m_LastFolders:
-  - Assets/Materials
+  - Assets/Scripts
   m_LastFoldersGridSize: 75
   m_LastProjectPath: C:\Users\Thomas\Documents\GitHub\ViveGame\ViveProject
   m_IsLocked: 0
   m_FolderTreeState:
     scrollPos: {x: 0, y: 0}
-    m_SelectedIDs: ea260000
-    m_LastClickedID: 9962
+    m_SelectedIDs: de280000
+    m_LastClickedID: 10462
     m_ExpandedIDs: 00000000a8250000f828000000ca9a3bffffff7f
     m_RenameOverlay:
       m_UserAcceptedRename: 0
@@ -620,7 +620,7 @@ MonoBehaviour:
   m_ListAreaState:
     m_SelectedInstanceIDs: 
     m_LastClickedInstanceID: 0
-    m_HadKeyboardFocusLastEvent: 0
+    m_HadKeyboardFocusLastEvent: 1
     m_ExpandedInstanceIDs: 921900009a650000901900001c1a0000b8220000fa2400002a00000054000000368b00002c00000026c5f4ff
     m_RenameOverlay:
       m_UserAcceptedRename: 0

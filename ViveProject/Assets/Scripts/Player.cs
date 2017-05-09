@@ -28,11 +28,19 @@ public class Player : MonoBehaviour {
 	public Vector3					characterControllerPositionLastFrame;
 	public Vector3					hmdPositionLastFrame;
 	public float					leanDistance;
-	float							maxLeanDistance = 0.6f;
+	float							maxLeanDistance = 0.5f;
 	float							headRadius = 0.1f;
+	public float					heightCurrent;
+	float							heightCutoffStanding = 1f;			// If the player is standing above this height, they are considered standing
+	float							heightCutoffCrouching = 0.5f;		// If the player is standing avove this height but below the standingCutoff, they are crouching
+																		// If the player is below the crouchingCutoff then they are laying
 
 	public Vector3					velocityCurrent;		// The current velocity of the player
 	public Vector3					velocityDesired;        // The desired velocity of the player
+	float							moveSpeedStanding = 3f;
+	float							moveSpeedCrouching = 1.5f;
+	float							moveSpeedLaying = 0.75f;
+	float							moveSpeedCurrent;
 
 	/*	Concept for step by step player movement process:
 	 * step 1: Get change in hmd move position
@@ -59,26 +67,40 @@ public class Player : MonoBehaviour {
 	}
 
 	void Update () {
+		CheckSetControllers();
 		UpdateControllerInput();
 		UpdatePlayerMovement();
 	}
 
-	void UpdateControllerInput () {
-		velocityDesired = new Vector3(controllerDeviceLeft.GetAxis(Valve.VR.EVRButtonId.k_EButton_SteamVR_Touchpad).x, 0, controllerDeviceLeft.GetAxis(Valve.VR.EVRButtonId.k_EButton_SteamVR_Touchpad).y);
-		Debug.Log(controllerDeviceLeft.GetAxis(Valve.VR.EVRButtonId.k_EButton_SteamVR_Touchpad));
-		Debug.Log(controllerDeviceLeft.GetHairTrigger());
+	void CheckSetControllers () {
+		if (controllerDeviceLeft == null) {
+			controllerDeviceLeft = SteamVR_Controller.Input((int)controllerLeft.index);
+		}
+
+		if (controllerDeviceRight == null) {
+			controllerDeviceRight = SteamVR_Controller.Input((int)controllerRight.index);
+		}
 	}
 
-	void UpdatePlayerMovement () {
+	void UpdateControllerInput () {
+		if (controllerDeviceLeft.index != 0 && controllerDeviceRight.index != 0) {
+			moveSpeedCurrent = Mathf.Lerp(moveSpeedCurrent, (heightCurrent > heightCutoffStanding ? moveSpeedStanding : (heightCurrent > heightCutoffCrouching ? moveSpeedCrouching : moveSpeedLaying)), 5 * Time.deltaTime);
+			velocityDesired = new Vector3(controllerDeviceLeft.GetAxis(Valve.VR.EVRButtonId.k_EButton_SteamVR_Touchpad).x, velocityDesired.y, controllerDeviceLeft.GetAxis(Valve.VR.EVRButtonId.k_EButton_SteamVR_Touchpad).y) * moveSpeedCurrent;
+			velocityDesired = Quaternion.LookRotation(new Vector3(controllerLeft.transform.forward.x, 0, controllerLeft.transform.forward.z), Vector3.up) * velocityDesired;
+			velocityCurrent = Vector3.Lerp(velocityCurrent, velocityDesired, 25 * Time.deltaTime);
+		}
+	}
 
-		//characterController.Move(velocityCurrent * Time.deltaTime);
+	void UpdatePlayerMovement() {
+
+		//velocityDesired += new Vector3(0, -9 * Time.deltaTime, 0);
 
 		RaycastHit hit;
-		
+
 		// Step 1: HMD movement	
 		float furthestHeadCollisionDistance = 0;
 
-		for (int i = 0; i < 15; i++) {			// Vertical Slices
+		for (int i = 0; i < 15; i++) {          // Vertical Slices
 			for (int j = 0; j < 15; j++) {      // Rings
 				Vector3 origin = hmdPositionLastFrame + Quaternion.Euler(0, (360 / 15) * i, 0) * Quaternion.Euler((360 / 15) * j, 0, 0) * new Vector3(0, 0, headRadius / 2);
 				Vector3 endingPos = hmd.transform.position + Quaternion.Euler(0, (360 / 15) * i, 0) * Quaternion.Euler((360 / 15) * j, 0, 0) * new Vector3(0, 0, headRadius / 2);
@@ -102,7 +124,7 @@ public class Player : MonoBehaviour {
 
 		Vector3 netHmdMovement = (hmd.transform.position - hmdPositionLastFrame);
 		netHmdMovement = new Vector3(netHmdMovement.x, 0, netHmdMovement.z);
-		characterController.Move(netHmdMovement);
+		//characterController.Move(netHmdMovement);
 
 		// Step 3: Attempt to move the characterController to the HMD
 		Vector3 hmdCCDifference = (hmd.transform.position - characterController.transform.position);
@@ -121,16 +143,27 @@ public class Player : MonoBehaviour {
 			rig.transform.position += leanPullBack * (leanDistance - maxLeanDistance);
 		}
 
-		SetCharacterControllerHeight (hmd.transform.position.y - 0.1f);
+		SetCharacterControllerHeight((hmd.transform.position.y - rig.transform.position.y) - 0.25f);
+
+		// Step ?: Gravity
+		float closestGroundDistance = Mathf.Infinity;
+		for (int k = 0; k < 15; k++) {          // Vertical Slices
+			for (int l = 0; l < 15; l++) {      // Rings
+
+			}
+		}
 
 		// Step 6: Get secondary controller trackpad input as character controller velocity
 		Vector3 ccPositionBeforePad = characterController.transform.position;
-		characterController.Move(velocityDesired * Time.deltaTime);
+		characterController.Move((velocityCurrent + new Vector3(0, -10, 0)) * Time.deltaTime);
 		Vector3 netCCMovement = (characterController.transform.position - ccPositionBeforePad);
 		rig.transform.position += netCCMovement;
 
 		hmdPositionLastFrame = hmd.transform.position;
 		characterControllerPositionLastFrame = transform.position;
+
+		heightCurrent = hmd.transform.position.y - rig.transform.position.y;
+
 	}
 
 	void SetCharacterControllerHeight (float desiredHeight) {
