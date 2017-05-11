@@ -7,6 +7,7 @@ using Valve.VR;
 public class Player : MonoBehaviour {
 
 	public LayerMask				hmdLayerMask;	// The layerMask for the hmd, defines objects which the player cannot put their head through
+	public LayerMask				characterControllerLayerMask;
 
 	// The SteamVR Tracked Objects, used to get the position and rotation of the controllers and head
 	public SteamVR_TrackedObject	controllerLeft;
@@ -25,9 +26,12 @@ public class Player : MonoBehaviour {
 
 	// The player's characterController, used to move the player
 	public CharacterController		characterController;
+	public CharacterController		headCC;
+	public GameObject				verticalPusher;
 	public Vector3					characterControllerPositionLastFrame;
 	public Vector3					hmdPositionLastFrame;
 	public float					leanDistance;
+	public float					currentVerticalHeadOffset;
 	float							maxLeanDistance = 0.5f;
 	float							headRadius = 0.1f;
 	public float					heightCurrent;
@@ -41,6 +45,7 @@ public class Player : MonoBehaviour {
 	float							moveSpeedCrouching = 1.5f;
 	float							moveSpeedLaying = 0.75f;
 	float							moveSpeedCurrent;
+	public bool						grounded = false;
 
 	/*	Concept for step by step player movement process:
 	 * step 1: Get change in hmd move position
@@ -87,7 +92,7 @@ public class Player : MonoBehaviour {
 			moveSpeedCurrent = Mathf.Lerp(moveSpeedCurrent, (heightCurrent > heightCutoffStanding ? moveSpeedStanding : (heightCurrent > heightCutoffCrouching ? moveSpeedCrouching : moveSpeedLaying)), 5 * Time.deltaTime);
 			velocityDesired = new Vector3(controllerDeviceLeft.GetAxis(Valve.VR.EVRButtonId.k_EButton_SteamVR_Touchpad).x, velocityDesired.y, controllerDeviceLeft.GetAxis(Valve.VR.EVRButtonId.k_EButton_SteamVR_Touchpad).y) * moveSpeedCurrent;
 			velocityDesired = Quaternion.LookRotation(new Vector3(controllerLeft.transform.forward.x, 0, controllerLeft.transform.forward.z), Vector3.up) * velocityDesired;
-			velocityCurrent = Vector3.Lerp(velocityCurrent, velocityDesired, 25 * Time.deltaTime);
+			velocityCurrent = Vector3.Lerp(velocityCurrent, new Vector3(velocityDesired.x, velocityCurrent.y, velocityDesired.z), 25 * Time.deltaTime);
 		}
 	}
 
@@ -98,33 +103,15 @@ public class Player : MonoBehaviour {
 		RaycastHit hit;
 
 		// Step 1: HMD movement	
-		float furthestHeadCollisionDistance = 0;
+		Vector3 hmdPosDelta = ((hmd.transform.position - verticalPusher.transform.localPosition) - headCC.transform.position);
+		headCC.Move(hmdPosDelta);       // attempt to move the headCC to the new hmdPosition
+		Vector3 hmdOffsetHorizontal = headCC.transform.position - hmd.transform.position;
+		verticalPusher.transform.position += new Vector3(0, hmdOffsetHorizontal.y, 0);
+		hmdOffsetHorizontal.y = 0;
+		//currentVerticalHeadOffset = (headCC.transform.position.y - hmd.transform.position.y) + currentVerticalHeadOffset;
 
-		for (int i = 0; i < 15; i++) {          // Vertical Slices
-			for (int j = 0; j < 15; j++) {      // Rings
-				Vector3 origin = hmdPositionLastFrame + Quaternion.Euler(0, (360 / 15) * i, 0) * Quaternion.Euler((360 / 15) * j, 0, 0) * new Vector3(0, 0, headRadius / 2);
-				Vector3 endingPos = hmd.transform.position + Quaternion.Euler(0, (360 / 15) * i, 0) * Quaternion.Euler((360 / 15) * j, 0, 0) * new Vector3(0, 0, headRadius / 2);
-				//Debug.DrawLine(origin, origin + new Vector3(0, 0.001f, 0), Color.red);
-				if (Physics.Raycast(origin, (hmd.transform.position - hmdPositionLastFrame).normalized, out hit, Vector3.Distance(hmd.transform.position, hmdPositionLastFrame), hmdLayerMask)) {
-					if (hit.transform) {
-						float headCollisionDistance = Vector3.Distance(hit.point, endingPos);
-						if (headCollisionDistance > furthestHeadCollisionDistance) {
-							furthestHeadCollisionDistance = headCollisionDistance;
-						}
-					}
-				}
-			}
-		}
+		rig.transform.position += hmdOffsetHorizontal;
 
-		if (furthestHeadCollisionDistance > 0) {
-			Vector3 direction = (hmdPositionLastFrame - hmd.transform.position);
-			direction = new Vector3(direction.x, 0, direction.z).normalized;
-			rig.transform.position += direction * (furthestHeadCollisionDistance + 0.001f);
-		}
-
-		Vector3 netHmdMovement = (hmd.transform.position - hmdPositionLastFrame);
-		netHmdMovement = new Vector3(netHmdMovement.x, 0, netHmdMovement.z);
-		//characterController.Move(netHmdMovement);
 
 		// Step 3: Attempt to move the characterController to the HMD
 		Vector3 hmdCCDifference = (hmd.transform.position - characterController.transform.position);
@@ -143,26 +130,45 @@ public class Player : MonoBehaviour {
 			rig.transform.position += leanPullBack * (leanDistance - maxLeanDistance);
 		}
 
-		SetCharacterControllerHeight((hmd.transform.position.y - rig.transform.position.y) - 0.25f);
+		SetCharacterControllerHeight((hmd.transform.position.y - (rig.transform.position.y)) - 0.25f);
 
 		// Step ?: Gravity
+		velocityCurrent += new Vector3(0, -9.81f * Time.deltaTime, 0);			// Add Gravity this frame
+
 		float closestGroundDistance = Mathf.Infinity;
 		for (int k = 0; k < 15; k++) {          // Vertical Slices
 			for (int l = 0; l < 15; l++) {      // Rings
-
+				Vector3 origin = characterController.transform.position + new Vector3(0, 0.005f, 0) + new Vector3(0, (characterController.height / -2) + characterController.radius, 0) + Quaternion.Euler(0, (360 / 15) * k, 0) * Quaternion.Euler((180 / 15) * l, 0, 0) * new Vector3(0, 0, characterController.radius);
+				Debug.DrawLine(origin, origin + Vector3.down * 0.005f, Color.blue, 0, false);
+				if (Physics.Raycast(origin, Vector3.down, out hit, Mathf.Abs(velocityCurrent.y * Time.deltaTime) + 0.01f, characterControllerLayerMask)) {
+					if (hit.transform) {
+						float groundCollisionDistance = Vector3.Distance(hit.point, origin);
+						if (groundCollisionDistance < closestGroundDistance) {
+							closestGroundDistance = groundCollisionDistance;
+						}
+					}
+				}
 			}
+		}
+
+		if (closestGroundDistance != Mathf.Infinity) {
+			grounded = true;
+			velocityCurrent.y = -closestGroundDistance;
+			Debug.Log("hit");
+		} else {
+			grounded = false;
 		}
 
 		// Step 6: Get secondary controller trackpad input as character controller velocity
 		Vector3 ccPositionBeforePad = characterController.transform.position;
-		characterController.Move((velocityCurrent + new Vector3(0, -10, 0)) * Time.deltaTime);
+		characterController.Move(velocityCurrent * Time.deltaTime);
 		Vector3 netCCMovement = (characterController.transform.position - ccPositionBeforePad);
 		rig.transform.position += netCCMovement;
 
 		hmdPositionLastFrame = hmd.transform.position;
 		characterControllerPositionLastFrame = transform.position;
 
-		heightCurrent = hmd.transform.position.y - rig.transform.position.y;
+		heightCurrent = hmd.transform.position.y - (rig.transform.position.y);
 
 	}
 
