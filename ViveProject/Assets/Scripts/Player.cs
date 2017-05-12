@@ -92,7 +92,7 @@ public class Player : MonoBehaviour {
 			moveSpeedCurrent = Mathf.Lerp(moveSpeedCurrent, (heightCurrent > heightCutoffStanding ? moveSpeedStanding : (heightCurrent > heightCutoffCrouching ? moveSpeedCrouching : moveSpeedLaying)), 5 * Time.deltaTime);
 			velocityDesired = new Vector3(controllerDeviceLeft.GetAxis(Valve.VR.EVRButtonId.k_EButton_SteamVR_Touchpad).x, velocityDesired.y, controllerDeviceLeft.GetAxis(Valve.VR.EVRButtonId.k_EButton_SteamVR_Touchpad).y) * moveSpeedCurrent;
 			velocityDesired = Quaternion.LookRotation(new Vector3(controllerLeft.transform.forward.x, 0, controllerLeft.transform.forward.z), Vector3.up) * velocityDesired;
-			velocityCurrent = Vector3.Lerp(velocityCurrent, new Vector3(velocityDesired.x, velocityCurrent.y, velocityDesired.z), 25 * Time.deltaTime);
+			velocityCurrent = Vector3.Lerp(velocityCurrent, new Vector3(velocityDesired.x, velocityCurrent.y, velocityDesired.z), (grounded ? 25 : 1) * Time.deltaTime);
 		}
 	}
 
@@ -108,9 +108,8 @@ public class Player : MonoBehaviour {
 		Vector3 hmdOffsetHorizontal = headCC.transform.position - hmd.transform.position;
 		verticalPusher.transform.position += new Vector3(0, hmdOffsetHorizontal.y, 0);
 		hmdOffsetHorizontal.y = 0;
-		//currentVerticalHeadOffset = (headCC.transform.position.y - hmd.transform.position.y) + currentVerticalHeadOffset;
 
-		rig.transform.position += hmdOffsetHorizontal;
+		rig.transform.position += new Vector3(hmdOffsetHorizontal.x, 0, hmdOffsetHorizontal.z);
 
 
 		// Step 3: Attempt to move the characterController to the HMD
@@ -138,7 +137,7 @@ public class Player : MonoBehaviour {
 		float closestGroundDistance = Mathf.Infinity;
 		for (int k = 0; k < 15; k++) {          // Vertical Slices
 			for (int l = 0; l < 15; l++) {      // Rings
-				Vector3 origin = characterController.transform.position + new Vector3(0, 0.005f, 0) + new Vector3(0, (characterController.height / -2) + characterController.radius, 0) + Quaternion.Euler(0, (360 / 15) * k, 0) * Quaternion.Euler((180 / 15) * l, 0, 0) * new Vector3(0, 0, characterController.radius);
+				Vector3 origin = characterController.transform.position + new Vector3(0, 0.005f, 0) + new Vector3(0, (Mathf.Clamp(characterController.height, characterController.radius * 2, Mathf.Infinity) / -2) + characterController.radius, 0) + Quaternion.Euler(0, (360 / 15) * k, 0) * Quaternion.Euler((180 / 15) * l, 0, 0) * new Vector3(0, 0, characterController.radius);
 				Debug.DrawLine(origin, origin + Vector3.down * 0.005f, Color.blue, 0, false);
 				if (Physics.Raycast(origin, Vector3.down, out hit, Mathf.Abs(velocityCurrent.y * Time.deltaTime) + 0.01f, characterControllerLayerMask)) {
 					if (hit.transform) {
@@ -163,6 +162,9 @@ public class Player : MonoBehaviour {
 		Vector3 ccPositionBeforePad = characterController.transform.position;
 		characterController.Move(velocityCurrent * Time.deltaTime);
 		Vector3 netCCMovement = (characterController.transform.position - ccPositionBeforePad);
+		if (netCCMovement != Vector3.zero) {
+			Debug.Log(netCCMovement.ToString("F4"));
+		}
 		rig.transform.position += netCCMovement;
 
 		hmdPositionLastFrame = hmd.transform.position;
@@ -173,8 +175,9 @@ public class Player : MonoBehaviour {
 	}
 
 	void SetCharacterControllerHeight (float desiredHeight) {
-		characterController.transform.position = new Vector3(characterController.transform.position.x, rig.transform.position.y + (desiredHeight / 2), characterController.transform.position.z);
-		characterController.height = desiredHeight;
+		characterController.transform.position = new Vector3(characterController.transform.position.x, rig.transform.position.y + (Mathf.Clamp(desiredHeight, characterController.radius * 2f, Mathf.Infinity) / 2), characterController.transform.position.z);
+		characterController.height = Mathf.Clamp(desiredHeight, characterController.radius * 2f, Mathf.Infinity);
+		characterController.stepOffset = characterController.height / 4f;
 	}
 
 }
