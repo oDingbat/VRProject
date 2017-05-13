@@ -33,7 +33,7 @@ public class Player : MonoBehaviour {
 	public float					leanDistance;
 	public float					currentVerticalHeadOffset;
 	float							maxLeanDistance = 0.5f;
-	float							headRadius = 0.1f;
+	float							headRadius = 0.05f;
 	public float					heightCurrent;
 	float							heightCutoffStanding = 1f;			// If the player is standing above this height, they are considered standing
 	float							heightCutoffCrouching = 0.5f;		// If the player is standing avove this height but below the standingCutoff, they are crouching
@@ -75,6 +75,8 @@ public class Player : MonoBehaviour {
 		CheckSetControllers();
 		UpdateControllerInput();
 		UpdatePlayerMovement();
+		UpdateHandPhysics();
+		UpdateHeadPhysics();
 	}
 
 	void CheckSetControllers () {
@@ -153,7 +155,6 @@ public class Player : MonoBehaviour {
 		if (closestGroundDistance != Mathf.Infinity) {
 			grounded = true;
 			velocityCurrent.y = -closestGroundDistance;
-			Debug.Log("hit");
 		} else {
 			grounded = false;
 		}
@@ -162,9 +163,6 @@ public class Player : MonoBehaviour {
 		Vector3 ccPositionBeforePad = characterController.transform.position;
 		characterController.Move(velocityCurrent * Time.deltaTime);
 		Vector3 netCCMovement = (characterController.transform.position - ccPositionBeforePad);
-		if (netCCMovement != Vector3.zero) {
-			Debug.Log(netCCMovement.ToString("F4"));
-		}
 		rig.transform.position += netCCMovement;
 
 		hmdPositionLastFrame = hmd.transform.position;
@@ -178,6 +176,22 @@ public class Player : MonoBehaviour {
 		characterController.transform.position = new Vector3(characterController.transform.position.x, rig.transform.position.y + (Mathf.Clamp(desiredHeight, characterController.radius * 2f, Mathf.Infinity) / 2), characterController.transform.position.z);
 		characterController.height = Mathf.Clamp(desiredHeight, characterController.radius * 2f, Mathf.Infinity);
 		characterController.stepOffset = characterController.height / 4f;
+	}
+
+	void UpdateHandPhysics () {
+		//handLeft.GetComponent<Rigidbody>().velocity = Vector3.Lerp(handLeft.GetComponent<Rigidbody>().velocity, controllerLeft.transform.position - handLeft.transform.position, 50 * Time.deltaTime);
+		//handRight.GetComponent<Rigidbody>().velocity = Vector3.Lerp(handRight.GetComponent<Rigidbody>().velocity, controllerRight.transform.position - handRight.transform.position, 50 * Time.deltaTime);
+		handLeft.GetComponent<Rigidbody>().velocity = Vector3.Lerp(handLeft.GetComponent<Rigidbody>().velocity, (controllerLeft.transform.position - handLeft.transform.position) / Time.deltaTime, 50 * Time.deltaTime);
+		handRight.GetComponent<Rigidbody>().velocity = Vector3.Lerp(handLeft.GetComponent<Rigidbody>().velocity, (controllerRight.transform.position - handRight.transform.position) / Time.deltaTime, 50 * Time.deltaTime);
+		handLeft.transform.rotation = controllerLeft.transform.rotation;
+		handRight.transform.rotation = controllerRight.transform.rotation;
+		handLeft.GetComponent<Rigidbody>().angularVelocity = Vector3.zero;
+		handRight.GetComponent<Rigidbody>().angularVelocity = Vector3.zero;
+
+	}
+
+	void UpdateHeadPhysics () {
+
 	}
 
 }
