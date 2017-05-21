@@ -99,7 +99,6 @@ public class Player : MonoBehaviour {
 			velocityDesired = new Vector3(controllerDeviceLeft.GetAxis(Valve.VR.EVRButtonId.k_EButton_SteamVR_Touchpad).x, velocityDesired.y, controllerDeviceLeft.GetAxis(Valve.VR.EVRButtonId.k_EButton_SteamVR_Touchpad).y) * moveSpeedCurrent;
 			velocityDesired = Quaternion.LookRotation(new Vector3(controllerLeft.transform.forward.x, 0, controllerLeft.transform.forward.z), Vector3.up) * velocityDesired;
 			velocityCurrent = Vector3.Lerp(velocityCurrent, new Vector3(velocityDesired.x, velocityCurrent.y, velocityDesired.z), (grounded ? 25 : 1) * Time.deltaTime);
-			Debug.Log("Slope Speed : " + slopeSpeed * 100 + "%");
 		}
 	}
 
@@ -147,11 +146,12 @@ public class Player : MonoBehaviour {
 		slopeLowest = 180;
 
 		float closestGroundDistance = Mathf.Infinity;
+		float furthestGrounedDistance = 0;
 		for (int k = 0; k < 15; k++) {          // Vertical Slices
 			for (int l = 0; l < 15; l++) {      // Rings
-				Vector3 origin = characterController.transform.position + new Vector3(0, 0.005f, 0) + new Vector3(0, (Mathf.Clamp(characterController.height, characterController.radius * 2, Mathf.Infinity) / -2) + characterController.radius, 0) + Quaternion.Euler(0, (360 / 15) * k, 0) * Quaternion.Euler((180 / 15) * l, 0, 0) * new Vector3(0, 0, characterController.radius);
+				Vector3 origin = characterController.transform.position + new Vector3(0, 0.004f, 0) + new Vector3(0, (Mathf.Clamp(characterController.height, characterController.radius * 2, Mathf.Infinity) / -2) + characterController.radius, 0) + Quaternion.Euler(0, (360 / 15) * k, 0) * Quaternion.Euler((180 / 15) * l, 0, 0) * new Vector3(0, 0, characterController.radius);
 				Debug.DrawLine(origin, origin + Vector3.down * 0.005f, Color.blue, 0, false);
-				if (Physics.Raycast(origin, Vector3.down, out hit, Mathf.Abs(velocityCurrent.y * Time.deltaTime) + 0.01f, characterControllerLayerMask)) {
+				if (Physics.Raycast(origin, Vector3.down, out hit, Mathf.Infinity, characterControllerLayerMask)) {
 					if (hit.transform) {
 						float groundCollisionDistance = Vector3.Distance(hit.point, origin);
 						if (groundCollisionDistance < closestGroundDistance) {
@@ -160,14 +160,34 @@ public class Player : MonoBehaviour {
 							slopeHighest = ((normalAngle > slopeHighest) ? normalAngle : slopeHighest);
 							slopeLowest = ((normalAngle < slopeLowest) ? normalAngle : slopeLowest);
 						}
+						if (groundCollisionDistance > furthestGrounedDistance) {
+							furthestGrounedDistance = groundCollisionDistance;
+						}
 					}
 				}
 			}
 		}
 
+		Debug.Log(furthestGrounedDistance);
+
 		if (closestGroundDistance != Mathf.Infinity) {
-			grounded = true;
-			velocityCurrent.y = -closestGroundDistance;
+			if (closestGroundDistance < 0.25f) {
+				grounded = true;
+				velocityCurrent.y = -closestGroundDistance;
+				if (furthestGrounedDistance < 0.5f) {
+					Vector3 ccStart = characterController.transform.position;
+					characterController.Move(new Vector3(0, -closestGroundDistance + characterController.skinWidth, 0));
+					Vector3 ccDelta = (characterController.transform.position - ccStart);
+					rig.transform.position += ccDelta;
+				}
+			} else if (-closestGroundDistance > velocityCurrent.y * Time.deltaTime) {
+				grounded = true;
+				velocityCurrent.y = -closestGroundDistance;
+				// Fell to ground
+				// Take damage?
+			} else {
+				grounded = false;
+			}
 		} else {
 			grounded = false;
 		}
