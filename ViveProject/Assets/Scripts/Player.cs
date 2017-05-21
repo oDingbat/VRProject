@@ -28,8 +28,8 @@ public class Player : MonoBehaviour {
 	public CharacterController		characterController;
 	public CharacterController		headCC;
 	public GameObject				verticalPusher;
-	public Vector3					characterControllerPositionLastFrame;
-	public Vector3					hmdPositionLastFrame;
+	public Vector3					hmdNeckPosition;
+	public Transform				neck;
 	public float					leanDistance;
 	public float					currentVerticalHeadOffset;
 	float							maxLeanDistance = 0.5f;
@@ -41,10 +41,13 @@ public class Player : MonoBehaviour {
 
 	public Vector3					velocityCurrent;		// The current velocity of the player
 	public Vector3					velocityDesired;        // The desired velocity of the player
-	float							moveSpeedStanding = 3f;
+	float							moveSpeedRunning = 6f;
+	float							moveSpeedStanding = 6f;
 	float							moveSpeedCrouching = 1.5f;
 	float							moveSpeedLaying = 0.75f;
 	float							moveSpeedCurrent;
+	float							slopeHighest;
+	float							slopeLowest;
 	public bool						grounded = false;
 
 	/*	Concept for step by step player movement process:
@@ -60,7 +63,6 @@ public class Player : MonoBehaviour {
 	 * step 8: Check again if we can compensate for leanDistance
 	 * step 9: Move camera rig to compensate
 	 * 
-	 * // Todo: account for gravity
 	 * 
 	 */
 
@@ -91,10 +93,13 @@ public class Player : MonoBehaviour {
 
 	void UpdateControllerInput () {
 		if (controllerDeviceLeft.index != 0 && controllerDeviceRight.index != 0) {
-			moveSpeedCurrent = Mathf.Lerp(moveSpeedCurrent, (heightCurrent > heightCutoffStanding ? moveSpeedStanding : (heightCurrent > heightCutoffCrouching ? moveSpeedCrouching : moveSpeedLaying)), 5 * Time.deltaTime);
+			bool padPressed = controllerDeviceLeft.GetPress(Valve.VR.EVRButtonId.k_EButton_DPad_Down) || controllerDeviceLeft.GetPress(Valve.VR.EVRButtonId.k_EButton_DPad_Up) || controllerDeviceLeft.GetPress(Valve.VR.EVRButtonId.k_EButton_DPad_Left) || controllerDeviceLeft.GetPress(Valve.VR.EVRButtonId.k_EButton_DPad_Right);
+			float slopeSpeed = ((-slopeHighest + 45) / (characterController.slopeLimit * 2)) + 0.5f;
+			moveSpeedCurrent = Mathf.Lerp(moveSpeedCurrent, (heightCurrent > heightCutoffStanding ? (padPressed ? moveSpeedRunning : moveSpeedStanding) : (heightCurrent > heightCutoffCrouching ? moveSpeedCrouching : moveSpeedLaying)) * slopeSpeed, 5 * Time.deltaTime);
 			velocityDesired = new Vector3(controllerDeviceLeft.GetAxis(Valve.VR.EVRButtonId.k_EButton_SteamVR_Touchpad).x, velocityDesired.y, controllerDeviceLeft.GetAxis(Valve.VR.EVRButtonId.k_EButton_SteamVR_Touchpad).y) * moveSpeedCurrent;
 			velocityDesired = Quaternion.LookRotation(new Vector3(controllerLeft.transform.forward.x, 0, controllerLeft.transform.forward.z), Vector3.up) * velocityDesired;
 			velocityCurrent = Vector3.Lerp(velocityCurrent, new Vector3(velocityDesired.x, velocityCurrent.y, velocityDesired.z), (grounded ? 25 : 1) * Time.deltaTime);
+			Debug.Log("Slope Speed : " + slopeSpeed * 100 + "%");
 		}
 	}
 
@@ -104,18 +109,20 @@ public class Player : MonoBehaviour {
 
 		RaycastHit hit;
 
-		// Step 1: HMD movement	
+		// Step 1: HMD movement
 		Vector3 hmdPosDelta = ((hmd.transform.position - verticalPusher.transform.localPosition) - headCC.transform.position);
 		headCC.Move(hmdPosDelta);       // attempt to move the headCC to the new hmdPosition
 		Vector3 hmdOffsetHorizontal = headCC.transform.position - hmd.transform.position;
-		verticalPusher.transform.position += new Vector3(0, hmdOffsetHorizontal.y, 0);
+		verticalPusher.transform.position += new Vector3(0, (headCC.transform.position - hmd.transform.position).y, 0);
 		hmdOffsetHorizontal.y = 0;
 
 		rig.transform.position += new Vector3(hmdOffsetHorizontal.x, 0, hmdOffsetHorizontal.z);
 
-
 		// Step 3: Attempt to move the characterController to the HMD
-		Vector3 hmdCCDifference = (hmd.transform.position - characterController.transform.position);
+		Vector3 neckOffset = hmd.transform.forward + hmd.transform.up;
+		neckOffset.y = 0;
+		neckOffset = neckOffset.normalized * -0.15f;
+		Vector3 hmdCCDifference = ((hmd.transform.position + neckOffset) - characterController.transform.position);
 		hmdCCDifference = new Vector3(hmdCCDifference.x, 0, hmdCCDifference.z);
 		characterController.Move(hmdCCDifference);
 
@@ -123,7 +130,7 @@ public class Player : MonoBehaviour {
 		Debug.DrawLine(hmd.transform.position, new Vector3(characterController.transform.position.x, hmd.transform.position.y, characterController.transform.position.z), Color.red, 0, false);
 
 		// Step 4: If HMD leanDistance is too far (greater than maxLeanDistance) then pull back the HMD (by moving the camera rig)
-		leanDistance = Vector3.Distance(new Vector3(hmd.transform.position.x, 0, hmd.transform.position.z), new Vector3(characterController.transform.position.x, 0, characterController.transform.position.z));
+		leanDistance = Vector3.Distance(new Vector3(hmd.transform.position.x, 0, hmd.transform.position.z) + neckOffset, new Vector3(characterController.transform.position.x, 0, characterController.transform.position.z));
 
 		if (leanDistance > maxLeanDistance) {
 			Vector3 leanPullBack = (characterController.transform.position - hmd.transform.position); // The direction to pull the hmd back
@@ -134,7 +141,10 @@ public class Player : MonoBehaviour {
 		SetCharacterControllerHeight((hmd.transform.position.y - (rig.transform.position.y)) - 0.25f);
 
 		// Step ?: Gravity
-		velocityCurrent += new Vector3(0, -9.81f * Time.deltaTime, 0);			// Add Gravity this frame
+		velocityCurrent += new Vector3(0, -9.81f * Time.deltaTime, 0);          // Add Gravity this frame
+
+		slopeHighest = 0;
+		slopeLowest = 180;
 
 		float closestGroundDistance = Mathf.Infinity;
 		for (int k = 0; k < 15; k++) {          // Vertical Slices
@@ -146,6 +156,9 @@ public class Player : MonoBehaviour {
 						float groundCollisionDistance = Vector3.Distance(hit.point, origin);
 						if (groundCollisionDistance < closestGroundDistance) {
 							closestGroundDistance = groundCollisionDistance;
+							float normalAngle = Vector3.Angle(hit.normal, Vector3.up);
+							slopeHighest = ((normalAngle > slopeHighest) ? normalAngle : slopeHighest);
+							slopeLowest = ((normalAngle < slopeLowest) ? normalAngle : slopeLowest);
 						}
 					}
 				}
@@ -164,9 +177,6 @@ public class Player : MonoBehaviour {
 		characterController.Move(velocityCurrent * Time.deltaTime);
 		Vector3 netCCMovement = (characterController.transform.position - ccPositionBeforePad);
 		rig.transform.position += netCCMovement;
-
-		hmdPositionLastFrame = hmd.transform.position;
-		characterControllerPositionLastFrame = transform.position;
 
 		heightCurrent = hmd.transform.position.y - (rig.transform.position.y);
 
