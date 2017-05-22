@@ -8,6 +8,7 @@ public class Player : MonoBehaviour {
 
 	public LayerMask				hmdLayerMask;	// The layerMask for the hmd, defines objects which the player cannot put their head through
 	public LayerMask				characterControllerLayerMask;
+	public LayerMask				grabLayerMask;
 
 	// The SteamVR Tracked Objects, used to get the position and rotation of the controllers and head
 	public SteamVR_TrackedObject	controllerLeft;
@@ -24,6 +25,14 @@ public class Player : MonoBehaviour {
 	public GameObject				head;
 	public GameObject				rig;
 
+	// States for the hands
+	public Transform				climbableGrabbedLeft;
+	public Transform				climbableGrabbedRight;
+	public Vector3					grabOffsetLeft;
+	public Vector3					grabOffsetRight;
+	public Vector3					grabCCOffsetLeft;
+	public Vector3					grabCCOffsetRight;
+
 	// The player's characterController, used to move the player
 	public CharacterController		characterController;
 	public CharacterController		headCC;
@@ -33,7 +42,6 @@ public class Player : MonoBehaviour {
 	public float					leanDistance;
 	public float					currentVerticalHeadOffset;
 	float							maxLeanDistance = 0.5f;
-	float							headRadius = 0.05f;
 	public float					heightCurrent;
 	float							heightCutoffStanding = 1f;			// If the player is standing above this height, they are considered standing
 	float							heightCutoffCrouching = 0.5f;		// If the player is standing avove this height but below the standingCutoff, they are crouching
@@ -42,7 +50,7 @@ public class Player : MonoBehaviour {
 	public Vector3					velocityCurrent;		// The current velocity of the player
 	public Vector3					velocityDesired;        // The desired velocity of the player
 	float							moveSpeedRunning = 6f;
-	float							moveSpeedStanding = 6f;
+	float							moveSpeedStanding = 3f;
 	float							moveSpeedCrouching = 1.5f;
 	float							moveSpeedLaying = 0.75f;
 	float							moveSpeedCurrent;
@@ -93,13 +101,101 @@ public class Player : MonoBehaviour {
 
 	void UpdateControllerInput () {
 		if (controllerDeviceLeft.index != 0 && controllerDeviceRight.index != 0) {
+
+			if (controllerDeviceLeft.GetPress(Valve.VR.EVRButtonId.k_EButton_Grip)) {
+				Debug.DrawRay(controllerLeft.transform.position, controllerLeft.transform.forward, Color.blue);
+				Debug.DrawRay(controllerLeft.transform.position, controllerLeft.transform.up, Color.green);
+				GrabLeft();
+			}
+
+			if (controllerDeviceLeft.GetPressUp(Valve.VR.EVRButtonId.k_EButton_Grip)) {
+				ReleaseLeft();
+			}
+
+			if (controllerDeviceRight.GetPress(Valve.VR.EVRButtonId.k_EButton_Grip)) {
+				Debug.DrawRay(controllerRight.transform.position, controllerRight.transform.forward, Color.blue);
+				Debug.DrawRay(controllerRight.transform.position, controllerRight.transform.up, Color.green);
+				GrabRight();
+			}
+
+			if (controllerDeviceRight.GetPressUp(Valve.VR.EVRButtonId.k_EButton_Grip)) {
+				ReleaseRight();
+			}
+
 			bool padPressed = controllerDeviceLeft.GetPress(Valve.VR.EVRButtonId.k_EButton_DPad_Down) || controllerDeviceLeft.GetPress(Valve.VR.EVRButtonId.k_EButton_DPad_Up) || controllerDeviceLeft.GetPress(Valve.VR.EVRButtonId.k_EButton_DPad_Left) || controllerDeviceLeft.GetPress(Valve.VR.EVRButtonId.k_EButton_DPad_Right);
 			float slopeSpeed = ((-slopeHighest + 45) / (characterController.slopeLimit * 2)) + 0.5f;
 			moveSpeedCurrent = Mathf.Lerp(moveSpeedCurrent, (heightCurrent > heightCutoffStanding ? (padPressed ? moveSpeedRunning : moveSpeedStanding) : (heightCurrent > heightCutoffCrouching ? moveSpeedCrouching : moveSpeedLaying)) * slopeSpeed, 5 * Time.deltaTime);
 			velocityDesired = new Vector3(controllerDeviceLeft.GetAxis(Valve.VR.EVRButtonId.k_EButton_SteamVR_Touchpad).x, velocityDesired.y, controllerDeviceLeft.GetAxis(Valve.VR.EVRButtonId.k_EButton_SteamVR_Touchpad).y) * moveSpeedCurrent;
 			velocityDesired = Quaternion.LookRotation(new Vector3(controllerLeft.transform.forward.x, 0, controllerLeft.transform.forward.z), Vector3.up) * velocityDesired;
-			velocityCurrent = Vector3.Lerp(velocityCurrent, new Vector3(velocityDesired.x, velocityCurrent.y, velocityDesired.z), (grounded ? 25 : 1) * Time.deltaTime);
+			if (climbableGrabbedLeft == null && climbableGrabbedRight == null) {
+				velocityCurrent = Vector3.Lerp(velocityCurrent, new Vector3(velocityDesired.x, velocityCurrent.y, velocityDesired.z), (grounded ? 25 : 1) * Time.deltaTime);
+			} else {
+				Vector3 combinedClimbPositions = Vector3.zero;
+				int climbCount = 0;
+
+				if (climbableGrabbedLeft == true) {
+					combinedClimbPositions += (climbableGrabbedLeft.position + grabOffsetLeft) + (grabCCOffsetLeft - (controllerLeft.transform.position - characterController.transform.position));
+					climbCount++;
+				}
+
+				if (climbableGrabbedRight == true) {
+					combinedClimbPositions += (climbableGrabbedRight.position + grabOffsetRight) + (grabCCOffsetRight - (controllerRight.transform.position - characterController.transform.position));
+					climbCount++;
+				}
+
+				combinedClimbPositions = combinedClimbPositions / climbCount;
+
+				velocityCurrent = Vector3.Lerp(velocityCurrent, (combinedClimbPositions - characterController.transform.position) / Time.deltaTime, 25 * Time.deltaTime);
+			}
 		}
+	}
+
+	void GrabLeft () {
+		Debug.Log("Attempt");
+		if (climbableGrabbedLeft == null) {
+			// Try and grab something
+			RaycastHit basicHit;
+			if (Physics.Raycast(controllerLeft.transform.position + controllerLeft.transform.forward * -0.3f, controllerLeft.transform.forward, out basicHit, 0.6f, grabLayerMask)) {
+				if (basicHit.transform.gameObject.layer == LayerMask.NameToLayer("Climbable")) {
+					grabOffsetLeft = characterController.transform.position - basicHit.transform.position;
+					grabCCOffsetLeft = controllerLeft.transform.position - characterController.transform.position;
+					climbableGrabbedLeft = basicHit.transform;
+					Debug.Log("Grabbed");
+				}
+			}
+		} else {
+			// Do nothing?
+		}
+	}
+
+	void ReleaseLeft () {
+		grabOffsetLeft = Vector3.zero;
+		grabCCOffsetLeft = Vector3.zero;
+		climbableGrabbedLeft = null;
+	}
+
+	void GrabRight () {
+		Debug.Log("Attempt");
+		if (climbableGrabbedRight == null) {
+			// Try and grab something
+			RaycastHit basicHit;
+			if (Physics.Raycast(controllerRight.transform.position + controllerRight.transform.forward * -0.3f, controllerRight.transform.forward, out basicHit, 0.6f, grabLayerMask)) {
+				if (basicHit.transform.gameObject.layer == LayerMask.NameToLayer("Climbable")) {
+					grabOffsetRight = characterController.transform.position - basicHit.transform.position;
+					grabCCOffsetRight = controllerRight.transform.position - characterController.transform.position;
+					climbableGrabbedRight = basicHit.transform;
+					Debug.Log("Grabbed");
+				}
+			}
+		} else {
+			// Do nothing?
+		}
+	}
+
+	void ReleaseRight () {
+		grabOffsetRight = Vector3.zero;
+		grabCCOffsetRight = Vector3.zero;
+		climbableGrabbedRight = null;
 	}
 
 	void UpdatePlayerMovement() {
@@ -140,8 +236,10 @@ public class Player : MonoBehaviour {
 		SetCharacterControllerHeight((hmd.transform.position.y - (rig.transform.position.y)) - 0.25f);
 
 		// Step ?: Gravity
-		velocityCurrent += new Vector3(0, -9.81f * Time.deltaTime, 0);          // Add Gravity this frame
-
+		if (climbableGrabbedLeft == null && climbableGrabbedRight == null) {
+			velocityCurrent += new Vector3(0, -9.81f * Time.deltaTime, 0);          // Add Gravity this frame
+		}
+		
 		slopeHighest = 0;
 		slopeLowest = 180;
 
@@ -168,17 +266,17 @@ public class Player : MonoBehaviour {
 			}
 		}
 
-		Debug.Log(furthestGrounedDistance);
-
 		if (closestGroundDistance != Mathf.Infinity) {
-			if (closestGroundDistance < 0.25f) {
-				grounded = true;
-				velocityCurrent.y = -closestGroundDistance;
-				if (furthestGrounedDistance < 0.5f) {
-					Vector3 ccStart = characterController.transform.position;
-					characterController.Move(new Vector3(0, -closestGroundDistance + characterController.skinWidth, 0));
-					Vector3 ccDelta = (characterController.transform.position - ccStart);
-					rig.transform.position += ccDelta;
+			if (closestGroundDistance < 0.15f) {
+				if (climbableGrabbedLeft == null && climbableGrabbedRight == null) {
+					grounded = true;
+					velocityCurrent.y = -closestGroundDistance;
+					if (furthestGrounedDistance < 0.35f) {
+						Vector3 ccStart = characterController.transform.position;
+						characterController.Move(new Vector3(0, -closestGroundDistance + characterController.skinWidth, 0));
+						Vector3 ccDelta = (characterController.transform.position - ccStart);
+						rig.transform.position += ccDelta;
+					}
 				}
 			} else if (-closestGroundDistance > velocityCurrent.y * Time.deltaTime) {
 				grounded = true;
