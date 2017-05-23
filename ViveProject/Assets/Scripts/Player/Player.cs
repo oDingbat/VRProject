@@ -2,13 +2,17 @@
 using System.Collections.Generic;
 using UnityEngine;
 using Valve.VR;
+using UnityEngine.PostProcessing;
 
-[RequireComponent (typeof (CharacterController))]
+[RequireComponent (typeof (CharacterController)), RequireComponent(typeof(Entity))]
 public class Player : MonoBehaviour {
 
 	public LayerMask				hmdLayerMask;	// The layerMask for the hmd, defines objects which the player cannot put their head through
 	public LayerMask				characterControllerLayerMask;
 	public LayerMask				grabLayerMask;
+
+	public PostProcessingProfile	postProcessingProfile;
+	public Entity					entity;
 
 	// The SteamVR Tracked Objects, used to get the position and rotation of the controllers and head
 	public SteamVR_TrackedObject	controllerLeft;
@@ -50,7 +54,7 @@ public class Player : MonoBehaviour {
 	public Vector3					velocityCurrent;		// The current velocity of the player
 	public Vector3					velocityDesired;        // The desired velocity of the player
 	float							moveSpeedRunning = 6f;
-	float							moveSpeedStanding = 3f;
+	float							moveSpeedStanding = 6f;
 	float							moveSpeedCrouching = 1.5f;
 	float							moveSpeedLaying = 0.75f;
 	float							moveSpeedCurrent;
@@ -75,10 +79,10 @@ public class Player : MonoBehaviour {
 	 */
 
 	void Start () {
-		characterController = GetComponent<CharacterController>();			// Grab the character controller at the start
-			// Define the controllerDevices
-		controllerDeviceLeft = SteamVR_Controller.Input((int)controllerLeft.index);
-		controllerDeviceRight = SteamVR_Controller.Input((int)controllerRight.index);
+		characterController = GetComponent<CharacterController>();          // Grab the character controller at the start
+		entity = GetComponent<Entity>();
+		Debug.Log("Vitals");
+		StartCoroutine(UpdateVitals());
 	}
 
 	void Update () {
@@ -320,6 +324,27 @@ public class Player : MonoBehaviour {
 
 	void UpdateHeadPhysics () {
 
+	}
+
+	public void TakeDamage (int damage) {
+		entity.vitals.healthCurrent = Mathf.Clamp(entity.vitals.healthCurrent - damage, 0, entity.vitals.healthMax);
+		float desiredIntensity = Mathf.Abs(Mathf.Clamp((float)entity.vitals.healthCurrent * (100 / 75), 0, 100) - 100) / 100;
+		UpdateDamageVignette(desiredIntensity);
+	}
+
+	IEnumerator UpdateVitals () {
+		while (true) {
+			entity.vitals.healthCurrent = Mathf.Clamp(entity.vitals.healthCurrent + 1, 0, entity.vitals.healthMax);
+			float desiredIntensity = Mathf.Abs(Mathf.Clamp((float)entity.vitals.healthCurrent * (100 / 75), 0, 100) - 100) / 100;
+			UpdateDamageVignette(desiredIntensity);
+			yield return new WaitForSeconds(0.2f);
+		}
+	}
+
+	void UpdateDamageVignette (float intensity) {
+		VignetteModel.Settings newVignetteSettings = postProcessingProfile.vignette.settings;
+		newVignetteSettings.intensity = intensity;
+		postProcessingProfile.vignette.settings = newVignetteSettings;
 	}
 
 }
