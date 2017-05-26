@@ -1,4 +1,5 @@
 ﻿//======= Copyright (c) Valve Corporation, All rights reserved. ===============
+using System;
 using UnityEngine;
 using Valve.VR;
 
@@ -247,4 +248,8 @@ public class SteamVR_TrackedController : MonoBehaviour
             }
         }
     }
+
+	internal object OnPadClicked() {
+		throw new NotImplementedException();
+	}
 }

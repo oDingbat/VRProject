@@ -16,6 +16,7 @@ public class Player : MonoBehaviour {
 
 	// The SteamVR Tracked Objects, used to get the position and rotation of the controllers and head
 	public SteamVR_TrackedObject	controllerLeft;
+	public SteamVR_TrackedController cLeft;
 	public SteamVR_TrackedObject	controllerRight;
 	public SteamVR_TrackedObject	hmd;
 
@@ -26,16 +27,27 @@ public class Player : MonoBehaviour {
 	// The GameObjects for the hands, head, & rig
 	public GameObject				handLeft;
 	public GameObject				handRight;
+	public Rigidbody				handRigidbodyLeft;
+	public Rigidbody				handRigidbodyRight;
 	public GameObject				head;
 	public GameObject				rig;
+	Vector3							handRigidbodyPositionOffset = new Vector3(-0.02f, -0.025f, -0.075f);
 
 	// States for the hands
 	public Transform				climbableGrabbedLeft;
 	public Transform				climbableGrabbedRight;
+	public Rigidbody				grabbedItemLeft;
+	public Rigidbody				grabbedItemRight;
+	public Quaternion				grabRotationLeft;
+	public Quaternion				grabRotationRight;
+	public Quaternion				grabRotationLastFrameLeft;
+	public Quaternion				grabRotationLastFrameRight;
+	public bool						wasClimbingLastFrame;
 	public Vector3					grabOffsetLeft;
 	public Vector3					grabOffsetRight;
 	public Vector3					grabCCOffsetLeft;
 	public Vector3					grabCCOffsetRight;
+	float							grabRayLength = 0.15f;
 
 	// The player's characterController, used to move the player
 	public CharacterController		characterController;
@@ -54,7 +66,7 @@ public class Player : MonoBehaviour {
 	public Vector3					velocityCurrent;		// The current velocity of the player
 	public Vector3					velocityDesired;        // The desired velocity of the player
 	float							moveSpeedRunning = 6f;
-	float							moveSpeedStanding = 6f;
+	float							moveSpeedStanding = 3f;
 	float							moveSpeedCrouching = 1.5f;
 	float							moveSpeedLaying = 0.75f;
 	float							moveSpeedCurrent;
@@ -80,6 +92,8 @@ public class Player : MonoBehaviour {
 
 	void Start () {
 		characterController = GetComponent<CharacterController>();          // Grab the character controller at the start
+		handRigidbodyLeft = handLeft.GetComponent<Rigidbody>();
+		handRigidbodyRight = handRight.GetComponent<Rigidbody>();
 		entity = GetComponent<Entity>();
 		Debug.Log("Vitals");
 		StartCoroutine(UpdateVitals());
@@ -125,62 +139,104 @@ public class Player : MonoBehaviour {
 				ReleaseRight();
 			}
 
-			bool padPressed = controllerDeviceLeft.GetPress(Valve.VR.EVRButtonId.k_EButton_DPad_Down) || controllerDeviceLeft.GetPress(Valve.VR.EVRButtonId.k_EButton_DPad_Up) || controllerDeviceLeft.GetPress(Valve.VR.EVRButtonId.k_EButton_DPad_Left) || controllerDeviceLeft.GetPress(Valve.VR.EVRButtonId.k_EButton_DPad_Right);
+			bool padPressed = controllerDeviceLeft.GetPress(SteamVR_Controller.ButtonMask.Touchpad);
+			Debug.Log(padPressed);
+
 			float slopeSpeed = ((-slopeHighest + 45) / (characterController.slopeLimit * 2)) + 0.5f;
 			moveSpeedCurrent = Mathf.Lerp(moveSpeedCurrent, (heightCurrent > heightCutoffStanding ? (padPressed ? moveSpeedRunning : moveSpeedStanding) : (heightCurrent > heightCutoffCrouching ? moveSpeedCrouching : moveSpeedLaying)) * slopeSpeed, 5 * Time.deltaTime);
 			velocityDesired = new Vector3(controllerDeviceLeft.GetAxis(Valve.VR.EVRButtonId.k_EButton_SteamVR_Touchpad).x, velocityDesired.y, controllerDeviceLeft.GetAxis(Valve.VR.EVRButtonId.k_EButton_SteamVR_Touchpad).y) * moveSpeedCurrent;
 			velocityDesired = Quaternion.LookRotation(new Vector3(controllerLeft.transform.forward.x, 0, controllerLeft.transform.forward.z), Vector3.up) * velocityDesired;
 			if (climbableGrabbedLeft == null && climbableGrabbedRight == null) {
+				wasClimbingLastFrame = false;
 				if (grounded == true) {
 					velocityCurrent = Vector3.Lerp(velocityCurrent, new Vector3(velocityDesired.x, velocityCurrent.y, velocityDesired.z), 25 * Time.deltaTime);
 				} else {
 					if (controllerDeviceLeft.GetAxis(Valve.VR.EVRButtonId.k_EButton_SteamVR_Touchpad) != Vector2.zero) {
-						velocityCurrent = Vector3.Lerp(velocityCurrent, new Vector3(velocityDesired.x, velocityCurrent.y, velocityDesired.z), 1 * Time.deltaTime);
+						Vector3 normalizedVelocityDesired = new Vector3(velocityDesired.x, 0, velocityDesired.z).normalized * (Mathf.Clamp01(new Vector3(velocityDesired.x, 0, velocityDesired.z).magnitude) * Mathf.Clamp(new Vector3(velocityCurrent.x, 0, velocityCurrent.z).magnitude, moveSpeedCurrent, Mathf.Infinity));
+						velocityCurrent = Vector3.Lerp(velocityCurrent, new Vector3(normalizedVelocityDesired.x, velocityCurrent.y, normalizedVelocityDesired.z), 1 * Time.deltaTime);
 					}
 				}
 			} else {
 				Vector3 combinedClimbPositions = Vector3.zero;
+				Quaternion climbRotationLeft = Quaternion.Euler(0, 0, 0);
+				Quaternion climbRotationRight = Quaternion.Euler(0, 0, 0);
 				int climbCount = 0;
 
 				if (climbableGrabbedLeft == true) {
-					combinedClimbPositions += (climbableGrabbedLeft.position + grabOffsetLeft) + (grabCCOffsetLeft - (controllerLeft.transform.position - characterController.transform.position));
+					climbRotationLeft = Quaternion.Inverse(grabRotationLeft) * climbableGrabbedLeft.rotation;
+				}
+
+				if (climbableGrabbedRight == true) {
+					climbRotationRight = Quaternion.Inverse(grabRotationRight) * climbableGrabbedRight.rotation;
+				}
+
+				if (climbableGrabbedLeft == true) {
+					combinedClimbPositions += (climbableGrabbedLeft.position + climbRotationLeft * grabOffsetLeft) + (climbRotationLeft * grabCCOffsetLeft - (controllerLeft.transform.position - characterController.transform.position));
 					climbCount++;
 				}
 
 				if (climbableGrabbedRight == true) {
-					combinedClimbPositions += (climbableGrabbedRight.position + grabOffsetRight) + (grabCCOffsetRight - (controllerRight.transform.position - characterController.transform.position));
+					combinedClimbPositions += (climbableGrabbedRight.position + climbRotationRight * grabOffsetRight) + (climbRotationRight * grabCCOffsetRight - (controllerRight.transform.position - characterController.transform.position));
 					climbCount++;
 				}
 
 				combinedClimbPositions = combinedClimbPositions / climbCount;
 
-				velocityCurrent = Vector3.Lerp(velocityCurrent, Vector3.ClampMagnitude((combinedClimbPositions - characterController.transform.position) / Time.deltaTime, 7), 25 * Time.deltaTime);
+				velocityCurrent = Vector3.Lerp(velocityCurrent, (combinedClimbPositions - characterController.transform.position) / Time.deltaTime, 25 * Time.deltaTime);
+
+				if (wasClimbingLastFrame == true) {
+					if (climbableGrabbedLeft) {
+						if (climbableGrabbedRight) {
+							RotatePlayer(Quaternion.Slerp(Quaternion.Inverse(grabRotationLastFrameLeft) * climbRotationLeft, Quaternion.Inverse(grabRotationLastFrameRight) * climbRotationRight, 0.5f));
+						} else {
+							RotatePlayer(Quaternion.Inverse(grabRotationLastFrameLeft) * climbRotationLeft);
+						}
+					} else {
+						if (climbableGrabbedRight) {
+							RotatePlayer(Quaternion.Inverse(grabRotationLastFrameRight) * climbRotationRight);
+						} else {
+							Debug.LogWarning("Why are we here?");
+						}
+					}
+				}
+
+				grabRotationLastFrameLeft = climbRotationLeft;
+				grabRotationLastFrameRight = climbRotationRight;
+				wasClimbingLastFrame = true;
 			}
 		}
 	}
 
+	void RotatePlayer (Quaternion rot) {
+		Vector3 rigOffset = (rig.transform.position - hmd.transform.position);
+		rigOffset.y = 0;
+		rig.transform.position = new Vector3(hmd.transform.position.x, rig.transform.position.y, hmd.transform.position.z) + (rot * rigOffset);
+		rig.transform.rotation = rig.transform.rotation * rot;
+	}
+
 	void GrabLeft () {
-		Debug.Log("Attempt");
-		if (climbableGrabbedLeft == null) {
+		if (climbableGrabbedLeft == null && grabbedItemLeft == null) {
 			// Try and grab something
-			Vector3[] rayOrigins = new Vector3[] { new Vector3(0, 0, -0.3f), new Vector3(0, 0.15f, -0.175f), new Vector3(0, 0.2f, -0.1f) };
-			Vector3[] rayRotations = new Vector3[] { new Vector3(0, 0, 0), new Vector3(45, 0, 0), new Vector3(90, 0, 0) };
-			RaycastHit basicHit;
-			for (int i = 0; i < rayOrigins.Length; i++) {
-				Vector3 currentOriginOffset = (controllerLeft.transform.rotation * rayOrigins[i]);
-				Quaternion currentRotationOffset =	Quaternion.AngleAxis(rayRotations[i].x, controllerLeft.transform.right) *
-													Quaternion.AngleAxis(rayRotations[i].y, controllerLeft.transform.up) *
-													Quaternion.AngleAxis(rayRotations[i].z, controllerLeft.transform.forward);
-				Debug.DrawRay(controllerLeft.transform.position + currentOriginOffset, currentRotationOffset * (controllerLeft.transform.forward * 0.4f), Color.blue);
-				Debug.DrawRay(controllerLeft.transform.position + currentOriginOffset, currentRotationOffset * (controllerLeft.transform.up * 0.4f), Color.green);
-				if (Physics.Raycast(controllerLeft.transform.position + currentOriginOffset, currentRotationOffset * controllerLeft.transform.forward, out basicHit, 0.4f, grabLayerMask)) {
-					if (basicHit.transform.gameObject.layer == LayerMask.NameToLayer("Climbable")) {
-						grabOffsetLeft = characterController.transform.position - basicHit.transform.position;
-						grabCCOffsetLeft = controllerLeft.transform.position - characterController.transform.position;
-						climbableGrabbedLeft = basicHit.transform;
-						StartCoroutine(TriggerHapticFeedback(controllerDeviceLeft, 0.1f));
-						break;
-					}
+			Vector3 originPosition = controllerLeft.transform.position + (controllerLeft.transform.rotation * new Vector3(handRigidbodyPositionOffset.x, handRigidbodyPositionOffset.y, handRigidbodyPositionOffset.z));
+			Collider[] itemColliders = Physics.OverlapSphere(originPosition, 0.2f, grabLayerMask);
+			foreach (Collider hitItem in itemColliders) {
+				if (hitItem.transform.gameObject.layer == LayerMask.NameToLayer("Item")) {
+					grabOffsetLeft = Quaternion.Inverse(controllerLeft.transform.rotation) * (hitItem.transform.position - controllerLeft.transform.position);
+					grabRotationLeft = Quaternion.Inverse(controllerLeft.transform.rotation) * hitItem.transform.rotation;
+					grabbedItemLeft = hitItem.transform.GetComponent<Rigidbody>();
+					return;
+				}
+			}
+
+			Collider[] climbColliders = Physics.OverlapSphere(originPosition, 0.065f, grabLayerMask);
+			foreach (Collider hitClimb in climbColliders) {
+				if (hitClimb.transform.gameObject.layer == LayerMask.NameToLayer("Climbable")) {
+					grabOffsetLeft = characterController.transform.position - hitClimb.transform.position;
+					grabRotationLeft = hitClimb.transform.rotation;
+					grabCCOffsetLeft = controllerLeft.transform.position - characterController.transform.position;
+					climbableGrabbedLeft = hitClimb.transform;
+					StartCoroutine(TriggerHapticFeedback(controllerDeviceLeft, 0.1f));
+					return;
 				}
 			}
 		} else {
@@ -192,31 +248,35 @@ public class Player : MonoBehaviour {
 		grabOffsetLeft = Vector3.zero;
 		grabCCOffsetLeft = Vector3.zero;
 		climbableGrabbedLeft = null;
+		grabbedItemLeft = null;
+		if (climbableGrabbedRight == null) {
+			velocityCurrent = Vector3.ClampMagnitude(velocityCurrent, 6);
+		}
 	}
 
 	void GrabRight () {
-		Debug.Log("Attempt");
-		if (climbableGrabbedRight == null) {
+		if (climbableGrabbedRight == null && grabbedItemRight == null) {
 			// Try and grab something
-			Vector3[] rayOrigins = new Vector3[] { new Vector3(0, 0, -0.3f), new Vector3(0, 0.15f, -0.175f), new Vector3(0, 0.2f, -0.1f) };
-			Vector3[] rayRotations = new Vector3[] { new Vector3(0, 0, 0), new Vector3(45, 0, 0), new Vector3(90, 0, 0) };
-			RaycastHit basicHit;
-			for (int i = 0; i < rayOrigins.Length; i++) {
-				Debug.Log("right " + i);
-				Vector3 currentOriginOffset = (controllerRight.transform.rotation * rayOrigins[i]);
-				Quaternion currentRotationOffset =	Quaternion.AngleAxis(rayRotations[i].x, controllerRight.transform.right) *
-													Quaternion.AngleAxis(rayRotations[i].y, controllerRight.transform.up) *
-													Quaternion.AngleAxis(rayRotations[i].z, controllerRight.transform.forward);
-				Debug.DrawRay(controllerRight.transform.position + currentOriginOffset, currentRotationOffset * (controllerRight.transform.forward * 0.4f), Color.blue);
-				Debug.DrawRay(controllerRight.transform.position + currentOriginOffset, currentRotationOffset * (controllerRight.transform.up * 0.4f), Color.green);
-				if (Physics.Raycast(controllerRight.transform.position + currentOriginOffset, currentRotationOffset * controllerRight.transform.forward, out basicHit, 0.4f, grabLayerMask)) {
-					if (basicHit.transform.gameObject.layer == LayerMask.NameToLayer("Climbable")) {
-						grabOffsetRight = characterController.transform.position - basicHit.transform.position;
-						grabCCOffsetRight = controllerRight.transform.position - characterController.transform.position;
-						climbableGrabbedRight = basicHit.transform;
-						StartCoroutine(TriggerHapticFeedback(controllerDeviceRight, 0.1f));
-						break;
-					}
+			Vector3 originPosition = controllerRight.transform.position + (controllerRight.transform.rotation * new Vector3(-handRigidbodyPositionOffset.x, handRigidbodyPositionOffset.y, handRigidbodyPositionOffset.z));
+			Collider[] itemColliders = Physics.OverlapSphere(originPosition, 0.2f, grabLayerMask);
+			foreach (Collider hitItem in itemColliders) {
+				if (hitItem.transform.gameObject.layer == LayerMask.NameToLayer("Item")) {
+					grabOffsetRight = Quaternion.Inverse(controllerRight.transform.rotation) * (hitItem.transform.position - controllerRight.transform.position);
+					grabRotationRight = Quaternion.Inverse(controllerRight.transform.rotation) * hitItem.transform.rotation;
+					grabbedItemRight = hitItem.transform.GetComponent<Rigidbody>();
+					return;
+				}
+			}
+
+			Collider[] climbColliders = Physics.OverlapSphere(originPosition, 0.065f, grabLayerMask);
+			foreach (Collider hitClimb in climbColliders) {
+				if (hitClimb.transform.gameObject.layer == LayerMask.NameToLayer("Climbable")) {
+					grabOffsetRight = characterController.transform.position - hitClimb.transform.position;
+					grabRotationRight = hitClimb.transform.rotation;
+					grabCCOffsetRight = controllerRight.transform.position - characterController.transform.position;
+					climbableGrabbedRight = hitClimb.transform;
+					StartCoroutine(TriggerHapticFeedback(controllerDeviceRight, 0.1f));
+					return;
 				}
 			}
 		} else {
@@ -228,6 +288,10 @@ public class Player : MonoBehaviour {
 		grabOffsetRight = Vector3.zero;
 		grabCCOffsetRight = Vector3.zero;
 		climbableGrabbedRight = null;
+		grabbedItemRight = null;
+		if (climbableGrabbedRight == null) {
+			velocityCurrent = Vector3.ClampMagnitude(velocityCurrent, 6);
+		}
 	}
 
 	IEnumerator TriggerHapticFeedback(SteamVR_Controller.Device device, float duration) {
@@ -339,6 +403,14 @@ public class Player : MonoBehaviour {
 
 	}
 
+	public void MovePlayer (Vector3 deltaPosition) {
+		Debug.Log("Move Player");
+		Vector3 ccPositionBefore = characterController.transform.position;
+		characterController.Move(deltaPosition);
+		Vector3 netCCMovement = (characterController.transform.position - ccPositionBefore);
+		rig.transform.position += netCCMovement;
+	}
+
 	void SetCharacterControllerHeight (float desiredHeight) {
 		characterController.transform.position = new Vector3(characterController.transform.position.x, rig.transform.position.y + (Mathf.Clamp(desiredHeight, characterController.radius * 2f, Mathf.Infinity) / 2), characterController.transform.position.z);
 		characterController.height = Mathf.Clamp(desiredHeight, characterController.radius * 2f, Mathf.Infinity);
@@ -346,14 +418,88 @@ public class Player : MonoBehaviour {
 	}
 
 	void UpdateHandPhysics () {
-		//handLeft.GetComponent<Rigidbody>().velocity = Vector3.Lerp(handLeft.GetComponent<Rigidbody>().velocity, controllerLeft.transform.position - handLeft.transform.position, 50 * Time.deltaTime);
-		//handRight.GetComponent<Rigidbody>().velocity = Vector3.Lerp(handRight.GetComponent<Rigidbody>().velocity, controllerRight.transform.position - handRight.transform.position, 50 * Time.deltaTime);
-		handLeft.GetComponent<Rigidbody>().velocity = (controllerLeft.transform.position - handLeft.transform.position) / Time.fixedDeltaTime;
-		handRight.GetComponent<Rigidbody>().velocity = (controllerRight.transform.position - handRight.transform.position) / Time.fixedDeltaTime;
-		handLeft.transform.rotation = controllerLeft.transform.rotation;
-		handRight.transform.rotation = controllerRight.transform.rotation;
-		handLeft.GetComponent<Rigidbody>().angularVelocity = Vector3.zero;
-		handRight.GetComponent<Rigidbody>().angularVelocity = Vector3.zero;
+		// Left Hand
+		handRigidbodyLeft.velocity = ((controllerLeft.transform.position + controllerLeft.transform.rotation * new Vector3(handRigidbodyPositionOffset.x, handRigidbodyPositionOffset.y, handRigidbodyPositionOffset.z)) - handLeft.transform.position) / Time.fixedDeltaTime;
+		Quaternion rotationDeltaLeft = (Quaternion.AngleAxis(30, controllerLeft.transform.right) * controllerLeft.transform.rotation) * Quaternion.Inverse(handLeft.transform.rotation);
+		float angleLeft;
+		Vector3 axisLeft;
+		rotationDeltaLeft.ToAngleAxis(out angleLeft, out axisLeft);
+		if (angleLeft > 180) {
+			angleLeft -= 360;
+		}
+
+		if (angleLeft != float.NaN) {
+			handRigidbodyLeft.maxAngularVelocity = Mathf.Infinity;
+			handRigidbodyLeft.angularVelocity = (angleLeft * axisLeft);
+		}
+
+		// Right Hand
+		handRigidbodyRight.velocity = ((controllerRight.transform.position + controllerRight.transform.rotation * new Vector3(-handRigidbodyPositionOffset.x, handRigidbodyPositionOffset.y, handRigidbodyPositionOffset.z)) - handRight.transform.position) / Time.fixedDeltaTime;
+		Quaternion rotationDeltaRight = (Quaternion.AngleAxis(30, controllerRight.transform.right) * controllerRight.transform.rotation) * Quaternion.Inverse(handRight.transform.rotation);
+		float angleRight;
+		Vector3 axisRight;
+		rotationDeltaRight.ToAngleAxis(out angleRight, out axisRight);
+		if (angleRight > 180) {
+			angleRight -= 360;
+		}
+
+		if (angleRight != float.NaN) {
+			handRigidbodyRight.maxAngularVelocity = Mathf.Infinity;
+			handRigidbodyRight.angularVelocity = (angleRight * axisRight);
+		}
+
+
+
+		// Item Physics
+		if (grabbedItemLeft != null && grabbedItemLeft == grabbedItemRight) {
+			Vector3 combinedPositions = ((controllerLeft.transform.position + (controllerLeft.transform.rotation * grabOffsetLeft)) + (controllerRight.transform.position + (controllerRight.transform.rotation * grabOffsetRight))) / 2;
+			grabbedItemLeft.velocity = (combinedPositions - grabbedItemLeft.transform.position) / Time.fixedDeltaTime;
+			Quaternion rotationDeltaItem = Quaternion.Slerp(controllerLeft.transform.rotation * grabRotationLeft, controllerRight.transform.rotation * grabRotationRight, 0.5f) * Quaternion.Inverse(grabbedItemLeft.transform.rotation);
+			float angleItem;
+			Vector3 axisItem;
+			rotationDeltaItem.ToAngleAxis(out angleItem, out axisItem);
+			if (angleItem > 180) {
+				angleItem -= 360;
+			}
+
+			if (angleItem != float.NaN) {
+				grabbedItemLeft.maxAngularVelocity = Mathf.Infinity;
+				grabbedItemLeft.angularVelocity = (angleItem * axisItem);
+			}
+		} else {
+			if (grabbedItemLeft != null) {
+				grabbedItemLeft.velocity = ((controllerLeft.transform.position + (controllerLeft.transform.rotation * grabOffsetLeft)) - grabbedItemLeft.transform.position) / Time.fixedDeltaTime;
+				Quaternion rotationDeltaItemLeft = (controllerLeft.transform.rotation * grabRotationLeft) * Quaternion.Inverse(grabbedItemLeft.transform.rotation);
+				float angleItemLeft;
+				Vector3 axisItemLeft;
+				rotationDeltaItemLeft.ToAngleAxis(out angleItemLeft, out axisItemLeft);
+				if (angleItemLeft > 180) {
+					angleItemLeft -= 360;
+				}
+
+				if (angleItemLeft != float.NaN) {
+					grabbedItemLeft.maxAngularVelocity = Mathf.Infinity;
+					grabbedItemLeft.angularVelocity = (angleItemLeft * axisItemLeft);
+				}
+			}
+
+			// Item Physics
+			if (grabbedItemRight != null) {
+				grabbedItemRight.velocity = ((controllerRight.transform.position + (controllerRight.transform.rotation * grabOffsetRight)) - grabbedItemRight.transform.position) / Time.fixedDeltaTime;
+				Quaternion rotationDeltaItemRight = (controllerRight.transform.rotation * grabRotationRight) * Quaternion.Inverse(grabbedItemRight.transform.rotation);
+				float angleItemRight;
+				Vector3 axisItemRight;
+				rotationDeltaItemRight.ToAngleAxis(out angleItemRight, out axisItemRight);
+				if (angleItemRight > 180) {
+					angleItemRight -= 360;
+				}
+
+				if (angleItemRight != float.NaN) {
+					grabbedItemRight.maxAngularVelocity = Mathf.Infinity;
+					grabbedItemRight.angularVelocity = (angleItemRight * axisItemRight);
+				}
+			}
+		}
 
 	}
 
