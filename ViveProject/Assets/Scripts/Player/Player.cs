@@ -33,6 +33,11 @@ public class Player : MonoBehaviour {
 	public GameObject				rig;
 	Vector3							handRigidbodyPositionOffset = new Vector3(-0.02f, -0.025f, -0.075f);
 
+	// Audio Sources
+	public AudioSource				windLoop;
+	public AudioSource				footstep;
+	public Vector3					positionLastFootstepPlayed;
+
 	// States for the hands
 	public Transform				climbableGrabbedLeft;
 	public Transform				climbableGrabbedRight;
@@ -65,6 +70,8 @@ public class Player : MonoBehaviour {
 
 	public Vector3					velocityCurrent;		// The current velocity of the player
 	public Vector3					velocityDesired;        // The desired velocity of the player
+	Vector3							ccPositionLastFrame;
+	Vector3							platformMovementsAppliedLastFrame = Vector3.zero;
 	float							moveSpeedRunning = 6f;
 	float							moveSpeedStanding = 3f;
 	float							moveSpeedCrouching = 1.5f;
@@ -103,6 +110,14 @@ public class Player : MonoBehaviour {
 		CheckSetControllers();
 		UpdateControllerInput();
 		UpdatePlayerMovement();
+
+		windLoop.volume = Mathf.Lerp(windLoop.volume, Mathf.Clamp01(((Vector3.Distance(ccPositionLastFrame, characterController.transform.position) + platformMovementsAppliedLastFrame.magnitude) / Time.deltaTime) / 75) - 0.15f, 50 * Time.deltaTime);
+		ccPositionLastFrame = characterController.transform.position;
+		platformMovementsAppliedLastFrame = Vector3.zero;
+
+		if (grounded == true && Vector3.Distance(new Vector3(characterController.transform.position.x, 0, characterController.transform.position.z), positionLastFootstepPlayed) > 2f) {
+			PlayFootstepSound();
+		}
 	}
 
 	void FixedUpdate () {
@@ -118,6 +133,12 @@ public class Player : MonoBehaviour {
 		if (controllerDeviceRight == null) {
 			controllerDeviceRight = SteamVR_Controller.Input((int)controllerRight.index);
 		}
+	}
+
+	void PlayFootstepSound () {
+		footstep.volume = Mathf.Clamp01(velocityCurrent.magnitude / 40f);
+		footstep.Play();
+		positionLastFootstepPlayed = new Vector3(characterController.transform.position.x, 0, characterController.transform.position.z);
 	}
 
 	void UpdateControllerInput () {
@@ -302,6 +323,7 @@ public class Player : MonoBehaviour {
 	}
 
 	void UpdatePlayerMovement() {
+		ccPositionLastFrame = characterController.transform.position;
 
 		//velocityDesired += new Vector3(0, -9 * Time.deltaTime, 0);
 
@@ -372,6 +394,7 @@ public class Player : MonoBehaviour {
 		if (closestGroundDistance != Mathf.Infinity) {
 			if (closestGroundDistance < 0.15f) {
 				if (climbableGrabbedLeft == null && climbableGrabbedRight == null) {
+					if (grounded == false) { PlayFootstepSound(); }
 					grounded = true;
 					velocityCurrent.y = -closestGroundDistance;
 					if (furthestGrounedDistance < 0.35f) {
@@ -382,6 +405,7 @@ public class Player : MonoBehaviour {
 					}
 				}
 			} else if (-closestGroundDistance > velocityCurrent.y * Time.deltaTime) {
+				if (grounded == false) { PlayFootstepSound(); }
 				grounded = true;
 				velocityCurrent.y = -closestGroundDistance;
 				// Fell to ground
@@ -400,7 +424,6 @@ public class Player : MonoBehaviour {
 		rig.transform.position += netCCMovement;
 
 		heightCurrent = hmd.transform.position.y - (rig.transform.position.y);
-
 	}
 
 	public void MovePlayer (Vector3 deltaPosition) {
@@ -409,6 +432,7 @@ public class Player : MonoBehaviour {
 		characterController.Move(deltaPosition);
 		Vector3 netCCMovement = (characterController.transform.position - ccPositionBefore);
 		rig.transform.position += netCCMovement;
+		platformMovementsAppliedLastFrame += netCCMovement;
 	}
 
 	void SetCharacterControllerHeight (float desiredHeight) {
