@@ -19,15 +19,15 @@ TagManager:
   - Hand Right
   - Head
   - Environment
+  - 
   - Item
-  - Platform
-  - Climbable
-  - Enemy
   - Heavy Item
+  - Item Detail
+  - Climbable
   - 
+  - Enemy
   - 
-  - 
-  - 
+  - Platform
   - 
   - 
   - 
