@@ -99,6 +99,7 @@
      <Compile Include="Assets\Scripts\Entities\StatusEffects.cs" />
      <Compile Include="Assets\Scripts\Entities\Vitals.cs" />
      <Compile Include="Assets\Scripts\Entities\Weapon.cs" />
+     <Compile Include="Assets\Scripts\GrabNode.cs" />
      <Compile Include="Assets\Scripts\Item.cs" />
      <Compile Include="Assets\Scripts\PlatformController.cs" />
      <Compile Include="Assets\Scripts\Player\Player.cs" />

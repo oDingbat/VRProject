@@ -51,7 +51,7 @@ public class Sentry : MonoBehaviour {
 
 	void SearchForTarget () {
 		RaycastHit hit;
-		if (Physics.Raycast(head.position, target.position - head.position, out hit, 25, visionMask)) {
+		if (Physics.Raycast(head.position, target.position - head.position, out hit, Mathf.Infinity, visionMask)) {
 			if (hit.transform.gameObject.tag == ("Player")) {
 				visionCurrent = Mathf.Clamp(visionCurrent + Time.deltaTime, 0, visionMax);
 				targetLastKnownPosition = target.position;

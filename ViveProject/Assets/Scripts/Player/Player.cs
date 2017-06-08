@@ -43,6 +43,8 @@ public class Player : MonoBehaviour {
 	public Transform				climbableGrabbedRight;
 	public Rigidbody				grabbedItemLeft;
 	public Rigidbody				grabbedItemRight;
+	public GrabNode					grabGrabNodeLeft;
+	public GrabNode					grabGrabNodeRight;
 	public Quaternion				grabRotationLeft;
 	public Quaternion				grabRotationRight;
 	public Quaternion				grabRotationLastFrameLeft;
@@ -52,6 +54,11 @@ public class Player : MonoBehaviour {
 	public Vector3					grabOffsetRight;
 	public Vector3					grabCCOffsetLeft;
 	public Vector3					grabCCOffsetRight;
+	public Vector3					grabDualWieldDirection;             // The vector3 direction from handDominant to handNonDominant (ie: hand right to left direction normalized)
+	public string					grabDualWieldDominantHand;
+	public Quaternion				grabDualWieldDominantStartRotation;
+	Vector3							handPosLastFrameLeft;
+	Vector3							handPosLastFrameRight;
 	float							grabRayLength = 0.15f;
 
 	// The player's characterController, used to move the player
@@ -80,6 +87,7 @@ public class Player : MonoBehaviour {
 	float							slopeHighest;
 	float							slopeLowest;
 	public bool						grounded = false;
+	bool							padPressed = false;
 
 	/*	Concept for step by step player movement process:
 	 * step 1: Get change in hmd move position
@@ -146,22 +154,33 @@ public class Player : MonoBehaviour {
 
 			if (controllerDeviceLeft.GetPress(Valve.VR.EVRButtonId.k_EButton_Grip)) {
 				GrabLeft();
+				handLeft.GetComponent<BoxCollider>().enabled = false;
 			}
 
 			if (controllerDeviceLeft.GetPressUp(Valve.VR.EVRButtonId.k_EButton_Grip)) {
 				ReleaseLeft();
+				handLeft.GetComponent<BoxCollider>().enabled = true;
 			}
 
 			if (controllerDeviceRight.GetPress(Valve.VR.EVRButtonId.k_EButton_Grip)) {
 				GrabRight();
+				handRight.GetComponent<BoxCollider>().enabled = false;
 			}
 
 			if (controllerDeviceRight.GetPressUp(Valve.VR.EVRButtonId.k_EButton_Grip)) {
 				ReleaseRight();
+				handRight.GetComponent<BoxCollider>().enabled = true;
 			}
 
-			bool padPressed = controllerDeviceLeft.GetPress(SteamVR_Controller.ButtonMask.Touchpad);
-			Debug.Log(padPressed);
+			if (padPressed == true) {
+				if (!controllerDeviceLeft.GetPress(SteamVR_Controller.ButtonMask.Touchpad) && controllerDeviceLeft.GetAxis(Valve.VR.EVRButtonId.k_EButton_SteamVR_Touchpad) == Vector2.zero) {
+					padPressed = false;
+				}
+			} else {
+				if (controllerDeviceLeft.GetPress(SteamVR_Controller.ButtonMask.Touchpad)) {
+					padPressed = true;
+				}
+			}
 
 			float slopeSpeed = ((-slopeHighest + 45) / (characterController.slopeLimit * 2)) + 0.5f;
 			moveSpeedCurrent = Mathf.Lerp(moveSpeedCurrent, (heightCurrent > heightCutoffStanding ? (padPressed ? moveSpeedRunning : moveSpeedStanding) : (heightCurrent > heightCutoffCrouching ? moveSpeedCrouching : moveSpeedLaying)) * slopeSpeed, 5 * Time.deltaTime);
@@ -174,7 +193,7 @@ public class Player : MonoBehaviour {
 				} else {
 					if (controllerDeviceLeft.GetAxis(Valve.VR.EVRButtonId.k_EButton_SteamVR_Touchpad) != Vector2.zero) {
 						Vector3 normalizedVelocityDesired = new Vector3(velocityDesired.x, 0, velocityDesired.z).normalized * (Mathf.Clamp01(new Vector3(velocityDesired.x, 0, velocityDesired.z).magnitude) * Mathf.Clamp(new Vector3(velocityCurrent.x, 0, velocityCurrent.z).magnitude, moveSpeedCurrent, Mathf.Infinity));
-						velocityCurrent = Vector3.Lerp(velocityCurrent, new Vector3(normalizedVelocityDesired.x, velocityCurrent.y, normalizedVelocityDesired.z), 1 * Time.deltaTime);
+						velocityCurrent = Vector3.Lerp(velocityCurrent, new Vector3(normalizedVelocityDesired.x, velocityCurrent.y, normalizedVelocityDesired.z), 2.5f * Time.deltaTime);
 					}
 				}
 			} else {
@@ -208,13 +227,13 @@ public class Player : MonoBehaviour {
 				if (wasClimbingLastFrame == true) {
 					if (climbableGrabbedLeft) {
 						if (climbableGrabbedRight) {
-							RotatePlayer(Quaternion.Slerp(Quaternion.Inverse(grabRotationLastFrameLeft) * climbRotationLeft, Quaternion.Inverse(grabRotationLastFrameRight) * climbRotationRight, 0.5f));
+							//RotatePlayer(Quaternion.Slerp(Quaternion.Inverse(grabRotationLastFrameLeft) * climbRotationLeft, Quaternion.Inverse(grabRotationLastFrameRight) * climbRotationRight, 0.5f));
 						} else {
-							RotatePlayer(Quaternion.Inverse(grabRotationLastFrameLeft) * climbRotationLeft);
+							//RotatePlayer(Quaternion.Inverse(grabRotationLastFrameLeft) * climbRotationLeft);
 						}
 					} else {
 						if (climbableGrabbedRight) {
-							RotatePlayer(Quaternion.Inverse(grabRotationLastFrameRight) * climbRotationRight);
+							//RotatePlayer(Quaternion.Inverse(grabRotationLastFrameRight) * climbRotationRight);
 						} else {
 							Debug.LogWarning("Why are we here?");
 						}
@@ -226,6 +245,10 @@ public class Player : MonoBehaviour {
 				wasClimbingLastFrame = true;
 			}
 		}
+
+		handPosLastFrameLeft = controllerLeft.transform.position;
+		handPosLastFrameRight = controllerRight.transform.position;
+
 	}
 
 	void RotatePlayer (Quaternion rot) {
@@ -241,23 +264,72 @@ public class Player : MonoBehaviour {
 			Vector3 originPosition = controllerLeft.transform.position + (controllerLeft.transform.rotation * new Vector3(handRigidbodyPositionOffset.x, handRigidbodyPositionOffset.y, handRigidbodyPositionOffset.z));
 			Collider[] itemColliders = Physics.OverlapSphere(originPosition, 0.2f, grabLayerMask);
 			foreach (Collider hitItem in itemColliders) {
-				if (hitItem.transform.gameObject.layer == LayerMask.NameToLayer("Item")) {
-					grabOffsetLeft = Quaternion.Inverse(controllerLeft.transform.rotation) * (hitItem.transform.position - controllerLeft.transform.position);
-					grabRotationLeft = Quaternion.Inverse(controllerLeft.transform.rotation) * hitItem.transform.rotation;
-					grabbedItemLeft = hitItem.transform.GetComponent<Rigidbody>();
+				if (hitItem.transform.gameObject.layer == LayerMask.NameToLayer("Item") || hitItem.transform.gameObject.layer == LayerMask.NameToLayer("Heavy Item")) {
+					if (hitItem.transform.GetComponent<Rigidbody>()) {
+						grabbedItemLeft = hitItem.transform.GetComponent<Rigidbody>();
+					} else if (hitItem.transform.parent.GetComponent<Rigidbody>()) {
+						grabbedItemLeft = hitItem.transform.parent.GetComponent<Rigidbody>();
+					} else if (hitItem.transform.parent.parent.GetComponent<Rigidbody>()) {
+						grabbedItemLeft = hitItem.transform.parent.parent.GetComponent<Rigidbody>();
+					}
+
+					if (grabbedItemLeft.transform.gameObject.layer == LayerMask.NameToLayer("Item")) {
+						GrabNode hitGrabNode = hitItem.GetComponent<GrabNode>();
+						if (hitGrabNode) {
+							if (hitGrabNode.referralNode == null) {
+								grabOffsetLeft = Quaternion.Euler(hitGrabNode.rotation) * (-hitGrabNode.transform.localPosition + hitGrabNode.offset) + new Vector3(0, handRigidbodyPositionOffset.y, handRigidbodyPositionOffset.z);
+								grabRotationLeft = Quaternion.Euler(hitGrabNode.rotation);
+								grabGrabNodeLeft = hitGrabNode;
+							} else {
+								grabOffsetLeft = Quaternion.Euler(hitGrabNode.referralNode.rotation) * (-hitGrabNode.referralNode.transform.localPosition + hitGrabNode.referralNode.offset) + new Vector3(0, handRigidbodyPositionOffset.y, handRigidbodyPositionOffset.z); ;
+								grabRotationLeft = Quaternion.Euler(hitGrabNode.referralNode.rotation);
+								grabGrabNodeLeft = hitGrabNode.referralNode;
+							}
+						} else {
+							grabOffsetLeft = Quaternion.Inverse(controllerLeft.transform.rotation) * (grabbedItemLeft.transform.position - controllerLeft.transform.position);
+							grabRotationLeft = Quaternion.Inverse(controllerLeft.transform.rotation) * grabbedItemLeft.transform.rotation;
+						}
+						if (grabbedItemLeft == grabbedItemRight) {      // Is the other hand already holding this item?
+							grabDualWieldDirection = (controllerLeft.transform.position - controllerRight.transform.position);
+							grabDualWieldDominantHand = "Right";
+							grabDualWieldDominantStartRotation = controllerRight.transform.rotation;
+						}
+					} else if (grabbedItemLeft.transform.gameObject.layer == LayerMask.NameToLayer("Heavy Item")) {
+						grabOffsetLeft = Quaternion.Inverse(grabbedItemLeft.transform.rotation) * (controllerLeft.transform.position - grabbedItemLeft.transform.position);
+						grabRotationLeft = grabbedItemLeft.transform.rotation;
+					}
 					return;
 				}
 			}
 
 			Collider[] climbColliders = Physics.OverlapSphere(originPosition, 0.065f, grabLayerMask);
 			foreach (Collider hitClimb in climbColliders) {
-				if (hitClimb.transform.gameObject.layer == LayerMask.NameToLayer("Climbable")) {
+				if (hitClimb.transform.gameObject.layer == LayerMask.NameToLayer("Climbable") || (hitClimb.transform.gameObject.layer == LayerMask.NameToLayer("Environment") && (hmd.transform.position.y - rig.transform.position.y < heightCutoffCrouching))) {
 					grabOffsetLeft = characterController.transform.position - hitClimb.transform.position;
 					grabRotationLeft = hitClimb.transform.rotation;
 					grabCCOffsetLeft = controllerLeft.transform.position - characterController.transform.position;
 					climbableGrabbedLeft = hitClimb.transform;
 					StartCoroutine(TriggerHapticFeedback(controllerDeviceLeft, 0.1f));
 					return;
+				}
+			}
+
+			int rings = 9;
+			int slices = 15;
+			for (int a = 0; a < rings; a++) {
+				for (int b = 0; b < slices; b++) {
+					Vector3 currentOrigin = originPosition + (Quaternion.Euler((a - (rings / 2)) * (180 / rings), b * (360 / slices), 0) * new Vector3(0, 0, 0.065f));
+					RaycastHit environmentHit;
+					if (Physics.Raycast(currentOrigin + new Vector3(0, 0.05f, 0), Vector3.down, out environmentHit, 0.1f, grabLayerMask)) {
+						if (Vector3.Angle(environmentHit.normal, Vector3.up) < 10) {
+							grabOffsetLeft = characterController.transform.position - environmentHit.transform.position;
+							grabRotationLeft = environmentHit.transform.rotation;
+							grabCCOffsetLeft = controllerLeft.transform.position - characterController.transform.position;
+							climbableGrabbedLeft = environmentHit.transform;
+							StartCoroutine(TriggerHapticFeedback(controllerDeviceLeft, 0.1f));
+							return;
+						}
+					}
 				}
 			}
 		} else {
@@ -268,11 +340,22 @@ public class Player : MonoBehaviour {
 	void ReleaseLeft () {
 		grabOffsetLeft = Vector3.zero;
 		grabCCOffsetLeft = Vector3.zero;
+		if (climbableGrabbedRight == null && climbableGrabbedLeft == true) {
+			AttemptClamber();
+		}
+		if (grabbedItemLeft == true) {
+			if (grabbedItemRight != grabbedItemLeft) {
+				ThrowItem(grabbedItemLeft, (controllerLeft.transform.position - handPosLastFrameLeft) / Time.deltaTime);
+			} else {
+				if (grabGrabNodeRight == null) {
+					grabOffsetRight = Quaternion.Inverse(controllerRight.transform.rotation) * (grabbedItemRight.transform.position - controllerRight.transform.position);
+					grabRotationRight = Quaternion.Inverse(controllerRight.transform.rotation) * grabbedItemRight.transform.rotation;
+				}
+			}
+		}
 		climbableGrabbedLeft = null;
 		grabbedItemLeft = null;
-		if (climbableGrabbedRight == null) {
-			velocityCurrent = Vector3.ClampMagnitude(velocityCurrent, 6);
-		}
+		grabGrabNodeLeft = null;
 	}
 
 	void GrabRight () {
@@ -281,23 +364,72 @@ public class Player : MonoBehaviour {
 			Vector3 originPosition = controllerRight.transform.position + (controllerRight.transform.rotation * new Vector3(-handRigidbodyPositionOffset.x, handRigidbodyPositionOffset.y, handRigidbodyPositionOffset.z));
 			Collider[] itemColliders = Physics.OverlapSphere(originPosition, 0.2f, grabLayerMask);
 			foreach (Collider hitItem in itemColliders) {
-				if (hitItem.transform.gameObject.layer == LayerMask.NameToLayer("Item")) {
-					grabOffsetRight = Quaternion.Inverse(controllerRight.transform.rotation) * (hitItem.transform.position - controllerRight.transform.position);
-					grabRotationRight = Quaternion.Inverse(controllerRight.transform.rotation) * hitItem.transform.rotation;
-					grabbedItemRight = hitItem.transform.GetComponent<Rigidbody>();
+				if (hitItem.transform.gameObject.layer == LayerMask.NameToLayer("Item") || hitItem.transform.gameObject.layer == LayerMask.NameToLayer("Heavy Item")) {
+					if (hitItem.transform.GetComponent<Rigidbody>()) {
+						grabbedItemRight = hitItem.transform.GetComponent<Rigidbody>();
+					} else if (hitItem.transform.parent.GetComponent<Rigidbody>()) {
+						grabbedItemRight = hitItem.transform.parent.GetComponent<Rigidbody>();
+					} else if (hitItem.transform.parent.parent.GetComponent<Rigidbody>()) {
+						grabbedItemRight = hitItem.transform.parent.parent.GetComponent<Rigidbody>();
+					}
+
+					if (grabbedItemRight.transform.gameObject.layer == LayerMask.NameToLayer("Item")) {
+						GrabNode hitGrabNode = hitItem.GetComponent<GrabNode>();
+						if (hitGrabNode) {
+							if (hitGrabNode.referralNode == null) {
+								grabOffsetRight = Quaternion.Euler(hitGrabNode.rotation) * (-hitGrabNode.transform.localPosition + hitGrabNode.offset) + new Vector3(0, handRigidbodyPositionOffset.y, handRigidbodyPositionOffset.z);
+								grabRotationRight = Quaternion.Euler(hitGrabNode.rotation);
+								grabGrabNodeRight = hitGrabNode;
+							} else {
+								grabOffsetRight = Quaternion.Euler(hitGrabNode.referralNode.rotation) * (-hitGrabNode.referralNode.transform.localPosition + hitGrabNode.referralNode.offset) + new Vector3(0, handRigidbodyPositionOffset.y, handRigidbodyPositionOffset.z); ;
+								grabRotationRight = Quaternion.Euler(hitGrabNode.referralNode.rotation);
+								grabGrabNodeRight = hitGrabNode.referralNode;
+							}
+						} else {
+							grabOffsetRight = Quaternion.Inverse(controllerRight.transform.rotation) * (grabbedItemRight.transform.position - controllerRight.transform.position);
+							grabRotationRight = Quaternion.Inverse(controllerRight.transform.rotation) * grabbedItemRight.transform.rotation;
+						}
+						if (grabbedItemRight == grabbedItemLeft) {      // Is the other hand already holding this item?
+							grabDualWieldDirection = (controllerRight.transform.position - controllerLeft.transform.position);
+							grabDualWieldDominantHand = "Left";
+							grabDualWieldDominantStartRotation = controllerLeft.transform.rotation;
+						}
+					} else if (grabbedItemRight.transform.gameObject.layer == LayerMask.NameToLayer("Heavy Item")) {
+						grabOffsetRight = Quaternion.Inverse(grabbedItemRight.transform.rotation) * controllerRight.transform.position - grabbedItemRight.transform.position;
+						grabRotationRight = grabbedItemRight.transform.rotation;
+					}
 					return;
 				}
 			}
 
 			Collider[] climbColliders = Physics.OverlapSphere(originPosition, 0.065f, grabLayerMask);
 			foreach (Collider hitClimb in climbColliders) {
-				if (hitClimb.transform.gameObject.layer == LayerMask.NameToLayer("Climbable")) {
+				if (hitClimb.transform.gameObject.layer == LayerMask.NameToLayer("Climbable") || (hitClimb.transform.gameObject.layer == LayerMask.NameToLayer("Environment") && (hmd.transform.position.y - rig.transform.position.y < heightCutoffCrouching))) {
 					grabOffsetRight = characterController.transform.position - hitClimb.transform.position;
 					grabRotationRight = hitClimb.transform.rotation;
 					grabCCOffsetRight = controllerRight.transform.position - characterController.transform.position;
 					climbableGrabbedRight = hitClimb.transform;
 					StartCoroutine(TriggerHapticFeedback(controllerDeviceRight, 0.1f));
 					return;
+				}
+			}
+
+			int rings = 9;
+			int slices = 15;
+			for (int a = 0; a < rings; a++) {
+				for (int b = 0; b < slices; b++) {
+					Vector3 currentOrigin = originPosition + (Quaternion.Euler((a - (rings / 2)) * (180 / rings), b * (360 / slices), 0) * new Vector3(0, 0, 0.065f));
+					RaycastHit environmentHit;
+					if (Physics.Raycast(currentOrigin + new Vector3(0, 0.05f, 0), Vector3.down, out environmentHit, 0.1f, grabLayerMask)) {
+						if (Vector3.Angle(environmentHit.normal, Vector3.up) < 10) {
+							grabOffsetRight = characterController.transform.position - environmentHit.transform.position;
+							grabRotationRight = environmentHit.transform.rotation;
+							grabCCOffsetRight = controllerRight.transform.position - characterController.transform.position;
+							climbableGrabbedRight = environmentHit.transform;
+							StartCoroutine(TriggerHapticFeedback(controllerDeviceRight, 0.1f));
+							return;
+						}
+					}
 				}
 			}
 		} else {
@@ -308,11 +440,38 @@ public class Player : MonoBehaviour {
 	void ReleaseRight () {
 		grabOffsetRight = Vector3.zero;
 		grabCCOffsetRight = Vector3.zero;
+		if (climbableGrabbedLeft == null && climbableGrabbedRight == true) {
+			AttemptClamber();
+		}
+		if (grabbedItemRight == true) {
+			if (grabbedItemLeft != grabbedItemRight) {
+				ThrowItem(grabbedItemRight, (controllerRight.transform.position - handPosLastFrameRight) / Time.deltaTime);
+			} else {
+				if (grabGrabNodeLeft == null) {
+					grabOffsetLeft = Quaternion.Inverse(controllerLeft.transform.rotation) * (grabbedItemLeft.transform.position - controllerLeft.transform.position);
+					grabRotationLeft = Quaternion.Inverse(controllerLeft.transform.rotation) * grabbedItemLeft.transform.rotation;
+				}
+			}
+		}
+
 		climbableGrabbedRight = null;
 		grabbedItemRight = null;
-		if (climbableGrabbedRight == null) {
-			velocityCurrent = Vector3.ClampMagnitude(velocityCurrent, 6);
+		grabGrabNodeRight = null;
+	}
+
+	void AttemptClamber () {
+		velocityCurrent = Vector3.ClampMagnitude(velocityCurrent, 6);
+		RaycastHit hit;
+		if (Physics.Raycast(hmd.transform.position, Vector3.down, out hit, (hmd.transform.position.y - rig.transform.position.y), characterControllerLayerMask)) {
+			Vector3 rigVerticalChange = new Vector3(0, hit.point.y, 0) - new Vector3(0, rig.transform.position.y, 0);
+			rig.transform.position += rigVerticalChange;
+			verticalPusher.transform.localPosition -= rigVerticalChange;
+			characterController.Move(rigVerticalChange);
 		}
+	}
+
+	void ThrowItem (Rigidbody item, Vector3 velocity) { 
+		item.velocity = Vector3.ClampMagnitude(velocity.magnitude > 5 ? (velocity * 2f) : velocity, 100);
 	}
 
 	IEnumerator TriggerHapticFeedback(SteamVR_Controller.Device device, float duration) {
@@ -358,7 +517,12 @@ public class Player : MonoBehaviour {
 			rig.transform.position += leanPullBack * (leanDistance - maxLeanDistance);
 		}
 
-		SetCharacterControllerHeight((hmd.transform.position.y - (rig.transform.position.y)) - 0.25f);
+		if (climbableGrabbedLeft == null && climbableGrabbedRight == null) {
+			SetCharacterControllerHeight((hmd.transform.position.y - (rig.transform.position.y)) - 0.25f);
+		} else {
+			SetCharacterControllerHeight(0.25f);
+		}
+
 
 		// Step ?: Gravity
 		if (climbableGrabbedLeft == null && climbableGrabbedRight == null) {
@@ -392,12 +556,12 @@ public class Player : MonoBehaviour {
 		}
 
 		if (closestGroundDistance != Mathf.Infinity) {
-			if (closestGroundDistance < 0.15f) {
+			if (closestGroundDistance < 0.1f) {
 				if (climbableGrabbedLeft == null && climbableGrabbedRight == null) {
 					if (grounded == false) { PlayFootstepSound(); }
 					grounded = true;
 					velocityCurrent.y = -closestGroundDistance;
-					if (furthestGrounedDistance < 0.35f) {
+					if (furthestGrounedDistance < 0.25f) {
 						Vector3 ccStart = characterController.transform.position;
 						characterController.Move(new Vector3(0, -closestGroundDistance + characterController.skinWidth, 0));
 						Vector3 ccDelta = (characterController.transform.position - ccStart);
@@ -420,6 +584,7 @@ public class Player : MonoBehaviour {
 		// Step 6: Get secondary controller trackpad input as character controller velocity
 		Vector3 ccPositionBeforePad = characterController.transform.position;
 		characterController.Move(velocityCurrent * Time.deltaTime);
+		headCC.Move(velocityCurrent * Time.deltaTime);
 		Vector3 netCCMovement = (characterController.transform.position - ccPositionBeforePad);
 		rig.transform.position += netCCMovement;
 
@@ -435,8 +600,12 @@ public class Player : MonoBehaviour {
 		platformMovementsAppliedLastFrame += netCCMovement;
 	}
 
-	void SetCharacterControllerHeight (float desiredHeight) {
-		characterController.transform.position = new Vector3(characterController.transform.position.x, rig.transform.position.y + (Mathf.Clamp(desiredHeight, characterController.radius * 2f, Mathf.Infinity) / 2), characterController.transform.position.z);
+	void SetCharacterControllerHeight(float desiredHeight) {
+		if (grounded == true) {
+			characterController.transform.position = new Vector3(characterController.transform.position.x, (rig.transform.position.y) + (Mathf.Clamp(desiredHeight, characterController.radius * 2f, Mathf.Infinity) / 2), characterController.transform.position.z);
+		} else {
+			characterController.transform.position = new Vector3(characterController.transform.position.x, (hmd.transform.position.y - 0.25f) - (Mathf.Clamp(desiredHeight, characterController.radius * 2f, Mathf.Infinity) / 2), characterController.transform.position.z);
+		}
 		characterController.height = Mathf.Clamp(desiredHeight, characterController.radius * 2f, Mathf.Infinity);
 		characterController.stepOffset = characterController.height / 4f;
 	}
@@ -476,9 +645,18 @@ public class Player : MonoBehaviour {
 
 		// Item Physics
 		if (grabbedItemLeft != null && grabbedItemLeft == grabbedItemRight) {
-			Vector3 combinedPositions = ((controllerLeft.transform.position + (controllerLeft.transform.rotation * grabOffsetLeft)) + (controllerRight.transform.position + (controllerRight.transform.rotation * grabOffsetRight))) / 2;
-			grabbedItemLeft.velocity = (combinedPositions - grabbedItemLeft.transform.position) / Time.fixedDeltaTime;
-			Quaternion rotationDeltaItem = Quaternion.Slerp(controllerLeft.transform.rotation * grabRotationLeft, controllerRight.transform.rotation * grabRotationRight, 0.5f) * Quaternion.Inverse(grabbedItemLeft.transform.rotation);
+			// Dual Wielding
+			Rigidbody grabbedItemDominant = (grabDualWieldDominantHand == "Left") ? grabbedItemLeft : grabbedItemRight;
+			SteamVR_TrackedObject controllerDominant = (grabDualWieldDominantHand == "Left") ? controllerLeft : controllerRight;
+
+			Vector3 dualWieldDirectionCurrent = (((grabDualWieldDominantHand == "Left") ? controllerRight.transform.position : controllerLeft.transform.position) - ((grabDualWieldDominantHand == "Left") ? controllerLeft.transform.position : controllerRight.transform.position));
+
+			Quaternion dualWieldDirectionChangeRotation = Quaternion.FromToRotation(grabDualWieldDirection, dualWieldDirectionCurrent);
+
+			Debug.Log(Vector3.Angle(grabDualWieldDirection, dualWieldDirectionCurrent));
+
+			Quaternion rotationDeltaItem = (dualWieldDirectionChangeRotation * grabDualWieldDominantStartRotation * ((grabDualWieldDominantHand == "Left") ? grabRotationLeft : grabRotationRight)) * Quaternion.Inverse(grabbedItemDominant.transform.rotation);
+
 			float angleItem;
 			Vector3 axisItem;
 			rotationDeltaItem.ToAngleAxis(out angleItem, out axisItem);
@@ -486,48 +664,65 @@ public class Player : MonoBehaviour {
 				angleItem -= 360;
 			}
 
+			grabbedItemLeft.velocity = Vector3.ClampMagnitude(((controllerDominant.transform.position + (dualWieldDirectionChangeRotation * grabDualWieldDominantStartRotation * ((grabDualWieldDominantHand == "Left") ? grabOffsetLeft : grabOffsetRight))) - grabbedItemDominant.transform.position) / Time.fixedDeltaTime, (grabbedItemDominant.GetComponent<HingeJoint>()) ? 1 : 100);
+
 			if (angleItem != float.NaN) {
 				grabbedItemLeft.maxAngularVelocity = Mathf.Infinity;
 				grabbedItemLeft.angularVelocity = (angleItem * axisItem);
 			}
 		} else {
+			// Item Physics - Left
 			if (grabbedItemLeft != null) {
-				grabbedItemLeft.velocity = ((controllerLeft.transform.position + (controllerLeft.transform.rotation * grabOffsetLeft)) - grabbedItemLeft.transform.position) / Time.fixedDeltaTime;
-				Quaternion rotationDeltaItemLeft = (controllerLeft.transform.rotation * grabRotationLeft) * Quaternion.Inverse(grabbedItemLeft.transform.rotation);
-				float angleItemLeft;
-				Vector3 axisItemLeft;
-				rotationDeltaItemLeft.ToAngleAxis(out angleItemLeft, out axisItemLeft);
-				if (angleItemLeft > 180) {
-					angleItemLeft -= 360;
-				}
+				if (grabbedItemLeft.gameObject.layer == LayerMask.NameToLayer("Item")) {
+					grabbedItemLeft.velocity = Vector3.ClampMagnitude(((controllerLeft.transform.position + (controllerLeft.transform.rotation * grabOffsetLeft)) - grabbedItemLeft.transform.position) / Time.fixedDeltaTime, (grabbedItemLeft.GetComponent<HingeJoint>()) ? 1 : 100);
 
-				if (angleItemLeft != float.NaN) {
-					grabbedItemLeft.maxAngularVelocity = Mathf.Infinity;
-					grabbedItemLeft.angularVelocity = (angleItemLeft * axisItemLeft);
+					if (!grabbedItemLeft.GetComponent<HingeJoint>()) {
+						Quaternion rotationDeltaItemLeft = (controllerLeft.transform.rotation * grabRotationLeft) * Quaternion.Inverse(grabbedItemLeft.transform.rotation);
+						float angleItemLeft;
+						Vector3 axisItemLeft;
+						rotationDeltaItemLeft.ToAngleAxis(out angleItemLeft, out axisItemLeft);
+						if (angleItemLeft > 180) {
+							angleItemLeft -= 360;
+						}
+
+						if (angleItemLeft != float.NaN) {
+							grabbedItemLeft.maxAngularVelocity = Mathf.Infinity;
+							grabbedItemLeft.angularVelocity = (angleItemLeft * axisItemLeft);
+						}
+					}
+				} else {
+					//Debug.DrawRay((grabbedItemLeft.transform.position + (grabbedItemLeft.transform.rotation * grabOffsetLeft)), Vector3.up, Color.red);
+					grabbedItemLeft.AddForceAtPosition((controllerLeft.transform.position - (grabbedItemLeft.transform.position + (grabbedItemLeft.transform.rotation * grabOffsetLeft))) * (grabbedItemLeft.mass * 0.01f) / Time.fixedDeltaTime, (grabbedItemLeft.transform.rotation * grabOffsetLeft));
 				}
 			}
 
-			// Item Physics
+			// Item Physics - Right
 			if (grabbedItemRight != null) {
-				grabbedItemRight.velocity = ((controllerRight.transform.position + (controllerRight.transform.rotation * grabOffsetRight)) - grabbedItemRight.transform.position) / Time.fixedDeltaTime;
-				Quaternion rotationDeltaItemRight = (controllerRight.transform.rotation * grabRotationRight) * Quaternion.Inverse(grabbedItemRight.transform.rotation);
-				float angleItemRight;
-				Vector3 axisItemRight;
-				rotationDeltaItemRight.ToAngleAxis(out angleItemRight, out axisItemRight);
-				if (angleItemRight > 180) {
-					angleItemRight -= 360;
-				}
+				if (grabbedItemRight.gameObject.layer == LayerMask.NameToLayer("Item")) {
+					grabbedItemRight.velocity = Vector3.ClampMagnitude(((controllerRight.transform.position + (controllerRight.transform.rotation * grabOffsetRight)) - grabbedItemRight.transform.position) / Time.fixedDeltaTime, (grabbedItemRight.GetComponent<HingeJoint>()) ? 1 : 100);
 
-				if (angleItemRight != float.NaN) {
-					grabbedItemRight.maxAngularVelocity = Mathf.Infinity;
-					grabbedItemRight.angularVelocity = (angleItemRight * axisItemRight);
+					if (!grabbedItemRight.GetComponent<HingeJoint>()) {
+						Quaternion rotationDeltaItemRight = (controllerRight.transform.rotation * grabRotationRight) * Quaternion.Inverse(grabbedItemRight.transform.rotation);
+						float angleItemRight;
+						Vector3 axisItemRight;
+						rotationDeltaItemRight.ToAngleAxis(out angleItemRight, out axisItemRight);
+						if (angleItemRight > 180) {
+							angleItemRight -= 360;
+						}
+
+						if (angleItemRight != float.NaN) {
+							grabbedItemRight.maxAngularVelocity = Mathf.Infinity;
+							grabbedItemRight.angularVelocity = (angleItemRight * axisItemRight);
+						}
+					}
+				} else {
+					grabbedItemRight.AddForceAtPosition((controllerRight.transform.position - (grabbedItemRight.transform.position + (grabbedItemRight.transform.rotation * grabOffsetRight))) * (grabbedItemRight.mass * 0.01f) / Time.fixedDeltaTime, (grabbedItemRight.transform.rotation * grabOffsetRight));
 				}
 			}
 		}
-
 	}
 
-	void UpdateHeadPhysics () {
+	void UpdateHeadPhysics() {
 
 	}
 
