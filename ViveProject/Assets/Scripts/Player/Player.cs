@@ -368,7 +368,7 @@ public class Player : MonoBehaviour {
 		}
 		if (jumpLoadedLeft == true) {
 			if ((grounded == true || timeLastJumped + 0.1f > Time.timeSinceLevelLoad) && climbableGrabbedLeft == false && grabbedItemLeft == false) {
-				velocityCurrent += Vector3.ClampMagnitude((controllerPosLastFrameLeft - controllerLeft.transform.position) * 500, (timeLastJumped + 0.1f > Time.timeSinceLevelLoad) ? 1.5f : 5f);
+				velocityCurrent += Vector3.ClampMagnitude((controllerPosLastFrameLeft - controllerLeft.transform.position) * 500, (timeLastJumped + 0.1f > Time.timeSinceLevelLoad) ? 1f : 4f);
 				jumpLoadedLeft = false;
 				if (grounded == true) { timeLastJumped = Time.timeSinceLevelLoad; }
 			}
@@ -481,7 +481,7 @@ public class Player : MonoBehaviour {
 		}
 		if (jumpLoadedRight == true) {
 			if ((grounded == true || timeLastJumped + 0.1f > Time.timeSinceLevelLoad) && climbableGrabbedRight == false && grabbedItemRight == false) {
-				velocityCurrent += Vector3.ClampMagnitude((controllerPosLastFrameRight - controllerRight.transform.position) * 500, (timeLastJumped + 0.1f > Time.timeSinceLevelLoad) ? 1.5f : 5f);
+				velocityCurrent += Vector3.ClampMagnitude((controllerPosLastFrameRight - controllerRight.transform.position) * 500, (timeLastJumped + 0.1f > Time.timeSinceLevelLoad) ? 1f : 4f);
 				jumpLoadedRight = false;
 				if (grounded == true) { timeLastJumped = Time.timeSinceLevelLoad; }
 			}
@@ -493,7 +493,7 @@ public class Player : MonoBehaviour {
 	}
 
 	void AttemptClamber () {
-		velocityCurrent = Vector3.ClampMagnitude(velocityCurrent, 6);
+		velocityCurrent = Vector3.ClampMagnitude(velocityCurrent, 4.5f);
 		RaycastHit hit;
 		if (Physics.Raycast(hmd.transform.position, Vector3.down, out hit, (hmd.transform.position.y - rig.transform.position.y), characterControllerLayerMask)) {
 			Vector3 rigVerticalChange = new Vector3(0, hit.point.y, 0) - new Vector3(0, rig.transform.position.y, 0);
