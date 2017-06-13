@@ -9,6 +9,10 @@ public class Weapon {
 	public bool				automatic;
 	public float			firerate;
 	public float			timeLastFired;
+	public float			kickLinear;
+	public float			kickAngular;
+	public int				burstCount;
+	public float			burstDelay;
 
 	[Space(10)]
 	[Header("Projectile Info")]

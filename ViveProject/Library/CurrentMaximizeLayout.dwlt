@@ -23,7 +23,7 @@ MonoBehaviour:
   m_MinSize: {x: 887, y: 613}
   m_MaxSize: {x: 16012, y: 18063}
   vertical: 0
-  controlID: 1336
+  controlID: 13895
 --- !u!114 &2
 MonoBehaviour:
   m_ObjectHideFlags: 52
@@ -124,7 +124,7 @@ MonoBehaviour:
   m_MinSize: {x: 610, y: 613}
   m_MaxSize: {x: 12010, y: 18063}
   vertical: 1
-  controlID: 1337
+  controlID: 13896
 --- !u!114 &4
 MonoBehaviour:
   m_ObjectHideFlags: 52
@@ -149,7 +149,7 @@ MonoBehaviour:
   m_MinSize: {x: 610, y: 221}
   m_MaxSize: {x: 12010, y: 4021}
   vertical: 0
-  controlID: 1338
+  controlID: 13813
 --- !u!114 &5
 MonoBehaviour:
   m_ObjectHideFlags: 52
@@ -203,9 +203,9 @@ MonoBehaviour:
     height: 534
   m_TreeViewState:
     scrollPos: {x: 0, y: 0}
-    m_SelectedIDs: 
-    m_LastClickedID: 0
-    m_ExpandedIDs: def9ffffe2f9ffffe4fbffff00000000c62e0000
+    m_SelectedIDs: 5e81f7ff
+    m_LastClickedID: -556706
+    m_ExpandedIDs: e0f9ffffe4f9ffffe4fbffff00000000ea2e0000
     m_RenameOverlay:
       m_UserAcceptedRename: 0
       m_Name: 
@@ -281,14 +281,14 @@ MonoBehaviour:
     width: 856
     height: 534
   m_SceneLighting: 1
-  lastFramingTime: 5893.961126859161
+  lastFramingTime: 5921.233802197971
   m_2DMode: 0
   m_isRotationLocked: 0
   m_AudioPlay: 0
   m_Position:
-    m_Target: {x: 36.719547, y: 8.5461035, z: -1.5651053}
+    m_Target: {x: 45.45593, y: 4.785399, z: 2.4303155}
     speed: 2
-    m_Value: {x: 36.719547, y: 8.5461035, z: -1.5651053}
+    m_Value: {x: 45.45593, y: 4.785399, z: 2.4303155}
   m_RenderMode: 0
   m_ValidateTrueMetals: 0
   m_SceneViewState:
@@ -311,17 +311,17 @@ MonoBehaviour:
       speed: 2
       m_Value: 0
   m_Rotation:
-    m_Target: {x: -0.04209802, y: -0.47922346, z: -0.023020295, w: 0.87638044}
+    m_Target: {x: -0.048795134, y: -0.55001336, z: 0.032213423, w: -0.83310664}
     speed: 2
-    m_Value: {x: -0.04209802, y: -0.47922346, z: -0.023020295, w: 0.87638044}
+    m_Value: {x: 0.048795134, y: 0.55001336, z: -0.032213423, w: 0.8331067}
   m_Size:
-    m_Target: 2.25169
+    m_Target: 3.5810418
     speed: 2
-    m_Value: 2.25169
+    m_Value: 3.5810418
   m_Ortho:
     m_Target: 0
     speed: 2
-    m_Value: 0.098346174
+    m_Value: 0
   m_LastSceneViewRotation: {x: -0.023393935, y: 0.9669764, z: -0.09634713, w: -0.2347906}
   m_LastSceneViewOrtho: 0
   m_ReplacementShader: {fileID: 0}
@@ -442,18 +442,18 @@ MonoBehaviour:
     m_ShowAllHits: 0
     m_SearchArea: 0
     m_Folders:
-    - Assets/Resources/Prefabs
+    - Assets/Materials
   m_ViewMode: 1
   m_StartGridSize: 59
   m_LastFolders:
-  - Assets/Resources/Prefabs
+  - Assets/Materials
   m_LastFoldersGridSize: 59
   m_LastProjectPath: C:\Users\Thomas\Documents\GitHub\ViveGame\ViveProject
   m_IsLocked: 0
   m_FolderTreeState:
-    scrollPos: {x: 0, y: 135}
-    m_SelectedIDs: e62b0000
-    m_LastClickedID: 11238
+    scrollPos: {x: 0, y: 39}
+    m_SelectedIDs: d2280000
+    m_LastClickedID: 10450
     m_ExpandedIDs: 00000000862600002e27000020290000342900000a2b00001e2c0000402c000000ca9a3bffffff7f
     m_RenameOverlay:
       m_UserAcceptedRename: 0
@@ -507,10 +507,10 @@ MonoBehaviour:
       m_Icon: {fileID: 0}
       m_ResourceFile: 
   m_ListAreaState:
-    m_SelectedInstanceIDs: 
-    m_LastClickedInstanceID: 0
+    m_SelectedInstanceIDs: 5e81f7ff
+    m_LastClickedInstanceID: -556706
     m_HadKeyboardFocusLastEvent: 0
-    m_ExpandedInstanceIDs: 921900009a650000901900001c1a0000b8220000fa2400002a00000054000000368b00002c00000026c5f4ffbe2e0000d626000000000000
+    m_ExpandedInstanceIDs: 921900009a650000901900001c1a0000b8220000fa2400002a00000054000000368b00002c00000026c5f4ffbe2e0000d6260000000000002a270000
     m_RenameOverlay:
       m_UserAcceptedRename: 0
       m_Name: 

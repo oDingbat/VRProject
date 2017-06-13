@@ -27,6 +27,7 @@ public class Projectile : MonoBehaviour {
 			distanceLeft = velocity * Time.deltaTime;
 			AttemptMove();
 		} else {
+			transform.position -= transform.forward * 0.01f;
 			firstFrameLoaded = true;
 		}
 	}
@@ -39,6 +40,9 @@ public class Projectile : MonoBehaviour {
 					GameObject.Find("Player Body").GetComponent<Player>().TakeDamage(25);
 					StartCoroutine(BreakProjectile(hit.point));
 				} else {
+					if (hit.transform.GetComponent<Rigidbody>()) {
+						hit.transform.GetComponent<Rigidbody>().AddForce(transform.forward * 100 * velocity);
+					}
 					distanceLeft = distanceLeft - Vector3.Distance(transform.position, hit.point);
 					transform.position = hit.point;
 					transform.rotation = Quaternion.LookRotation(Vector3.Reflect(transform.forward, hit.normal));

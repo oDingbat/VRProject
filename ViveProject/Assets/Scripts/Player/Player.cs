@@ -65,8 +65,8 @@ public class Player : MonoBehaviour {
 	public Vector3					controllerPosLastFrameRight;
 	bool							itemReleasingDisabledLeft;
 	bool							itemReleasingDisabledRight;
-	public float							itemVelocityPercentageLeft;			// When items are first picked up their IVP = 0; over time grabbed approaches 1 linearly; this value determines the magnitude of the velocity (and angularVelocity) of the item
-	public float							itemVelocityPercentageRight;		// When items are first picked up their IVP = 0; over time grabbed approaches 1 linearly; this value determines the magnitude of the velocity (and angularVelocity) of the item
+	public float					itemVelocityPercentageLeft;			// When items are first picked up their IVP = 0; over time grabbed approaches 1 linearly; this value determines the magnitude of the velocity (and angularVelocity) of the item
+	public float					itemVelocityPercentageRight;		// When items are first picked up their IVP = 0; over time grabbed approaches 1 linearly; this value determines the magnitude of the velocity (and angularVelocity) of the item
 
 	// The player's characterController, used to move the player
 	public CharacterController		characterController;
@@ -431,6 +431,7 @@ public class Player : MonoBehaviour {
 		}
 		climbableGrabbedLeft = null;
 		grabbedRigidbodyLeft = null;
+		grabbedItemLeft = null;
 		grabNodeLeft = null;
 	}
 
@@ -565,13 +566,14 @@ public class Player : MonoBehaviour {
 
 		climbableGrabbedRight = null;
 		grabbedRigidbodyRight = null;
+		grabbedItemRight = null;
 		grabNodeRight = null;
 	}
 
 	void InteractLeft () {
 		if (grabNodeLeft != null) {
 			if (grabNodeLeft.interactionType == GrabNode.InteractionType.Trigger) {
-				AttemptToFireWeapon(grabbedItemLeft);
+				AttemptToFireWeapon("left", grabbedItemLeft);
 			}
 		}
 	}
@@ -579,24 +581,43 @@ public class Player : MonoBehaviour {
 	void InteractRight () {
 		if (grabNodeRight != null) {
 			if (grabNodeRight.interactionType == GrabNode.InteractionType.Trigger) {
-				AttemptToFireWeapon (grabbedItemRight);
+				AttemptToFireWeapon ("right", grabbedItemRight);
 			}
 		}
 	}
 
-	void AttemptToFireWeapon (Item currentItem) {
+	void AttemptToFireWeapon (string hand, Item currentItem) {
 		Weapon currentWeapon = currentItem.weapon;
 		if (currentWeapon.timeLastFired + (1 / currentWeapon.firerate) <= Time.timeSinceLevelLoad) {
 			currentWeapon.timeLastFired = Time.timeSinceLevelLoad;
-			FireWeapon(currentItem);
+			StartCoroutine(FireWeapon(hand, currentItem));
 		}
 	}
 
-	void FireWeapon(Item currentItem) {
+	IEnumerator FireWeapon(string hand, Item currentItem) {
 		Weapon currentWeapon = currentItem.weapon;
+		Rigidbody currentRigidbody = currentItem.transform.GetComponent<Rigidbody>();
 		Transform barrel = currentItem.transform.Find("(Barrel Point)");
-		GameObject newProjectile = (GameObject)Instantiate(currentWeapon.projectile, barrel.position + barrel.forward * 0.2f, currentItem.transform.rotation);
-		newProjectile.GetComponent<Projectile>().velocity = currentWeapon.projectileVelocity;
+		
+		for (int i = 0; i < Mathf.Clamp(currentWeapon.burstCount, 1, 100); i++) {
+			if (grabbedItemLeft == grabbedItemRight) {
+				itemVelocityPercentageLeft = 0f;
+				itemVelocityPercentageRight = 0f;
+				currentRigidbody.velocity += (currentRigidbody.transform.forward * -currentWeapon.kickLinear * 0.5f);
+				currentRigidbody.angularVelocity += new Vector3(Random.Range(-currentWeapon.kickAngular, currentWeapon.kickAngular), Random.Range(-currentWeapon.kickAngular, currentWeapon.kickAngular), Random.Range(-currentWeapon.kickAngular, currentWeapon.kickAngular)) * 0.5f;
+			} else {
+				currentRigidbody.velocity += (currentRigidbody.transform.forward * -currentWeapon.kickLinear);
+				currentRigidbody.angularVelocity += new Vector3(Random.Range(-currentWeapon.kickAngular, currentWeapon.kickAngular), Random.Range(-currentWeapon.kickAngular, currentWeapon.kickAngular), Random.Range(-currentWeapon.kickAngular, currentWeapon.kickAngular));
+				if (hand == "left") {
+					itemVelocityPercentageLeft = 0;
+				} else if (hand == "right") {
+					itemVelocityPercentageRight = 0;
+				}
+			}
+			GameObject newProjectile = (GameObject)Instantiate(currentWeapon.projectile, barrel.position + barrel.forward * 0.2f, currentItem.transform.rotation);
+			newProjectile.GetComponent<Projectile>().velocity = currentWeapon.projectileVelocity;
+			yield return new WaitForSeconds(currentWeapon.burstDelay);
+		}
 	}
 
 	void AttemptClamber () {
@@ -736,11 +757,29 @@ public class Player : MonoBehaviour {
 
 		heightCurrent = hmd.transform.position.y - (rig.transform.position.y);
 
+		MoveItems(characterController.transform.position - ccPositionLastFrame);
+
 		//if (characterController.transform.position.y - ccPositionBeforePad.y > 0.01f) {
 		if (grounded == true) {
 			verticalPusher.transform.localPosition -= new Vector3(0, (characterController.transform.position.y - ccPositionBeforePad.y), 0);
 		}
 
+	}
+
+	void MoveItems (Vector3 deltaPosition) {
+		if (grabbedRigidbodyLeft == grabbedRigidbodyRight) {
+			if (grabbedRigidbodyLeft) {
+				grabbedRigidbodyLeft.MovePosition(grabbedRigidbodyLeft.transform.position + deltaPosition);
+			}
+		} else {
+			if (grabbedRigidbodyLeft) {
+				grabbedRigidbodyLeft.MovePosition(grabbedRigidbodyLeft.transform.position + deltaPosition);
+			}
+			if (grabbedRigidbodyRight) {
+				grabbedRigidbodyRight.MovePosition(grabbedRigidbodyRight.transform.position + deltaPosition);
+			}
+
+		}
 	}
 
 	public void MovePlayer (Vector3 deltaPosition) {
@@ -765,7 +804,7 @@ public class Player : MonoBehaviour {
 	void UpdateHandPhysics () {
 		// Left Hand
 		if (grabbedRigidbodyLeft != null) {
-			itemVelocityPercentageLeft = Mathf.Clamp01(itemVelocityPercentageLeft + Time.deltaTime * 5f);
+			itemVelocityPercentageLeft = Mathf.Clamp01(itemVelocityPercentageLeft + Time.deltaTime * 2f);
 		} else {
 			itemVelocityPercentageLeft = Mathf.Clamp01(itemVelocityPercentageLeft - Time.deltaTime * 10);
 		}
@@ -786,7 +825,7 @@ public class Player : MonoBehaviour {
 
 		// Right Hand
 		if (grabbedRigidbodyRight != null) {
-			itemVelocityPercentageRight = Mathf.Clamp01(itemVelocityPercentageRight + Time.deltaTime * 5f);
+			itemVelocityPercentageRight = Mathf.Clamp01(itemVelocityPercentageRight + Time.deltaTime * 2f);
 		} else {
 			itemVelocityPercentageRight = Mathf.Clamp01(itemVelocityPercentageRight - Time.deltaTime * 10);
 		}
@@ -826,17 +865,17 @@ public class Player : MonoBehaviour {
 				angleItem -= 360;
 			}
 
-			grabbedRigidbodyLeft.velocity = Vector3.ClampMagnitude(((controllerDominant.transform.position + (dualWieldDirectionChangeRotation * controllerDominant.transform.rotation * ((grabDualWieldDominantHand == "Left") ? grabOffsetLeft : grabOffsetRight))) - grabbedItemDominant.transform.position) / Time.fixedDeltaTime, (grabbedItemDominant.GetComponent<HingeJoint>()) ? 1 : 100) * Mathf.Lerp(itemVelocityPercentageLeft, itemVelocityPercentageRight, 0.5f);
+			grabbedRigidbodyLeft.velocity = Vector3.Lerp(grabbedRigidbodyLeft.velocity, Vector3.ClampMagnitude(((controllerDominant.transform.position + (dualWieldDirectionChangeRotation * controllerDominant.transform.rotation * ((grabDualWieldDominantHand == "Left") ? grabOffsetLeft : grabOffsetRight))) - grabbedItemDominant.transform.position) / Time.fixedDeltaTime, (grabbedItemDominant.GetComponent<HingeJoint>()) ? 1 : 100) * Mathf.Lerp(itemVelocityPercentageLeft, itemVelocityPercentageRight, 0.5f), Mathf.Clamp01(50 * Time.deltaTime));
 
 			if (angleItem != float.NaN) {
 				grabbedRigidbodyLeft.maxAngularVelocity = Mathf.Infinity;
-				grabbedRigidbodyLeft.angularVelocity = (angleItem * axisItem) * Mathf.Lerp(itemVelocityPercentageLeft, itemVelocityPercentageRight, 0.5f) * 0.95f;
+				grabbedRigidbodyLeft.angularVelocity = Vector3.Lerp(grabbedRigidbodyLeft.angularVelocity, (angleItem * axisItem) * Mathf.Lerp(itemVelocityPercentageLeft, itemVelocityPercentageRight, 0.5f) * 0.95f, Mathf.Clamp01(50 * Time.deltaTime));
 			}
 		} else {
 			// Item Physics - Left
 			if (grabbedRigidbodyLeft != null) {
 				if (grabbedRigidbodyLeft.gameObject.layer == LayerMask.NameToLayer("Item")) {
-					grabbedRigidbodyLeft.velocity = Vector3.ClampMagnitude(((controllerLeft.transform.position + (controllerLeft.transform.rotation * grabOffsetLeft)) - grabbedRigidbodyLeft.transform.position) / Time.fixedDeltaTime, (grabbedRigidbodyLeft.GetComponent<HingeJoint>()) ? 1 : 100) * itemVelocityPercentageLeft;
+					grabbedRigidbodyLeft.velocity = Vector3.Lerp(grabbedRigidbodyLeft.velocity, Vector3.ClampMagnitude(((controllerLeft.transform.position + (controllerLeft.transform.rotation * grabOffsetLeft)) - grabbedRigidbodyLeft.transform.position) / Time.fixedDeltaTime, (grabbedRigidbodyLeft.GetComponent<HingeJoint>()) ? 1 : 100) * itemVelocityPercentageLeft, Mathf.Clamp01(50 * Time.deltaTime));
 
 					if (!grabbedRigidbodyLeft.GetComponent<HingeJoint>()) {
 						Quaternion rotationDeltaItemLeft = (controllerLeft.transform.rotation * grabRotationLeft) * Quaternion.Inverse(grabbedRigidbodyLeft.transform.rotation);
@@ -849,7 +888,7 @@ public class Player : MonoBehaviour {
 
 						if (angleItemLeft != float.NaN) {
 							grabbedRigidbodyLeft.maxAngularVelocity = Mathf.Infinity;
-							grabbedRigidbodyLeft.angularVelocity = (angleItemLeft * axisItemLeft) * itemVelocityPercentageLeft * 0.95f;
+							grabbedRigidbodyLeft.angularVelocity = Vector3.Lerp(grabbedRigidbodyLeft.angularVelocity, (angleItemLeft * axisItemLeft) * itemVelocityPercentageLeft * 0.95f, Mathf.Clamp01(50 * Time.deltaTime));
 						}
 					}
 				} else {
@@ -862,7 +901,7 @@ public class Player : MonoBehaviour {
 			if (grabbedRigidbodyRight != null) {
 				if (grabbedRigidbodyRight.gameObject.layer == LayerMask.NameToLayer("Item")) {
 					//grabbedRigidbodyRight.velocity = Vector3.Lerp(grabbedRigidbodyRight.velocity, Vector3.ClampMagnitude(((controllerRight.transform.position + (controllerRight.transform.rotation * grabOffsetRight)) - grabbedRigidbodyRight.transform.position) / Time.fixedDeltaTime, (grabbedRigidbodyRight.GetComponent<HingeJoint>()) ? 1 : 100), itemVelocityPercentageRight);
-					grabbedRigidbodyRight.velocity = Vector3.ClampMagnitude(((controllerRight.transform.position + (controllerRight.transform.rotation * grabOffsetRight)) - grabbedRigidbodyRight.transform.position) / Time.fixedDeltaTime, (grabbedRigidbodyRight.GetComponent<HingeJoint>()) ? 1 : 100) * itemVelocityPercentageRight;
+					grabbedRigidbodyRight.velocity = Vector3.Lerp(grabbedRigidbodyRight.velocity, Vector3.ClampMagnitude(((controllerRight.transform.position + (controllerRight.transform.rotation * grabOffsetRight)) - grabbedRigidbodyRight.transform.position) / Time.fixedDeltaTime, (grabbedRigidbodyRight.GetComponent<HingeJoint>()) ? 1 : 100) * itemVelocityPercentageRight, Mathf.Clamp01(50 * Time.deltaTime));
 
 					if (!grabbedRigidbodyRight.GetComponent<HingeJoint>()) {
 						Quaternion rotationDeltaItemRight = (controllerRight.transform.rotation * grabRotationRight) * Quaternion.Inverse(grabbedRigidbodyRight.transform.rotation);
@@ -875,7 +914,7 @@ public class Player : MonoBehaviour {
 
 						if (angleItemRight != float.NaN) {
 							grabbedRigidbodyRight.maxAngularVelocity = Mathf.Infinity;
-							grabbedRigidbodyRight.angularVelocity = (angleItemRight * axisItemRight) * itemVelocityPercentageRight * 0.95f;
+							grabbedRigidbodyRight.angularVelocity = Vector3.Lerp(grabbedRigidbodyRight.angularVelocity, (angleItemRight * axisItemRight) * itemVelocityPercentageRight * 0.95f, Mathf.Clamp01(50 * Time.deltaTime));
 						}
 					}
 				} else {

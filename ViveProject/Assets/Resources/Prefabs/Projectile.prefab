@@ -200,7 +200,7 @@ TrailRenderer:
     numCapVertices: 3
     alignment: 0
     textureMode: 0
-  m_MinVertexDistance: 0.1
+  m_MinVertexDistance: 0
   m_Autodestruct: 0
 --- !u!108 &108419338256827572
 Light:
