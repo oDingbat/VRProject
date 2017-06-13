@@ -207,6 +207,14 @@ public class Player : MonoBehaviour {
 				handRight.GetComponent<BoxCollider>().enabled = true;
 			}
 
+			if (controllerDeviceLeft.GetHairTriggerDown() || (controllerDeviceLeft.GetHairTrigger() && grabbedItemLeft.weapon.automatic)) {
+				InteractLeft();
+			}
+
+			if (controllerDeviceRight.GetHairTriggerDown() || (controllerDeviceRight.GetHairTrigger() && grabbedItemRight.weapon.automatic)) {
+				InteractRight();
+			}
+
 			if (padPressed == true) {
 				if (!controllerDeviceLeft.GetPress(SteamVR_Controller.ButtonMask.Touchpad) && controllerDeviceLeft.GetAxis(Valve.VR.EVRButtonId.k_EButton_SteamVR_Touchpad) == Vector2.zero) {
 					//padPressed = false;
@@ -558,6 +566,37 @@ public class Player : MonoBehaviour {
 		climbableGrabbedRight = null;
 		grabbedRigidbodyRight = null;
 		grabNodeRight = null;
+	}
+
+	void InteractLeft () {
+		if (grabNodeLeft != null) {
+			if (grabNodeLeft.interactionType == GrabNode.InteractionType.Trigger) {
+				AttemptToFireWeapon(grabbedItemLeft);
+			}
+		}
+	}
+
+	void InteractRight () {
+		if (grabNodeRight != null) {
+			if (grabNodeRight.interactionType == GrabNode.InteractionType.Trigger) {
+				AttemptToFireWeapon (grabbedItemRight);
+			}
+		}
+	}
+
+	void AttemptToFireWeapon (Item currentItem) {
+		Weapon currentWeapon = currentItem.weapon;
+		if (currentWeapon.timeLastFired + (1 / currentWeapon.firerate) <= Time.timeSinceLevelLoad) {
+			currentWeapon.timeLastFired = Time.timeSinceLevelLoad;
+			FireWeapon(currentItem);
+		}
+	}
+
+	void FireWeapon(Item currentItem) {
+		Weapon currentWeapon = currentItem.weapon;
+		Transform barrel = currentItem.transform.Find("(Barrel Point)");
+		GameObject newProjectile = (GameObject)Instantiate(currentWeapon.projectile, barrel.position + barrel.forward * 0.2f, currentItem.transform.rotation);
+		newProjectile.GetComponent<Projectile>().velocity = currentWeapon.projectileVelocity;
 	}
 
 	void AttemptClamber () {

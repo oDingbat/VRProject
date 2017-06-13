@@ -11,6 +11,7 @@ public class Projectile : MonoBehaviour {
 
 	float				distanceLeft = 0;
 	bool				broken;
+	bool				firstFrameLoaded;
 
 	void Start () {
 		StartCoroutine(AutoDestroy());
@@ -22,8 +23,12 @@ public class Projectile : MonoBehaviour {
 	}
 
 	void Update () {
-		distanceLeft = velocity * Time.deltaTime;
-		AttemptMove();
+		if (firstFrameLoaded == true) {
+			distanceLeft = velocity * Time.deltaTime;
+			AttemptMove();
+		} else {
+			firstFrameLoaded = true;
+		}
 	}
 
 	void AttemptMove () {

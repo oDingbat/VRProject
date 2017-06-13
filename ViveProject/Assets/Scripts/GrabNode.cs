@@ -4,14 +4,15 @@ using UnityEngine;
 
 public class GrabNode : MonoBehaviour {
 
-	public Vector3		rotation;
-	public Vector3		offset;
-	public GrabNode		referralNode;
-	public int			dominance;
+	public Vector3			rotation;
+	public Vector3			offset;
+	public GrabNode			referralNode;
+	public int				dominance;
 
-	public GrabType		grabType;
-	public enum			GrabType { FixedPositionRotation, FixedPosition, Dynamic, Referral }
-
+	public GrabType			grabType;
+	public enum				GrabType { FixedPositionRotation, FixedPosition, Dynamic, Referral }
+	public InteractionType	interactionType;
+	public enum				InteractionType { None, Trigger }
 
 	void OnDrawGizmosSelected() {
 		if (referralNode == null) {
