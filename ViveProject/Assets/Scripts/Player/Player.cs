@@ -39,45 +39,41 @@ public class Player : MonoBehaviour {
 	public Vector3					positionLastFootstepPlayed;
 
 	// States for the hands
-	public Transform				climbableGrabbedLeft;
-	public Transform				climbableGrabbedRight;
-	public Rigidbody				grabbedRigidbodyLeft;
-	public Rigidbody				grabbedRigidbodyRight;
-	public Item						grabbedItemLeft;
-	public Item						grabbedItemRight;
-	public GrabNode					grabNodeLeft;
-	public GrabNode					grabNodeRight;
-	public Quaternion				grabRotationLeft;
-	public Quaternion				grabRotationRight;
-	public Quaternion				grabRotationLastFrameLeft;
-	public Quaternion				grabRotationLastFrameRight;
-	public bool						wasClimbingLastFrame;
-	public Vector3					grabOffsetLeft;
-	public Vector3					grabOffsetRight;
-	public Vector3					grabCCOffsetLeft;
-	public Vector3					grabCCOffsetRight;
+	public Transform				climbableGrabbedLeft;				// The transform of the climbable object being currently grabbed by the left hand
+	public Transform				climbableGrabbedRight;				// The transform of the climbable object being currently grabbed by the right hand
+	public Rigidbody				grabbedRigidbodyLeft;				// The rigidbody of the object being currently grabbed by the left hand
+	public Rigidbody				grabbedRigidbodyRight;              // The rigidbody of the object being currently grabbed by the right hand
+	public Item						grabbedItemLeft;                    // The Item component of the object being currently grabbed by the left hand			// TODO: Make all of these variables not public
+	public Item						grabbedItemRight;                   // The Item component of the object being currently grabbed by the right hand
+	public GrabNode					grabNodeLeft;						// The grabNode of the object currently grabbed by the left hand (for item objects)
+	public GrabNode					grabNodeRight;                      // The grabNode of the object currently grabbed by the right hand (for item objects)
+	public Quaternion				grabRotationLeft;                   // This value is used differently depending on the case. If grabbing an item, it stores the desired rotation of the item relative to the hand's rotation. If grabbing a climbable object, it stores the rotation of the object when first grabbed.
+	public Quaternion				grabRotationRight;					// ^ ^
+	public Quaternion				grabRotationLastFrameLeft;			// This value is used to record the grabRotation last frame. It is (was) used for an experimental formula which rotates the player along with it's grabbed object's rotation.		// TODO: do we still need these variables?
+	public Quaternion				grabRotationLastFrameRight;			// ^ ^
+	public bool						wasClimbingLastFrame;               // Records whether or not the player was climbing last frame; used for experimental formula which rotates the player along with it's grabbed object's rotation.		// TODO: do we still need this variable?
+	public Vector3					grabOffsetLeft;                     // Used differently depending on the case. If grabbing an item, it stores the offset between the hand and the item which when rotated according to rotationOffset is the desired position of the object. If grabbing a climbable object, it stores the offset between the hand and the grabbed object, to determine the desired position of the player
+	public Vector3					grabOffsetRight;					// ^ ^
+	public Vector3					grabCCOffsetLeft;                   // If grabbing a climbable object, this variable stores the offset between the hand and the character controller, to determine where to move the player to when climbing
+	public Vector3					grabCCOffsetRight;					// ^ ^
 	public Vector3					grabDualWieldDirection;             // The vector3 direction from handDominant to handNonDominant (ie: hand right to left direction normalized)
-	public string					grabDualWieldDominantHand;
-	Vector3							handPosLastFrameLeft;
-	Vector3							handPosLastFrameRight;
-	float							grabRayLength = 0.15f;
-	public Vector3					controllerPosLastFrameLeft;
-	public Vector3					controllerPosLastFrameRight;
-	bool							itemReleasingDisabledLeft;
-	bool							itemReleasingDisabledRight;
+	public string					grabDualWieldDominantHand;			// This value determines, when dual wielding an item, which hand is dominant and thus acts as the main pivot point
+	Vector3							handPosLastFrameLeft;				// Used to determine which direction to throw items
+	Vector3							handPosLastFrameRight;              // Used to determine which direction to throw items
+	public Vector3					controllerPosLastFrameLeft;			// Used to determine the jumping velocity when jumping with the left hand
+	public Vector3					controllerPosLastFrameRight;        // Used to determine the jumping velocity when jumping with the right hand
+	bool							itemReleasingDisabledLeft;			// Used for picking up non-prop items. Used to disable item releasing when first grabbing an item as to make the grip function as a toggle rather than an on/off grab button
+	bool							itemReleasingDisabledRight;         // Used for picking up non-prop items. Used to disable item releasing when first grabbing an item as to make the grip function as a toggle rather than an on/off grab button
 	public float					itemVelocityPercentageLeft;			// When items are first picked up their IVP = 0; over time grabbed approaches 1 linearly; this value determines the magnitude of the velocity (and angularVelocity) of the item
 	public float					itemVelocityPercentageRight;		// When items are first picked up their IVP = 0; over time grabbed approaches 1 linearly; this value determines the magnitude of the velocity (and angularVelocity) of the item
 
 	// The player's characterController, used to move the player
-	public CharacterController		characterController;
-	public CharacterController		headCC;
-	public GameObject				verticalPusher;
-	public Vector3					hmdNeckPosition;
-	public Transform				neck;
-	public float					leanDistance;
-	public float					currentVerticalHeadOffset;
-	float							maxLeanDistance = 0.375f;
-	public float					heightCurrent;
+	public CharacterController		characterController;				// The main character controller, used for player movement and velocity calculations
+	public CharacterController		headCC;								// The player's head's character controller, used for mantling over cover, climbing in small spaces, and for detecting collision in walls, ceilings, and floors.
+	public GameObject				verticalPusher;						// Used to push the player's head vertically. This is useful for when a player tries to stand in an inclosed space or duck down into an object. It will keep the player's head from clipping through geometry.
+	public float					leanDistance;						// The current distance the player is leaning. See maxLeanDistance.
+	float							maxLeanDistance = 0.375f;           // The value used to determine how far the player can lean over cover/obstacles. Once the player moves past the leanDistance he/she will be pulled back via rig movement.
+	public float					heightCurrent;						// The current height of the hmd from the rig
 	float							heightCutoffStanding = 1f;			// If the player is standing above this height, they are considered standing
 	float							heightCutoffCrouching = 0.5f;		// If the player is standing avove this height but below the standingCutoff, they are crouching
 																		// If the player is below the crouchingCutoff then they are laying
@@ -165,6 +161,7 @@ public class Player : MonoBehaviour {
 	void UpdateControllerInput () {
 		if (controllerDeviceLeft.index != 0 && controllerDeviceRight.index != 0) {
 
+			// Controller Left: Grip Down
 			if (controllerDeviceLeft.GetPressDown(Valve.VR.EVRButtonId.k_EButton_Grip)) {
 				if (grabbedRigidbodyLeft == true && grabbedItemLeft && grabbedItemLeft.itemType != Item.ItemType.Prop) {
 					itemReleasingDisabledLeft = false;
@@ -175,10 +172,12 @@ public class Player : MonoBehaviour {
 				handLeft.GetComponent<BoxCollider>().enabled = false;
 			}
 
+			// Controller Left: Grip Being Held
 			if (controllerDeviceLeft.GetPress(Valve.VR.EVRButtonId.k_EButton_Grip)) {
 				GrabLeft();
 			}
 
+			// Controller Left: Grip Up
 			if (controllerDeviceLeft.GetPressUp(Valve.VR.EVRButtonId.k_EButton_Grip)) {
 				if (grabbedRigidbodyLeft == false || ((grabbedItemLeft && grabbedItemLeft.itemType == Item.ItemType.Prop) || itemReleasingDisabledLeft == false)) {
 					ReleaseLeft();
@@ -186,6 +185,7 @@ public class Player : MonoBehaviour {
 				handLeft.GetComponent<BoxCollider>().enabled = true;
 			}
 
+			// Controller Right: Grip Down
 			if (controllerDeviceRight.GetPressDown(Valve.VR.EVRButtonId.k_EButton_Grip)) {
 				if (grabbedRigidbodyRight == true && grabbedItemRight && grabbedItemRight.itemType != Item.ItemType.Prop) {
 					itemReleasingDisabledRight = false;
@@ -196,10 +196,12 @@ public class Player : MonoBehaviour {
 				handRight.GetComponent<BoxCollider>().enabled = false;
 			}
 
+			// Controller Right: Grip Being Held
 			if (controllerDeviceRight.GetPress(Valve.VR.EVRButtonId.k_EButton_Grip)) {
 				GrabRight();
 			}
 
+			// Controller Right: Grip Up
 			if (controllerDeviceRight.GetPressUp(Valve.VR.EVRButtonId.k_EButton_Grip)) {
 				if (grabbedRigidbodyRight == false || ((grabbedItemRight && grabbedItemRight.itemType == Item.ItemType.Prop) || itemReleasingDisabledRight == false)) {
 					ReleaseRight();
