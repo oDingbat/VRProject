@@ -34,6 +34,7 @@ public class Player : MonoBehaviour {
 	Vector3							handRigidbodyPositionOffset = new Vector3(-0.02f, -0.025f, -0.075f);
 
 	// Audio Sources
+	public AudioManager				audioManager;
 	public AudioSource				windLoop;
 	public AudioSource				footstep;
 	public Vector3					positionLastFootstepPlayed;
@@ -115,6 +116,7 @@ public class Player : MonoBehaviour {
 		characterController = GetComponent<CharacterController>();          // Grab the character controller at the start
 		handRigidbodyLeft = handLeft.GetComponent<Rigidbody>();
 		handRigidbodyRight = handRight.GetComponent<Rigidbody>();
+		audioManager = GameObject.Find("AudioManager").GetComponent<AudioManager>();
 		entity = GetComponent<Entity>();
 		Debug.Log("Vitals");
 		StartCoroutine(UpdateVitals());
@@ -310,6 +312,8 @@ public class Player : MonoBehaviour {
 			Collider[] itemColliders = Physics.OverlapSphere(originPosition, 0.2f, grabLayerMask);
 			foreach (Collider hitItem in itemColliders) {
 				if (hitItem.transform.gameObject.layer == LayerMask.NameToLayer("Item") || hitItem.transform.gameObject.layer == LayerMask.NameToLayer("Heavy Item")) {
+					StartCoroutine(TriggerHapticFeedback(controllerDeviceLeft, 0.1f));
+
 					if (hitItem.transform.GetComponent<Rigidbody>()) {
 						grabbedRigidbodyLeft = hitItem.transform.GetComponent<Rigidbody>();
 					} else if (hitItem.transform.parent.GetComponent<Rigidbody>()) {
@@ -426,7 +430,7 @@ public class Player : MonoBehaviour {
 		}
 		if (jumpLoadedLeft == true) {
 			if ((grounded == true || timeLastJumped + 0.1f > Time.timeSinceLevelLoad) && climbableGrabbedLeft == false && grabbedRigidbodyLeft == false) {
-				velocityCurrent += Vector3.ClampMagnitude((controllerPosLastFrameLeft - controllerLeft.transform.position) * 500, (timeLastJumped + 0.1f > Time.timeSinceLevelLoad) ? 1f : 4f);
+				velocityCurrent += Vector3.ClampMagnitude((controllerPosLastFrameLeft - controllerLeft.transform.position) * 500, (timeLastJumped + 0.1f > Time.timeSinceLevelLoad) ? 1f : 150f);
 				jumpLoadedLeft = false;
 				if (grounded == true) { timeLastJumped = Time.timeSinceLevelLoad; }
 			}
@@ -442,26 +446,46 @@ public class Player : MonoBehaviour {
 			// Try and grab something
 			Vector3 originPosition = controllerRight.transform.position + (controllerRight.transform.rotation * new Vector3(-handRigidbodyPositionOffset.x, handRigidbodyPositionOffset.y, handRigidbodyPositionOffset.z));
 			Collider[] itemColliders = Physics.OverlapSphere(originPosition, 0.2f, grabLayerMask);
-			foreach (Collider hitItem in itemColliders) {
-				if (hitItem.transform.gameObject.layer == LayerMask.NameToLayer("Item") || hitItem.transform.gameObject.layer == LayerMask.NameToLayer("Heavy Item")) {
-					if (hitItem.transform.GetComponent<Rigidbody>()) {
-						grabbedRigidbodyRight = hitItem.transform.GetComponent<Rigidbody>();
-					} else if (hitItem.transform.parent.GetComponent<Rigidbody>()) {
-						grabbedRigidbodyRight = hitItem.transform.parent.GetComponent<Rigidbody>();
-					} else if (hitItem.transform.parent.parent.GetComponent<Rigidbody>()) {
-						grabbedRigidbodyRight = hitItem.transform.parent.parent.GetComponent<Rigidbody>();
+			if (itemColliders.Length > 0) {
+				Collider hitItemClosest = itemColliders[0];
+				float closestDistance = Mathf.Infinity;
+				foreach (Collider hitItem in itemColliders) {
+					GrabNode hitItemClass = null;
+					if (hitItem.GetComponent<GrabNode>()) {
+						hitItemClass = hitItem.GetComponent<GrabNode>();
+						if (Vector3.Distance(hitItem.transform.position + (hitItem.transform.parent.parent.rotation * hitItemClass.offset), controllerRight.transform.position) < closestDistance) {
+							hitItemClosest = hitItem;
+							closestDistance = Vector3.Distance(hitItem.transform.position + (hitItem.transform.parent.parent.rotation * hitItemClass.offset), controllerRight.transform.position);
+						}
+					} else {
+						if (Vector3.Distance(hitItem.transform.position, controllerRight.transform.position) < closestDistance) {
+							hitItemClosest = hitItem;
+							closestDistance = Vector3.Distance(hitItem.transform.position, controllerRight.transform.position);
+						}
+					}
+				}
+
+				if (hitItemClosest.transform.gameObject.layer == LayerMask.NameToLayer("Item") || hitItemClosest.transform.gameObject.layer == LayerMask.NameToLayer("Heavy Item")) {
+					StartCoroutine(TriggerHapticFeedback(controllerDeviceRight, 0.1f));
+
+					if (hitItemClosest.transform.GetComponent<Rigidbody>()) {
+						grabbedRigidbodyRight = hitItemClosest.transform.GetComponent<Rigidbody>();
+					} else if (hitItemClosest.transform.parent.GetComponent<Rigidbody>()) {
+						grabbedRigidbodyRight = hitItemClosest.transform.parent.GetComponent<Rigidbody>();
+					} else if (hitItemClosest.transform.parent.parent.GetComponent<Rigidbody>()) {
+						grabbedRigidbodyRight = hitItemClosest.transform.parent.parent.GetComponent<Rigidbody>();
 					}
 					
-					if (hitItem.transform.GetComponent<Item>()) {
-						grabbedItemRight = hitItem.transform.GetComponent<Item>();
-					} else if (hitItem.transform.parent.GetComponent<Item>()) {
-						grabbedItemRight = hitItem.transform.parent.GetComponent<Item>();
-					} else if (hitItem.transform.parent.parent.GetComponent<Item>()) {
-						grabbedItemRight = hitItem.transform.parent.parent.GetComponent<Item>();
+					if (hitItemClosest.transform.GetComponent<Item>()) {
+						grabbedItemRight = hitItemClosest.transform.GetComponent<Item>();
+					} else if (hitItemClosest.transform.parent.GetComponent<Item>()) {
+						grabbedItemRight = hitItemClosest.transform.parent.GetComponent<Item>();
+					} else if (hitItemClosest.transform.parent.parent.GetComponent<Item>()) {
+						grabbedItemRight = hitItemClosest.transform.parent.parent.GetComponent<Item>();
 					}
 
 					if (grabbedRigidbodyRight.transform.gameObject.layer == LayerMask.NameToLayer("Item")) {
-						GrabNode hitGrabNode = hitItem.GetComponent<GrabNode>();
+						GrabNode hitGrabNode = hitItemClosest.GetComponent<GrabNode>();
 						if (hitGrabNode) {
 							if (hitGrabNode.referralNode == null) {
 								grabNodeRight = hitGrabNode;
@@ -560,7 +584,7 @@ public class Player : MonoBehaviour {
 		}
 		if (jumpLoadedRight == true) {
 			if ((grounded == true || timeLastJumped + 0.1f > Time.timeSinceLevelLoad) && climbableGrabbedRight == false && grabbedRigidbodyRight == false) {
-				velocityCurrent += Vector3.ClampMagnitude((controllerPosLastFrameRight - controllerRight.transform.position) * 500, (timeLastJumped + 0.1f > Time.timeSinceLevelLoad) ? 1f : 4f);
+				velocityCurrent += Vector3.ClampMagnitude((controllerPosLastFrameRight - controllerRight.transform.position) * 500, (timeLastJumped + 0.1f > Time.timeSinceLevelLoad) ? 1f : 150f);
 				jumpLoadedRight = false;
 				if (grounded == true) { timeLastJumped = Time.timeSinceLevelLoad; }
 			}
@@ -575,7 +599,7 @@ public class Player : MonoBehaviour {
 	void InteractLeft () {
 		if (grabNodeLeft != null) {
 			if (grabNodeLeft.interactionType == GrabNode.InteractionType.Trigger) {
-				AttemptToFireWeapon("left", grabbedItemLeft);
+				AttemptToFireWeapon("Left", grabbedItemLeft);
 			}
 		}
 	}
@@ -583,7 +607,7 @@ public class Player : MonoBehaviour {
 	void InteractRight () {
 		if (grabNodeRight != null) {
 			if (grabNodeRight.interactionType == GrabNode.InteractionType.Trigger) {
-				AttemptToFireWeapon ("right", grabbedItemRight);
+				AttemptToFireWeapon ("Right", grabbedItemRight);
 			}
 		}
 	}
@@ -591,8 +615,8 @@ public class Player : MonoBehaviour {
 	void AttemptToFireWeapon (string hand, Item currentItem) {
 		Weapon currentWeapon = currentItem.weapon;
 		if (currentWeapon.timeLastFired + (1 / currentWeapon.firerate) <= Time.timeSinceLevelLoad) {
-			currentWeapon.timeLastFired = Time.timeSinceLevelLoad;
 			StartCoroutine(FireWeapon(hand, currentItem));
+			currentWeapon.timeLastFired = Time.timeSinceLevelLoad;
 		}
 	}
 
@@ -601,23 +625,60 @@ public class Player : MonoBehaviour {
 		Rigidbody currentRigidbody = currentItem.transform.GetComponent<Rigidbody>();
 		Transform barrel = currentItem.transform.Find("(Barrel Point)");
 		
-		for (int i = 0; i < Mathf.Clamp(currentWeapon.burstCount, 1, 100); i++) {
+		for (int i = 0; i < Mathf.Clamp(currentWeapon.burstCount, 1, 100); i++) {           // For each burst shot in this fire
+			
+			// Step 1: Trigger haptic feedback
+			if (grabbedRigidbodyLeft == grabbedRigidbodyRight) {
+				StartCoroutine(TriggerHapticFeedback(controllerDeviceLeft, 0.1f));
+				StartCoroutine(TriggerHapticFeedback(controllerDeviceRight, 0.1f));
+			} else {
+				StartCoroutine(TriggerHapticFeedback((hand == "Left" ? controllerDeviceLeft : controllerDeviceRight), 0.1f));
+			}
+
+			// Step 2: Apply velocity and angular velocity to weapon
 			if (grabbedItemLeft == grabbedItemRight) {
 				itemVelocityPercentageLeft = 0f;
 				itemVelocityPercentageRight = 0f;
-				currentRigidbody.velocity += (currentRigidbody.transform.forward * -currentWeapon.kickLinear * 0.5f);
-				currentRigidbody.angularVelocity += new Vector3(Random.Range(-currentWeapon.kickAngular, currentWeapon.kickAngular), Random.Range(-currentWeapon.kickAngular, currentWeapon.kickAngular), Random.Range(-currentWeapon.kickAngular, currentWeapon.kickAngular)) * 0.5f;
+				currentRigidbody.velocity += (currentRigidbody.transform.forward * -currentWeapon.recoilLinear * 0.5f);
+				currentRigidbody.angularVelocity += new Vector3(Random.Range(-currentWeapon.recoilAngular, currentWeapon.recoilAngular), Random.Range(-currentWeapon.recoilAngular, currentWeapon.recoilAngular), Random.Range(-currentWeapon.recoilAngular, currentWeapon.recoilAngular)) * 0.5f;
 			} else {
-				currentRigidbody.velocity += (currentRigidbody.transform.forward * -currentWeapon.kickLinear);
-				currentRigidbody.angularVelocity += new Vector3(Random.Range(-currentWeapon.kickAngular, currentWeapon.kickAngular), Random.Range(-currentWeapon.kickAngular, currentWeapon.kickAngular), Random.Range(-currentWeapon.kickAngular, currentWeapon.kickAngular));
-				if (hand == "left") {
+				currentRigidbody.velocity += (currentRigidbody.transform.forward * -currentWeapon.recoilLinear);
+				currentRigidbody.angularVelocity += new Vector3(Random.Range(-currentWeapon.recoilAngular, currentWeapon.recoilAngular), Random.Range(-currentWeapon.recoilAngular, currentWeapon.recoilAngular), Random.Range(-currentWeapon.recoilAngular, currentWeapon.recoilAngular));
+				if (hand == "Left") {
 					itemVelocityPercentageLeft = 0;
-				} else if (hand == "right") {
+				} else if (hand == "Right") {
 					itemVelocityPercentageRight = 0;
 				}
 			}
-			GameObject newProjectile = (GameObject)Instantiate(currentWeapon.projectile, barrel.position + barrel.forward * 0.2f, currentItem.transform.rotation);
-			newProjectile.GetComponent<Projectile>().velocity = currentWeapon.projectileVelocity;
+
+			// Step 3: Adjust weapon accuracy & get random accuracy
+			currentWeapon.accuracyCurrent = Mathf.Clamp(currentWeapon.accuracyCurrent - currentWeapon.accuracyDecrement, currentWeapon.accuracyMin, currentWeapon.accuracyMax);
+			float angleMax = Mathf.Abs(currentWeapon.accuracyCurrent - 1) * 5f;
+			Quaternion randomAccuracy = Quaternion.Euler(Random.Range(-angleMax, angleMax), Random.Range(-angleMax, angleMax), Random.Range(-angleMax, angleMax));
+
+			for (int j = 0; (j < currentWeapon.projectileSpreads.Length || (currentWeapon.projectileSpreads.Length == 0 && j == 0)); j++) {
+
+				// Step 5: Get random spread deviations
+				Quaternion projectileSpreadDeviation = Quaternion.Euler(Random.Range(-currentWeapon.projectileSpreadDeviation, currentWeapon.projectileSpreadDeviation), Random.Range(-currentWeapon.projectileSpreadDeviation, currentWeapon.projectileSpreadDeviation), 0);
+
+				// Step 4: Create new projectile
+				GameObject newProjectile = (GameObject)Instantiate(currentWeapon.projectile, barrel.position + barrel.forward * 0.2f, currentItem.transform.rotation * randomAccuracy);
+				if (currentWeapon.projectileSpreads.Length > 0) {
+					if (currentWeapon.projectileSpreadType == Weapon.SpreadType.Circular) {
+						newProjectile.transform.rotation *= projectileSpreadDeviation * Quaternion.Euler(0, 0, currentWeapon.projectileSpreads[j].x) * Quaternion.Euler(currentWeapon.projectileSpreads[j].y, 0, 0);
+					} else {
+						newProjectile.transform.rotation *= Quaternion.Euler(currentWeapon.projectileSpreads[j].y, currentWeapon.projectileSpreads[j].x, 0);
+					}
+				}
+				Projectile newProjectileClass = newProjectile.GetComponent<Projectile>();
+				newProjectileClass.velocity = currentWeapon.projectileVelocity;
+				newProjectileClass.deceleration = currentWeapon.projectileDeceleration;
+				newProjectileClass.decelerationType = currentWeapon.projectileDecelerationType;
+				newProjectileClass.ricochetCount = currentWeapon.projectileRicochetCount;
+				newProjectileClass.ricochetAngleMax = currentWeapon.projectileRicochetAngleMax;
+				audioManager.PlayClipAtPoint(currentWeapon.soundFireNormal, barrel.position, 2f);
+
+			}
 			yield return new WaitForSeconds(currentWeapon.burstDelay);
 		}
 	}
@@ -850,7 +911,7 @@ public class Player : MonoBehaviour {
 
 		// Item Physics
 		if (grabbedRigidbodyLeft != null && grabbedRigidbodyLeft == grabbedRigidbodyRight) {
-			// Dual Wielding
+			// Physics - Dual Wielding
 			Rigidbody grabbedItemDominant = (grabDualWieldDominantHand == "Left") ? grabbedRigidbodyLeft : grabbedRigidbodyRight;
 			SteamVR_TrackedObject controllerDominant = (grabDualWieldDominantHand == "Left") ? controllerLeft : controllerRight;
 
@@ -873,8 +934,12 @@ public class Player : MonoBehaviour {
 				grabbedRigidbodyLeft.maxAngularVelocity = Mathf.Infinity;
 				grabbedRigidbodyLeft.angularVelocity = Vector3.Lerp(grabbedRigidbodyLeft.angularVelocity, (angleItem * axisItem) * Mathf.Lerp(itemVelocityPercentageLeft, itemVelocityPercentageRight, 0.5f) * 0.95f, Mathf.Clamp01(50 * Time.deltaTime));
 			}
+
+			// Accuracy - Dual Wield
+			grabbedItemLeft.weapon.accuracyCurrent = Mathf.Clamp(grabbedItemLeft.weapon.accuracyCurrent + (grabbedItemLeft.weapon.accuracyIncrement * Time.deltaTime), grabbedItemLeft.weapon.accuracyMin, grabbedItemLeft.weapon.accuracyMax);
+
 		} else {
-			// Item Physics - Left
+			// Physics - Left
 			if (grabbedRigidbodyLeft != null) {
 				if (grabbedRigidbodyLeft.gameObject.layer == LayerMask.NameToLayer("Item")) {
 					grabbedRigidbodyLeft.velocity = Vector3.Lerp(grabbedRigidbodyLeft.velocity, Vector3.ClampMagnitude(((controllerLeft.transform.position + (controllerLeft.transform.rotation * grabOffsetLeft)) - grabbedRigidbodyLeft.transform.position) / Time.fixedDeltaTime, (grabbedRigidbodyLeft.GetComponent<HingeJoint>()) ? 1 : 100) * itemVelocityPercentageLeft, Mathf.Clamp01(50 * Time.deltaTime));
@@ -899,7 +964,12 @@ public class Player : MonoBehaviour {
 				}
 			}
 
-			// Item Physics - Right
+			// Accuracy - Left
+			if (grabbedItemLeft) {
+				grabbedItemLeft.weapon.accuracyCurrent = Mathf.Clamp(grabbedItemLeft.weapon.accuracyCurrent + (grabbedItemLeft.weapon.accuracyIncrement * Time.deltaTime), grabbedItemLeft.weapon.accuracyMin, grabbedItemLeft.weapon.accuracyMax);
+			}
+			
+			// Physics - Right
 			if (grabbedRigidbodyRight != null) {
 				if (grabbedRigidbodyRight.gameObject.layer == LayerMask.NameToLayer("Item")) {
 					//grabbedRigidbodyRight.velocity = Vector3.Lerp(grabbedRigidbodyRight.velocity, Vector3.ClampMagnitude(((controllerRight.transform.position + (controllerRight.transform.rotation * grabOffsetRight)) - grabbedRigidbodyRight.transform.position) / Time.fixedDeltaTime, (grabbedRigidbodyRight.GetComponent<HingeJoint>()) ? 1 : 100), itemVelocityPercentageRight);
@@ -922,6 +992,11 @@ public class Player : MonoBehaviour {
 				} else {
 					grabbedRigidbodyRight.AddForceAtPosition((controllerRight.transform.position - (grabbedRigidbodyRight.transform.position + (grabbedRigidbodyRight.transform.rotation * grabOffsetRight))) * (grabbedRigidbodyRight.mass * 0.01f) / Time.fixedDeltaTime, (grabbedRigidbodyRight.transform.rotation * grabOffsetRight));
 				}
+			}
+
+			// Accuracy - Right
+			if (grabbedItemRight) {
+				grabbedItemRight.weapon.accuracyCurrent = Mathf.Clamp(grabbedItemRight.weapon.accuracyCurrent + (grabbedItemRight.weapon.accuracyIncrement * Time.deltaTime), grabbedItemRight.weapon.accuracyMin, grabbedItemRight.weapon.accuracyMax);
 			}
 		}
 	}

@@ -40,7 +40,7 @@ GameObject:
   - component: {fileID: 96432531595534036}
   - component: {fileID: 114633387947825098}
   m_Layer: 0
-  m_Name: Projectile
+  m_Name: Projectile Plasma
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -86,7 +86,7 @@ MeshRenderer:
   m_LightProbeUsage: 1
   m_ReflectionProbeUsage: 1
   m_Materials:
-  - {fileID: 2100000, guid: e1b08faf8bfd6194e83f6a3d0bd8ab17, type: 2}
+  - {fileID: 2100000, guid: 0b2a879e160b77e4d8721523acd5110a, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -126,7 +126,7 @@ TrailRenderer:
   m_LightProbeUsage: 0
   m_ReflectionProbeUsage: 0
   m_Materials:
-  - {fileID: 2100000, guid: e1b08faf8bfd6194e83f6a3d0bd8ab17, type: 2}
+  - {fileID: 2100000, guid: 0b2a879e160b77e4d8721523acd5110a, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -169,8 +169,8 @@ TrailRenderer:
       m_RotationOrder: 0
     colorGradient:
       serializedVersion: 2
-      key0: {r: 0.85098046, g: 0.90196085, b: 0.3019608, a: 1}
-      key1: {r: 0.85098046, g: 0.90196085, b: 0.30588236, a: 1}
+      key0: {r: 0.23137257, g: 1, b: 0.6117647, a: 1}
+      key1: {r: 0.20000002, g: 1, b: 0.627451, a: 1}
       key2: {r: 0, g: 0, b: 0, a: 0}
       key3: {r: 0, g: 0, b: 0, a: 0}
       key4: {r: 0, g: 0, b: 0, a: 0}

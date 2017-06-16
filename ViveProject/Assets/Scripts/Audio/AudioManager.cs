@@ -48,6 +48,7 @@ public class AudioManager : MonoBehaviour {
 		jukeboxes[jukeboxIndex].Stop();
 		jukeboxes[jukeboxIndex].transform.position = pos;
 		jukeboxes[jukeboxIndex].clip = clip;
+		jukeboxes[jukeboxIndex].volume = 0.5f;
 		jukeboxes[jukeboxIndex].Play();
 	}
 
