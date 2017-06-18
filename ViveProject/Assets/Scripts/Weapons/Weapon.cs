@@ -11,6 +11,7 @@ public class Weapon {
 	public float						timeLastFired;
 	public int							burstCount;
 	public float						burstDelay;
+	public bool							triggerHeld;
 
 	[Space(10)]
 	[Header("Accuracy Info")]
@@ -26,6 +27,16 @@ public class Weapon {
 	[Header("Recoil Info")]
 	public float						recoilLinear;					// The amount of velocity added to the weapon when fired
 	public float						recoilAngular;					// The amount of angularVelocity added to the weapon when fired
+
+	[Space(10)]
+	[Header("Charge Info")]
+	public bool							chargingEnabled;				// Does the weapon use charging?
+	public float						chargeCurrent;					// The current percentage of charge
+	public float						chargeIncrement;				// The amount charge increases per second
+	public float						chargeDecrement;				// The amount charge decreases per second
+	public float						chargeDecrementPerShot;			// The amount of charge lost once the weapon is fired
+	public float						chargeRequired;					// The amount of charge required to fire
+	public float						chargeInfluenceVelocity;		// The percentage of influence the charge amount has on projectile velocity
 
 	[Space(10)]
 	[Header("Projectile Info")]

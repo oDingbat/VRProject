@@ -4,6 +4,7 @@ using UnityEngine;
 
 public class GrabNode : MonoBehaviour {
 
+
 	public Vector3			rotation;
 	public Vector3			offset;
 	public GrabNode			referralNode;

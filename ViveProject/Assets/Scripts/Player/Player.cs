@@ -109,7 +109,6 @@ public class Player : MonoBehaviour {
 	 * step 8: Check again if we can compensate for leanDistance
 	 * step 9: Move camera rig to compensate
 	 * 
-	 * 
 	 */
 
 	void Start () {
@@ -211,12 +210,36 @@ public class Player : MonoBehaviour {
 				handRight.GetComponent<BoxCollider>().enabled = true;
 			}
 
-			if (controllerDeviceLeft.GetHairTriggerDown() || (controllerDeviceLeft.GetHairTrigger() && grabbedItemLeft.weapon.automatic)) {
-				InteractLeft();
+			if (grabbedItemLeft != null && grabNodeLeft != null) {
+				if (controllerDeviceLeft.GetHairTriggerDown()) {
+					InteractDown("Left", grabbedItemLeft);
+				}
+
+				if (controllerDeviceLeft.GetHairTriggerUp()) {
+					InteractUp("Left", grabbedItemLeft);
+				}
+
+				if (controllerDeviceLeft.GetHairTrigger()) {
+					InteractHold("Left", grabbedItemLeft);
+				} else {
+					InteractNull("Left", grabbedItemLeft);
+				}
 			}
 
-			if (controllerDeviceRight.GetHairTriggerDown() || (controllerDeviceRight.GetHairTrigger() && grabbedItemRight.weapon.automatic)) {
-				InteractRight();
+			if (grabbedItemRight != null && grabNodeRight != null) {
+				if (controllerDeviceRight.GetHairTriggerDown()) {
+					InteractDown("Right", grabbedItemRight);
+				}
+
+				if (controllerDeviceRight.GetHairTriggerUp()) {
+					InteractUp("Right", grabbedItemRight);
+				}
+
+				if (controllerDeviceRight.GetHairTrigger()) {
+					InteractHold("Right", grabbedItemRight);
+				} else {
+					InteractNull("Right", grabbedItemRight);
+				}
 			}
 
 			if (padPressed == true) {
@@ -600,27 +623,50 @@ public class Player : MonoBehaviour {
 		grabNodeRight = null;
 	}
 
-	void InteractLeft () {
-		if (grabNodeLeft != null) {
-			if (grabNodeLeft.interactionType == GrabNode.InteractionType.Trigger) {
-				AttemptToFireWeapon("Left", grabbedItemLeft);
+	void InteractDown (string hand, Item currentItem) {
+		Weapon currentWeapon = currentItem.weapon;
+		if ((hand == "Left" ? grabNodeLeft : grabNodeRight).interactionType == GrabNode.InteractionType.Trigger) {
+			if (currentWeapon.chargingEnabled == false) {
+				AttemptToFireWeapon(hand, currentItem);
 			}
 		}
 	}
 
-	void InteractRight () {
-		if (grabNodeRight != null) {
-			if (grabNodeRight.interactionType == GrabNode.InteractionType.Trigger) {
-				AttemptToFireWeapon ("Right", grabbedItemRight);
+	void InteractHold (string hand, Item currentItem) {
+		Weapon currentWeapon = currentItem.weapon;
+		currentWeapon.triggerHeld = true;
+		if ((hand == "Left" ? grabNodeLeft : grabNodeRight).interactionType == GrabNode.InteractionType.Trigger) {
+			if (currentWeapon.automatic == true) {
+				AttemptToFireWeapon(hand, currentItem);
+			}
+			if (currentWeapon.chargingEnabled == true) {
+				currentWeapon.chargeCurrent = Mathf.Clamp01(currentWeapon.chargeCurrent + (currentWeapon.chargeIncrement * Time.deltaTime));
 			}
 		}
+	}
+
+	void InteractUp(string hand, Item currentItem) {
+		Weapon currentWeapon = currentItem.weapon;
+		currentWeapon.triggerHeld = false;
+		if ((hand == "Left" ? grabNodeLeft : grabNodeRight).interactionType == GrabNode.InteractionType.Trigger) {
+			if (currentWeapon.chargingEnabled == true) {
+				AttemptToFireWeapon(hand, currentItem);
+			}
+		}
+	}
+
+	void InteractNull (string hand, Item currentItem) {
+		Weapon currentWeapon = currentItem.weapon;
+		currentWeapon.triggerHeld = false;
 	}
 
 	void AttemptToFireWeapon (string hand, Item currentItem) {
 		Weapon currentWeapon = currentItem.weapon;
 		if (currentWeapon.timeLastFired + (1 / currentWeapon.firerate) <= Time.timeSinceLevelLoad) {
-			StartCoroutine(FireWeapon(hand, currentItem));
-			currentWeapon.timeLastFired = Time.timeSinceLevelLoad;
+			if (currentWeapon.chargingEnabled == false || (currentWeapon.chargeCurrent >= currentWeapon.chargeRequired)) {
+				StartCoroutine(FireWeapon(hand, currentItem));
+				currentWeapon.timeLastFired = Time.timeSinceLevelLoad;
+			}
 		}
 	}
 
@@ -628,7 +674,7 @@ public class Player : MonoBehaviour {
 		Weapon currentWeapon = currentItem.weapon;
 		Rigidbody currentRigidbody = currentItem.transform.GetComponent<Rigidbody>();
 		Transform barrel = currentItem.transform.Find("(Barrel Point)");
-		
+
 		for (int i = 0; i < Mathf.Clamp(currentWeapon.burstCount, 1, 100); i++) {           // For each burst shot in this fire
 			
 			// Step 1: Trigger haptic feedback
@@ -675,7 +721,11 @@ public class Player : MonoBehaviour {
 					}
 				}
 				Projectile newProjectileClass = newProjectile.GetComponent<Projectile>();
-				newProjectileClass.velocity = newProjectile.transform.forward * currentWeapon.projectileVelocity;
+				if (currentWeapon.chargingEnabled == true) {
+					newProjectileClass.velocity = newProjectile.transform.forward * (currentWeapon.projectileVelocity - (currentWeapon.projectileVelocity * currentWeapon.chargeInfluenceVelocity * Mathf.Abs(currentWeapon.chargeCurrent - 1)));
+				} else {
+					newProjectileClass.velocity = newProjectile.transform.forward * currentWeapon.projectileVelocity;
+				}
 				newProjectileClass.deceleration = currentWeapon.projectileDeceleration;
 				newProjectileClass.decelerationType = currentWeapon.projectileDecelerationType;
 				newProjectileClass.gravity = currentWeapon.projectileGravity;
@@ -685,6 +735,10 @@ public class Player : MonoBehaviour {
 
 			}
 			yield return new WaitForSeconds(currentWeapon.burstDelay);
+		}
+
+		if (currentWeapon.chargingEnabled == true) {
+			currentWeapon.chargeCurrent = Mathf.Clamp01(currentWeapon.chargeCurrent - currentWeapon.chargeDecrementPerShot);
 		}
 	}
 
@@ -702,6 +756,9 @@ public class Player : MonoBehaviour {
 	void ThrowItem (Rigidbody item, Vector3 velocity) { 
 		item.velocity = Vector3.ClampMagnitude(velocity.magnitude > 5 ? (velocity * 2f) : velocity, 100);
 		item.useGravity = true;
+		if (item.transform.GetComponent<Item>().weapon != null) {
+			item.transform.GetComponent<Item>().weapon.triggerHeld = false;
+		}
 	}
 
 	IEnumerator TriggerHapticFeedback(SteamVR_Controller.Device device, float duration) {
