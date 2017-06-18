@@ -330,6 +330,8 @@ public class Player : MonoBehaviour {
 						grabbedItemLeft = hitItem.transform.parent.parent.GetComponent<Item>();
 					}
 
+					grabbedRigidbodyLeft.useGravity = false;
+
 					if (grabbedRigidbodyLeft.transform.gameObject.layer == LayerMask.NameToLayer("Item")) {
 						GrabNode hitGrabNode = hitItem.GetComponent<GrabNode>();
 						if (hitGrabNode) {
@@ -430,7 +432,7 @@ public class Player : MonoBehaviour {
 		}
 		if (jumpLoadedLeft == true) {
 			if ((grounded == true || timeLastJumped + 0.1f > Time.timeSinceLevelLoad) && climbableGrabbedLeft == false && grabbedRigidbodyLeft == false) {
-				velocityCurrent += Vector3.ClampMagnitude((controllerPosLastFrameLeft - controllerLeft.transform.position) * 500, (timeLastJumped + 0.1f > Time.timeSinceLevelLoad) ? 1f : 150f);
+				velocityCurrent += Vector3.ClampMagnitude((controllerPosLastFrameLeft - controllerLeft.transform.position) * 500, (timeLastJumped + 0.1f > Time.timeSinceLevelLoad) ? 1f : 5f);
 				jumpLoadedLeft = false;
 				if (grounded == true) { timeLastJumped = Time.timeSinceLevelLoad; }
 			}
@@ -483,6 +485,8 @@ public class Player : MonoBehaviour {
 					} else if (hitItemClosest.transform.parent.parent.GetComponent<Item>()) {
 						grabbedItemRight = hitItemClosest.transform.parent.parent.GetComponent<Item>();
 					}
+
+					grabbedRigidbodyRight.useGravity = false;
 
 					if (grabbedRigidbodyRight.transform.gameObject.layer == LayerMask.NameToLayer("Item")) {
 						GrabNode hitGrabNode = hitItemClosest.GetComponent<GrabNode>();
@@ -584,7 +588,7 @@ public class Player : MonoBehaviour {
 		}
 		if (jumpLoadedRight == true) {
 			if ((grounded == true || timeLastJumped + 0.1f > Time.timeSinceLevelLoad) && climbableGrabbedRight == false && grabbedRigidbodyRight == false) {
-				velocityCurrent += Vector3.ClampMagnitude((controllerPosLastFrameRight - controllerRight.transform.position) * 500, (timeLastJumped + 0.1f > Time.timeSinceLevelLoad) ? 1f : 150f);
+				velocityCurrent += Vector3.ClampMagnitude((controllerPosLastFrameRight - controllerRight.transform.position) * 500, (timeLastJumped + 0.1f > Time.timeSinceLevelLoad) ? 1f : 5f);
 				jumpLoadedRight = false;
 				if (grounded == true) { timeLastJumped = Time.timeSinceLevelLoad; }
 			}
@@ -671,9 +675,10 @@ public class Player : MonoBehaviour {
 					}
 				}
 				Projectile newProjectileClass = newProjectile.GetComponent<Projectile>();
-				newProjectileClass.velocity = currentWeapon.projectileVelocity;
+				newProjectileClass.velocity = newProjectile.transform.forward * currentWeapon.projectileVelocity;
 				newProjectileClass.deceleration = currentWeapon.projectileDeceleration;
 				newProjectileClass.decelerationType = currentWeapon.projectileDecelerationType;
+				newProjectileClass.gravity = currentWeapon.projectileGravity;
 				newProjectileClass.ricochetCount = currentWeapon.projectileRicochetCount;
 				newProjectileClass.ricochetAngleMax = currentWeapon.projectileRicochetAngleMax;
 				audioManager.PlayClipAtPoint(currentWeapon.soundFireNormal, barrel.position, 2f);
@@ -696,6 +701,7 @@ public class Player : MonoBehaviour {
 
 	void ThrowItem (Rigidbody item, Vector3 velocity) { 
 		item.velocity = Vector3.ClampMagnitude(velocity.magnitude > 5 ? (velocity * 2f) : velocity, 100);
+		item.useGravity = true;
 	}
 
 	IEnumerator TriggerHapticFeedback(SteamVR_Controller.Device device, float duration) {

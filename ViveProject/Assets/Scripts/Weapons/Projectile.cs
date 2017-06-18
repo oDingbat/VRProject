@@ -6,10 +6,12 @@ public class Projectile : MonoBehaviour {
 
 	public LayerMask	collisionMask;
 
-	public float				velocity;
+	public float				initialVelocityMagnitude;
+	public Vector3				velocity;
 	public float				deceleration;
 	public DecelerationType		decelerationType;
 	public enum					DecelerationType { Normal, Smooth }
+	public float				gravity;
 
 	float				lifespan = 5;
 
@@ -19,6 +21,7 @@ public class Projectile : MonoBehaviour {
 	bool				firstFrameLoaded;
 
 	void Start () {
+		initialVelocityMagnitude = velocity.magnitude;
 		StartCoroutine(AutoDestroy());
 	}
 
@@ -29,9 +32,7 @@ public class Projectile : MonoBehaviour {
 
 	void Update () {
 		if (firstFrameLoaded == true) {
-			if (broken == false) {
-				AttemptMove();
-			}
+			AttemptMove();
 		} else {
 			transform.position -= transform.forward * 0.01f;
 			firstFrameLoaded = true;
@@ -40,33 +41,35 @@ public class Projectile : MonoBehaviour {
 
 	void AttemptMove () {
 		RaycastHit hit;
-		if (Physics.Raycast(transform.position, transform.forward, out hit, velocity * Time.deltaTime, collisionMask)) {
+		if (Physics.Raycast(transform.position, velocity.normalized, out hit, velocity.magnitude * Time.deltaTime, collisionMask)) {
 			if (hit.transform) {
 				if (hit.transform.gameObject.tag == "Player") {
 					GameObject.Find("Player Body").GetComponent<Player>().TakeDamage(25);
 					StartCoroutine(BreakProjectile(hit.point));
 				} else {
-					Vector3 normalPerpendicular = transform.forward - hit.normal * Vector3.Dot(transform.forward, hit.normal);
-					if (ricochetCount > 0 && Vector3.Angle(normalPerpendicular, transform.forward) <= ricochetAngleMax) {
+					Vector3 normalPerpendicular = velocity.normalized - hit.normal * Vector3.Dot(velocity.normalized, hit.normal);
+					if (ricochetCount > 0 && Vector3.Angle(normalPerpendicular, velocity.normalized) <= ricochetAngleMax) {
 						ricochetCount--;
 						if (hit.transform.GetComponent<Rigidbody>()) {
-							hit.transform.GetComponent<Rigidbody>().AddForce(transform.forward * 100 * velocity);
+							hit.transform.GetComponent<Rigidbody>().AddForceAtPosition(velocity * 100, hit.point);
 						}
 						transform.position = hit.point + (hit.normal * 0.001f);
-						transform.rotation = Quaternion.LookRotation(Vector3.Reflect(transform.forward, hit.normal));
+						transform.rotation = Quaternion.LookRotation(Vector3.Reflect(velocity.normalized, hit.normal));
+						velocity = Vector3.Reflect(velocity, hit.normal);
 					} else {
 						StartCoroutine(BreakProjectile(hit.point));
 					}
 				}
 			}
 		} else {
-			transform.position += transform.forward * velocity * Time.deltaTime;
+			transform.position += velocity * Time.deltaTime;
+			velocity += new Vector3(0, gravity * -9.807f * Time.deltaTime, 0);
 			if (decelerationType == DecelerationType.Normal) {
-				velocity = Mathf.Clamp(velocity - (deceleration * Time.deltaTime), 0, Mathf.Infinity);
+				velocity = velocity.normalized * Mathf.Clamp(velocity.magnitude - (deceleration * Time.deltaTime), 0, Mathf.Infinity);
 			} else {
-				velocity = Mathf.Clamp(Mathf.Lerp(velocity, 0, deceleration * Time.deltaTime), 0, Mathf.Infinity);
+				velocity = Vector3.Lerp(velocity, Vector3.zero, deceleration * Time.deltaTime);
 			}
-			if (velocity <= 5f) {
+			if (velocity.magnitude <= 5 && initialVelocityMagnitude > 50) {
 				StartCoroutine(BreakProjectile(transform.position));
 			}
 		}

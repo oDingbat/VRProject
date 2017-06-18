@@ -67,7 +67,7 @@ Transform:
   m_GameObject: {fileID: 1799400920980828}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 93.35, y: 3.9, z: 0}
-  m_LocalScale: {x: 0.08, y: 0.08, z: 0.08}
+  m_LocalScale: {x: 0.1, y: 0.1, z: 0.1}
   m_Children:
   - {fileID: 4174023970635176}
   m_Father: {fileID: 0}
@@ -148,7 +148,7 @@ TrailRenderer:
   m_Time: 0.1
   m_Parameters:
     serializedVersion: 2
-    widthMultiplier: 0.08
+    widthMultiplier: 0.1
     widthCurve:
       serializedVersion: 2
       m_Curve:
@@ -252,8 +252,9 @@ MonoBehaviour:
   collisionMask:
     serializedVersion: 2
     m_Bits: 4294901705
-  velocity: 0
+  velocity: {x: 0, y: 0, z: 0}
   deceleration: 0
   decelerationType: 0
+  gravity: 0
   ricochetCount: 1000
   ricochetAngleMax: 360

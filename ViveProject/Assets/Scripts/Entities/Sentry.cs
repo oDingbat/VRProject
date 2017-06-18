@@ -77,7 +77,13 @@ public class Sentry : MonoBehaviour {
 
 	void FireWeapon () {
 		GameObject newProjectile = (GameObject)Instantiate(weapon.projectile, barrel.position + barrel.forward * 0.2f, head.rotation * Quaternion.Euler(Random.Range(-1, 1), Random.Range(-1, 1), Random.Range(-1, 1)));
-		newProjectile.GetComponent<Projectile>().velocity = weapon.projectileVelocity;
+		Projectile newProjectileClass = newProjectile.GetComponent<Projectile>();
+		newProjectileClass.velocity = head.forward * weapon.projectileVelocity;
+		newProjectileClass.deceleration = weapon.projectileDeceleration;
+		newProjectileClass.decelerationType = weapon.projectileDecelerationType;
+		newProjectileClass.gravity = weapon.projectileGravity;
+		newProjectileClass.ricochetCount = weapon.projectileRicochetCount;
+		newProjectileClass.ricochetAngleMax = weapon.projectileRicochetAngleMax;
 	}
 
 }

@@ -35,7 +35,8 @@ public class Weapon {
 	public float						projectileSpreadDeviation;		// The random rotation deviation given to each projectile in projectile spreads
 	public int							projectileRicochetCount;		// The maximum number of times a projectile can ricochet
 	public float						projectileRicochetAngleMax;		// The maximum angle projectiles can ricochet off of
-	public float						projectileVelocity;				// The forward velocity applied to all projectiles when fired
+	public float						projectileVelocity;             // The forward velocity applied to all projectiles when fired
+	public float						projectileGravity;				// The percentage of gravity the projectile has
 	public Projectile.DecelerationType	projectileDecelerationType;		// The deceleration type of the projectile (normal or logarithmic)
 	public float						projectileDeceleration;			// The deceleration applied to the projectiles
 	public GameObject					projectile;						// The projectile prefab which is instantiated when firing the weapon
