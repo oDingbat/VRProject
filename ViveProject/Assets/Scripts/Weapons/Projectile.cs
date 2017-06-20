@@ -12,8 +12,9 @@ public class Projectile : MonoBehaviour {
 	public DecelerationType		decelerationType;
 	public enum					DecelerationType { Normal, Smooth }
 	public float				gravity;
+	public bool					sticky;
 
-	float				lifespan = 5;
+	public float				lifespan = 5;
 
 	public int			ricochetCount;
 	public float		ricochetAngleMax;
@@ -32,7 +33,9 @@ public class Projectile : MonoBehaviour {
 
 	void Update () {
 		if (firstFrameLoaded == true) {
-			AttemptMove();
+			if (broken == false) {
+				AttemptMove();
+			}
 		} else {
 			transform.position -= transform.forward * 0.01f;
 			firstFrameLoaded = true;
@@ -44,15 +47,26 @@ public class Projectile : MonoBehaviour {
 		if (Physics.Raycast(transform.position, velocity.normalized, out hit, velocity.magnitude * Time.deltaTime, collisionMask)) {
 			if (hit.transform) {
 				if (hit.transform.gameObject.tag == "Player") {
-					GameObject.Find("Player Body").GetComponent<Player>().TakeDamage(25);
+					GameObject.Find("Player Body").GetComponent<Entity>().TakeDamage(25);
 					StartCoroutine(BreakProjectile(hit.point));
 				} else {
+					if (hit.transform.GetComponent<Entity>()) {
+						hit.transform.GetComponent<Entity>().TakeDamage(25);
+						StartCoroutine(BreakProjectile(hit.point));
+					}
+
+					if (sticky == true && hit.transform.gameObject.tag == "Environment") {
+						transform.parent = hit.transform;
+					}
+
 					Vector3 normalPerpendicular = velocity.normalized - hit.normal * Vector3.Dot(velocity.normalized, hit.normal);
+
+					if (hit.transform.GetComponent<Rigidbody>()) {
+						hit.transform.GetComponent<Rigidbody>().AddForceAtPosition(velocity * Mathf.Sqrt(Vector3.Angle(normalPerpendicular, velocity.normalized) * 25f), hit.point);
+					}
+
 					if (ricochetCount > 0 && Vector3.Angle(normalPerpendicular, velocity.normalized) <= ricochetAngleMax) {
 						ricochetCount--;
-						if (hit.transform.GetComponent<Rigidbody>()) {
-							hit.transform.GetComponent<Rigidbody>().AddForceAtPosition(velocity * 100, hit.point);
-						}
 						transform.position = hit.point + (hit.normal * 0.001f);
 						transform.rotation = Quaternion.LookRotation(Vector3.Reflect(velocity.normalized, hit.normal));
 						velocity = Vector3.Reflect(velocity, hit.normal);
@@ -80,7 +94,9 @@ public class Projectile : MonoBehaviour {
 			transform.position = finalPos;
 			broken = true;
 			yield return new WaitForSeconds(GetComponent<TrailRenderer>().time * 0.9f);
-			Destroy(gameObject);
+			if (sticky == false) {
+				Destroy(gameObject);
+			}
 		} else {
 			yield return null;
 		}

@@ -50,6 +50,8 @@ public class Weapon {
 	public float						projectileGravity;				// The percentage of gravity the projectile has
 	public Projectile.DecelerationType	projectileDecelerationType;		// The deceleration type of the projectile (normal or logarithmic)
 	public float						projectileDeceleration;			// The deceleration applied to the projectiles
+	public float						projectileLifespan;
+	public bool							projectileIsSticky;
 	public GameObject					projectile;						// The projectile prefab which is instantiated when firing the weapon
 
 	[Space(10)]

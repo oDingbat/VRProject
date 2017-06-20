@@ -201,7 +201,7 @@ TrailRenderer:
     alignment: 0
     textureMode: 0
   m_MinVertexDistance: 0
-  m_Autodestruct: 1
+  m_Autodestruct: 0
 --- !u!108 &108419338256827572
 Light:
   m_ObjectHideFlags: 1
@@ -252,9 +252,12 @@ MonoBehaviour:
   collisionMask:
     serializedVersion: 2
     m_Bits: 4294901705
+  initialVelocityMagnitude: 0
   velocity: {x: 0, y: 0, z: 0}
   deceleration: 0
   decelerationType: 0
   gravity: 0
+  sticky: 0
+  lifespan: 5
   ricochetCount: 1000
   ricochetAngleMax: 360

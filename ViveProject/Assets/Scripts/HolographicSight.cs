@@ -7,6 +7,7 @@ using Valve.VR;
 public class HolographicSight : MonoBehaviour {
 
 	public LayerMask hitMask;
+	public float scale = 1;
 
 	public Transform dotLeft;
 	public Transform dotRight;
@@ -33,7 +34,8 @@ public class HolographicSight : MonoBehaviour {
 				dotLeft.gameObject.SetActive(false);
 			}
 
-			dotLeft.localScale = Vector3.one * Vector3.Distance(leftWorld, dotLeft.position) * 0.01f;
+			dotLeft.localScale = Vector3.one * Mathf.Sqrt(Vector3.Distance(leftWorld, dotLeft.position)) * 0.1f * scale;
+			dotLeft.rotation = transform.rotation;
 
 			RaycastHit hitRight;
 			if (Physics.Raycast(rightWorld, (barrel.transform.position + barrel.transform.forward * 1000) - rightWorld, out hitRight, Mathf.Infinity, hitMask)) {
@@ -43,7 +45,8 @@ public class HolographicSight : MonoBehaviour {
 				dotRight.gameObject.SetActive(false);
 			}
 
-			dotRight.localScale = Vector3.one * Vector3.Distance(rightWorld, dotRight.position) * 0.01f;
+			dotRight.localScale = Vector3.one * Mathf.Sqrt(Vector3.Distance(rightWorld, dotRight.position)) * 0.1f * scale;
+			dotRight.rotation = transform.rotation;
 		}
 	}
 

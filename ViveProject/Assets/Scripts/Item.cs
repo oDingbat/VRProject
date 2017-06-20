@@ -20,7 +20,9 @@ public class Item : MonoBehaviour {
 				}
 			}
 		}
-		audioSourceMove.volume = Mathf.Clamp01(GetComponent<Rigidbody>().velocity.magnitude * 0.1f);
+		if (audioSourceMove) {
+			audioSourceMove.volume = Mathf.Clamp01(GetComponent<Rigidbody>().velocity.magnitude * 0.1f);
+		}
 	}
 
 	void OnCollisionEnter (Collision collision) {

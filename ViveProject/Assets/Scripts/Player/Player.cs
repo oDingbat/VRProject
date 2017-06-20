@@ -84,7 +84,7 @@ public class Player : MonoBehaviour {
 	Vector3							ccPositionLastFrame;
 	Vector3							platformMovementsAppliedLastFrame = Vector3.zero;
 	float							moveSpeedRunning = 6f;
-	float							moveSpeedStanding = 4f;
+	float							moveSpeedStanding = 4.5f;
 	float							moveSpeedCrouching = 2.5f;
 	float							moveSpeedLaying = 1.25f;
 	float							moveSpeedCurrent;
@@ -118,6 +118,10 @@ public class Player : MonoBehaviour {
 		audioManager = GameObject.Find("AudioManager").GetComponent<AudioManager>();
 		entity = GetComponent<Entity>();
 		Debug.Log("Vitals");
+
+		// Subscribe Events
+		entity.eventTakeDamage += TakeDamage;
+
 		StartCoroutine(UpdateVitals());
 	}
 
@@ -731,6 +735,8 @@ public class Player : MonoBehaviour {
 				newProjectileClass.gravity = currentWeapon.projectileGravity;
 				newProjectileClass.ricochetCount = currentWeapon.projectileRicochetCount;
 				newProjectileClass.ricochetAngleMax = currentWeapon.projectileRicochetAngleMax;
+				newProjectileClass.lifespan = currentWeapon.projectileLifespan;
+				newProjectileClass.sticky = currentWeapon.projectileIsSticky;
 				audioManager.PlayClipAtPoint(currentWeapon.soundFireNormal, barrel.position, 2f);
 
 			}
@@ -1068,8 +1074,7 @@ public class Player : MonoBehaviour {
 
 	}
 
-	public void TakeDamage (int damage) {
-		entity.vitals.healthCurrent = Mathf.Clamp(entity.vitals.healthCurrent - damage, 0, entity.vitals.healthMax);
+	public void TakeDamage () {
 		float desiredIntensity = Mathf.Abs(Mathf.Clamp((float)entity.vitals.healthCurrent * (100 / 75), 0, 100) - 100) / 100;
 		UpdateDamageVignette(desiredIntensity);
 	}

@@ -9,6 +9,8 @@ public class Vitals {
 	public int healthCurrent;
 	public int healthMax;
 
+	public bool isDead;
+
 	public void TakeDamage (int damage) {
 		healthCurrent = Mathf.Clamp(healthCurrent - damage, 0, healthMax);
 	}
