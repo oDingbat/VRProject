@@ -309,7 +309,7 @@ MeshFilter:
     type: 2}
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 348627106}
-  m_Mesh: {fileID: 922780744}
+  m_Mesh: {fileID: 831226935}
 --- !u!23 &348627110
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -324,7 +324,7 @@ MeshRenderer:
   m_LightProbeUsage: 0
   m_ReflectionProbeUsage: 0
   m_Materials:
-  - {fileID: 2055314178}
+  - {fileID: 2133710928}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -786,6 +786,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 46a704dc8e6d7b047a9d4f9989c1c538, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  entity: {fileID: 0}
   hmdLayerMask:
     serializedVersion: 2
     m_Bits: 4294963401
@@ -795,56 +796,63 @@ MonoBehaviour:
   grabLayerMask:
     serializedVersion: 2
     m_Bits: 258048
+  mainCam: {fileID: 1439851369}
   postProcessingProfile: {fileID: 11400000, guid: bfebe263889cfac47bd62c11d2557d0e,
     type: 2}
-  entity: {fileID: 0}
-  controllerLeft: {fileID: 1731248290}
-  cLeft: {fileID: 0}
-  controllerRight: {fileID: 561136830}
-  hmd: {fileID: 819641494}
-  handLeft: {fileID: 820069010}
-  handRight: {fileID: 1197415385}
-  handRigidbodyLeft: {fileID: 0}
-  handRigidbodyRight: {fileID: 0}
   head: {fileID: 0}
   rig: {fileID: 348627106}
   audioManager: {fileID: 0}
   windLoop: {fileID: 1341665676}
   footstep: {fileID: 702859331}
   positionLastFootstepPlayed: {x: 0, y: 0, z: 0}
-  climbableGrabbedLeft: {fileID: 0}
-  climbableGrabbedRight: {fileID: 0}
-  grabbedRigidbodyLeft: {fileID: 0}
-  grabbedRigidbodyRight: {fileID: 0}
-  grabbedItemLeft: {fileID: 0}
-  grabbedItemRight: {fileID: 0}
-  grabNodeLeft: {fileID: 0}
-  grabNodeRight: {fileID: 0}
-  grabRotationLeft: {x: 0, y: 0, z: 0, w: 0}
-  grabRotationRight: {x: 0, y: 0, z: 0, w: 0}
-  grabRotationLastFrameLeft: {x: 0, y: 0, z: 0, w: 0}
-  grabRotationLastFrameRight: {x: 0, y: 0, z: 0, w: 0}
-  wasClimbingLastFrame: 0
-  grabOffsetLeft: {x: 0, y: 0, z: 0}
-  grabOffsetRight: {x: 0, y: 0, z: 0}
-  grabCCOffsetLeft: {x: 0, y: 0, z: 0}
-  grabCCOffsetRight: {x: 0, y: 0, z: 0}
+  grabInfoLeft:
+    climbableGrabbed: {fileID: 0}
+    grabbedRigidbody: {fileID: 0}
+    grabbedItem: {fileID: 0}
+    grabNode: {fileID: 0}
+    grabRotation: {x: 0, y: 0, z: 0, w: 1}
+    grabRotationLastFrame: {x: 0, y: 0, z: 0, w: 1}
+    grabOffset: {x: 0, y: 0, z: 0}
+    grabCCOffset: {x: 0, y: 0, z: 0}
+    itemVelocityPercentage: 0
+  grabInfoRight:
+    climbableGrabbed: {fileID: 0}
+    grabbedRigidbody: {fileID: 0}
+    grabbedItem: {fileID: 0}
+    grabNode: {fileID: 0}
+    grabRotation: {x: 0, y: 0, z: 0, w: 1}
+    grabRotationLastFrame: {x: 0, y: 0, z: 0, w: 1}
+    grabOffset: {x: 0, y: 0, z: 0}
+    grabCCOffset: {x: 0, y: 0, z: 0}
+    itemVelocityPercentage: 0
   grabDualWieldDirection: {x: 0, y: 0, z: 0}
   grabDualWieldDominantHand: 
-  controllerPosLastFrameLeft: {x: 0, y: 0, z: 0}
-  controllerPosLastFrameRight: {x: 0, y: 0, z: 0}
-  itemVelocityPercentageLeft: 0
-  itemVelocityPercentageRight: 0
+  wasClimbingLastFrame: 0
+  handInfoLeft:
+    controller: {fileID: 1731248290}
+    handGameObject: {fileID: 820069010}
+    handRigidbody: {fileID: 0}
+    controllerPosLastFrame: {x: 0, y: 0, z: 0}
+    handPosLastFrame: {x: 0, y: 0, z: 0}
+    itemReleasingDisabled: 0
+    jumpLoaded: 0
+  handInfoRight:
+    controller: {fileID: 561136830}
+    handGameObject: {fileID: 1197415385}
+    handRigidbody: {fileID: 0}
+    controllerPosLastFrame: {x: 0, y: 0, z: 0}
+    handPosLastFrame: {x: 0, y: 0, z: 0}
+    itemReleasingDisabled: 0
+    jumpLoaded: 0
   characterController: {fileID: 0}
   headCC: {fileID: 1707862268}
   verticalPusher: {fileID: 563048521}
+  hmd: {fileID: 819641494}
   leanDistance: 0
-  heightCurrent: 0
   velocityCurrent: {x: 0, y: 0, z: 0}
   velocityDesired: {x: 0, y: 0, z: 0}
   grounded: 0
-  extCam: {fileID: 0}
-  mainCam: {fileID: 1439851369}
+  heightCurrent: 0
 --- !u!114 &611968455
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1323,7 +1331,7 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 2
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!43 &922780744
+--- !u!43 &831226935
 Mesh:
   m_ObjectHideFlags: 0
   m_PrefabParentObject: {fileID: 0}
@@ -1582,6 +1590,151 @@ MeshCollider:
   m_InflateMesh: 0
   m_SkinWidth: 0.01
   m_Mesh: {fileID: 4300002, guid: b4b4528c73f084e46a417d8c0f444bc2, type: 3}
+--- !u!1 &1091386477
+GameObject:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  serializedVersion: 5
+  m_Component:
+  - component: {fileID: 1091386483}
+  - component: {fileID: 1091386482}
+  - component: {fileID: 1091386481}
+  - component: {fileID: 1091386480}
+  - component: {fileID: 1091386479}
+  - component: {fileID: 1091386478}
+  m_Layer: 14
+  m_Name: Cube
+  m_TagString: Item
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!54 &1091386478
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 1091386477}
+  serializedVersion: 2
+  m_Mass: 10
+  m_Drag: 0
+  m_AngularDrag: 0.05
+  m_UseGravity: 1
+  m_IsKinematic: 0
+  m_Interpolate: 0
+  m_Constraints: 0
+  m_CollisionDetection: 0
+--- !u!114 &1091386479
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 1091386477}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 39929d88d81048145998643293736483, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  itemType: 0
+  weapon:
+    automatic: 0
+    firerate: 0
+    timeLastFired: 0
+    burstCount: 0
+    burstDelay: 0
+    triggerHeld: 0
+    accuracyCurrent: 0
+    accuracyMax: 0
+    accuracyMin: 0
+    accuracyIncrement: 0
+    accuracyDecrement: 0
+    recoilLinear: 0
+    recoilAngular: 0
+    chargingEnabled: 0
+    chargeCurrent: 0
+    chargeIncrement: 0
+    chargeDecrement: 0
+    chargeDecrementPerShot: 0
+    chargeRequired: 0
+    chargeInfluenceVelocity: 0
+    projectileSpreads: []
+    projectileSpreadType: 0
+    projectileSpreadDeviation: 0
+    projectileRicochetCount: 0
+    projectileRicochetAngleMax: 0
+    projectileVelocity: 0
+    projectileGravity: 0
+    projectileDecelerationType: 0
+    projectileDeceleration: 0
+    projectileLifespan: 0
+    projectileIsSticky: 0
+    projectile: {fileID: 0}
+    soundFireNormal: {fileID: 0}
+--- !u!23 &1091386480
+MeshRenderer:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 1091386477}
+  m_Enabled: 1
+  m_CastShadows: 1
+  m_ReceiveShadows: 1
+  m_MotionVectors: 1
+  m_LightProbeUsage: 1
+  m_ReflectionProbeUsage: 1
+  m_Materials:
+  - {fileID: 10303, guid: 0000000000000000f000000000000000, type: 0}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_PreserveUVs: 1
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_SelectedEditorRenderState: 3
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0
+--- !u!65 &1091386481
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 1091386477}
+  m_Material: {fileID: 0}
+  m_IsTrigger: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Size: {x: 1, y: 1, z: 1}
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!33 &1091386482
+MeshFilter:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 1091386477}
+  m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!4 &1091386483
+Transform:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 1091386477}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -0.41, y: 0.4, z: -1.21}
+  m_LocalScale: {x: 0.25, y: 0.25, z: 0.25}
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 10
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1197415385
 GameObject:
   m_ObjectHideFlags: 0
@@ -2984,7 +3137,7 @@ MeshFilter:
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 2045565189}
   m_Mesh: {fileID: 10210, guid: 0000000000000000e000000000000000, type: 0}
---- !u!21 &2055314178
+--- !u!21 &2133710928
 Material:
   serializedVersion: 6
   m_ObjectHideFlags: 0

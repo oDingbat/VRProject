@@ -7,98 +7,133 @@ using UnityEngine.PostProcessing;
 [RequireComponent (typeof (CharacterController)), RequireComponent(typeof(Entity))]
 public class Player : MonoBehaviour {
 
+	[Space(10)]
+	[Header("Entity")]
+	public Entity entity;
+
+	[Header("Layer Masks")]
 	public LayerMask				hmdLayerMask;	// The layerMask for the hmd, defines objects which the player cannot put their head through
 	public LayerMask				characterControllerLayerMask;
 	public LayerMask				grabLayerMask;
 
+	[Space(10)]
+	[Header("Cameras")]
+	public Camera					mainCam;
+
+	[Space(10)]
+	[Header("Graphics Settings")]
 	public PostProcessingProfile	postProcessingProfile;
-	public Entity					entity;
 
-	// The SteamVR Tracked Objects, used to get the position and rotation of the controllers and head
-	public SteamVR_TrackedObject	controllerLeft;
-	public SteamVR_TrackedController cLeft;
-	public SteamVR_TrackedObject	controllerRight;
-	public SteamVR_TrackedObject	hmd;
-
-	// The SteamVR Controller Devices for the left & right controllers; Used to get input
-	SteamVR_Controller.Device		controllerDeviceLeft;
-	SteamVR_Controller.Device		controllerDeviceRight;
-
-	// The GameObjects for the hands, head, & rig
-	public GameObject				handLeft;
-	public GameObject				handRight;
-	public Rigidbody				handRigidbodyLeft;
-	public Rigidbody				handRigidbodyRight;
+	[Space(10)]
+	[Header("Player GameObject References")]
 	public GameObject				head;
 	public GameObject				rig;
-	Vector3							handRigidbodyPositionOffset = new Vector3(-0.02f, -0.025f, -0.075f);
-
-	// Audio Sources
+	
+	[Space(10)]
+	[Header("Audio Sources")]
 	public AudioManager				audioManager;
 	public AudioSource				windLoop;
 	public AudioSource				footstep;
 	public Vector3					positionLastFootstepPlayed;
 
-	// States for the hands
-	public Transform				climbableGrabbedLeft;				// The transform of the climbable object being currently grabbed by the left hand
-	public Transform				climbableGrabbedRight;				// The transform of the climbable object being currently grabbed by the right hand
-	public Rigidbody				grabbedRigidbodyLeft;				// The rigidbody of the object being currently grabbed by the left hand
-	public Rigidbody				grabbedRigidbodyRight;              // The rigidbody of the object being currently grabbed by the right hand
-	public Item						grabbedItemLeft;                    // The Item component of the object being currently grabbed by the left hand			// TODO: Make all of these variables not public
-	public Item						grabbedItemRight;                   // The Item component of the object being currently grabbed by the right hand
-	public GrabNode					grabNodeLeft;						// The grabNode of the object currently grabbed by the left hand (for item objects)
-	public GrabNode					grabNodeRight;                      // The grabNode of the object currently grabbed by the right hand (for item objects)
-	public Quaternion				grabRotationLeft;                   // This value is used differently depending on the case. If grabbing an item, it stores the desired rotation of the item relative to the hand's rotation. If grabbing a climbable object, it stores the rotation of the object when first grabbed.
-	public Quaternion				grabRotationRight;					// ^ ^
-	public Quaternion				grabRotationLastFrameLeft;			// This value is used to record the grabRotation last frame. It is (was) used for an experimental formula which rotates the player along with it's grabbed object's rotation.		// TODO: do we still need these variables?
-	public Quaternion				grabRotationLastFrameRight;			// ^ ^
-	public bool						wasClimbingLastFrame;               // Records whether or not the player was climbing last frame; used for experimental formula which rotates the player along with it's grabbed object's rotation.		// TODO: do we still need this variable?
-	public Vector3					grabOffsetLeft;                     // Used differently depending on the case. If grabbing an item, it stores the offset between the hand and the item which when rotated according to rotationOffset is the desired position of the object. If grabbing a climbable object, it stores the offset between the hand and the grabbed object, to determine the desired position of the player
-	public Vector3					grabOffsetRight;					// ^ ^
-	public Vector3					grabCCOffsetLeft;                   // If grabbing a climbable object, this variable stores the offset between the hand and the character controller, to determine where to move the player to when climbing
-	public Vector3					grabCCOffsetRight;					// ^ ^
-	public Vector3					grabDualWieldDirection;             // The vector3 direction from handDominant to handNonDominant (ie: hand right to left direction normalized)
-	public string					grabDualWieldDominantHand;			// This value determines, when dual wielding an item, which hand is dominant and thus acts as the main pivot point
-	Vector3							handPosLastFrameLeft;				// Used to determine which direction to throw items
-	Vector3							handPosLastFrameRight;              // Used to determine which direction to throw items
-	public Vector3					controllerPosLastFrameLeft;			// Used to determine the jumping velocity when jumping with the left hand
-	public Vector3					controllerPosLastFrameRight;        // Used to determine the jumping velocity when jumping with the right hand
-	bool							itemReleasingDisabledLeft;			// Used for picking up non-prop items. Used to disable item releasing when first grabbing an item as to make the grip function as a toggle rather than an on/off grab button
-	bool							itemReleasingDisabledRight;         // Used for picking up non-prop items. Used to disable item releasing when first grabbing an item as to make the grip function as a toggle rather than an on/off grab button
-	public float					itemVelocityPercentageLeft;			// When items are first picked up their IVP = 0; over time grabbed approaches 1 linearly; this value determines the magnitude of the velocity (and angularVelocity) of the item
-	public float					itemVelocityPercentageRight;		// When items are first picked up their IVP = 0; over time grabbed approaches 1 linearly; this value determines the magnitude of the velocity (and angularVelocity) of the item
+	[Space(10)]
+	[Header("Grab Infos")]
+	public GrabInformation			grabInfoLeft = new GrabInformation();					
+	public GrabInformation			grabInfoRight = new GrabInformation();
 
+	[Space(10)]
+	[Header("Grabbing Variables")]
+	public Vector3 grabDualWieldDirection;             // The vector3 direction from handDominant to handNonDominant (ie: hand right to left direction normalized)
+	public string grabDualWieldDominantHand;            // This value determines, when dual wielding an item, which hand is dominant and thus acts as the main pivot point
+	public bool wasClimbingLastFrame;               // Records whether or not the player was climbing last frame; used for experimental formula which rotates the player along with it's grabbed object's rotation.		// TODO: do we still need this variable?
+
+
+	[Space(10)]
+	[Header("Hand Infos")]
+	public HandInformation			handInfoLeft = new HandInformation();
+	public HandInformation			handInfoRight = new HandInformation();
+
+	[Space(10)]
+	[Header("Player Object References")]
 	// The player's characterController, used to move the player
 	public CharacterController		characterController;				// The main character controller, used for player movement and velocity calculations
 	public CharacterController		headCC;								// The player's head's character controller, used for mantling over cover, climbing in small spaces, and for detecting collision in walls, ceilings, and floors.
-	public GameObject				verticalPusher;						// Used to push the player's head vertically. This is useful for when a player tries to stand in an inclosed space or duck down into an object. It will keep the player's head from clipping through geometry.
-	public float					leanDistance;						// The current distance the player is leaning. See maxLeanDistance.
-	float							maxLeanDistance = 0.375f;           // The value used to determine how far the player can lean over cover/obstacles. Once the player moves past the leanDistance he/she will be pulled back via rig movement.
-	public float					heightCurrent;						// The current height of the hmd from the rig
-	float							heightCutoffStanding = 1f;			// If the player is standing above this height, they are considered standing
-	float							heightCutoffCrouching = 0.5f;		// If the player is standing avove this height but below the standingCutoff, they are crouching
-																		// If the player is below the crouchingCutoff then they are laying
+	public GameObject				verticalPusher;                     // Used to push the player's head vertically. This is useful for when a player tries to stand in an inclosed space or duck down into an object. It will keep the player's head from clipping through geometry.
+	public SteamVR_TrackedObject	hmd;
 
-	public Vector3					velocityCurrent;		// The current velocity of the player
-	public Vector3					velocityDesired;        // The desired velocity of the player
-	Vector3							ccPositionLastFrame;
-	Vector3							platformMovementsAppliedLastFrame = Vector3.zero;
+	[Space(10)]
+	[Header("Constants")]
+	float							heightCutoffStanding = 1f;									// If the player is standing above this height, they are considered standing
+	float							heightCutoffCrouching = 0.5f;									// If the player is standing avove this height but below the standingCutoff, they are crouching. If the player is below the crouchingCutoff then they are laying
+	float							maxLeanDistance = 0.375f;										// The value used to determine how far the player can lean over cover/obstacles. Once the player moves past the leanDistance he/she will be pulled back via rig movement.
+	public float					leanDistance;											// The current distance the player is leaning. See maxLeanDistance.
+	Vector3							handRigidbodyPositionOffset = new Vector3(-0.02f, -0.025f, -0.075f);
 	float							moveSpeedRunning = 6f;
 	float							moveSpeedStanding = 4.5f;
 	float							moveSpeedCrouching = 2.5f;
 	float							moveSpeedLaying = 1.25f;
+
+	[Space(10)]
+	[Header("Movement Variables")]
+	public Vector3					velocityCurrent;		// The current velocity of the player
+	public Vector3					velocityDesired;        // The desired velocity of the player
 	float							moveSpeedCurrent;
 	float							slopeHighest;
 	float							slopeLowest;
 	public bool						grounded = false;
-	bool							jumpLoadedLeft = false;
-	bool							jumpLoadedRight = false;
-	bool							padPressed = false;
 	float							timeLastJumped = 0;
+	Vector3							platformMovementsAppliedLastFrame = Vector3.zero;
 	bool							justStepped;
+	bool							padPressed;
 
-	public Camera					extCam;
-	public Camera					mainCam;
+	[Space(10)]
+	[Header("Positional Variables")]
+	public float					heightCurrent;                     // The current height of the hmd from the rig
+	Vector3							ccPositionLastFrame;
+	
+	[System.Serializable]
+	public class GrabInformation {
+		public Transform	climbableGrabbed;       // The transform of the climbable object being currently grabbed
+		public Rigidbody	grabbedRigidbody;       // The rigidbody of the object being currently grabbed
+		public Item			grabbedItem;            // The Item component of the object being currently grabbed
+		public GrabNode		grabNode;               // The grabNode of the object currently grabbed (for item objects)
+		public Quaternion	grabRotation;           // This value is used differently depending on the case. If grabbing an item, it stores the desired rotation of the item relative to the hand's rotation. If grabbing a climbable object, it stores the rotation of the object when first grabbed.
+		public Quaternion	grabRotationLastFrame;	// This value is used to record the grabRotation last frame. It is (was) used for an experimental formula which rotates the player along with it's grabbed object's rotation.		// TODO: do we still need this variable?
+		public Vector3		grabOffset;             // This value is used differently depending on the case. If grabbing an item, it stores the offset between the hand and the item which when rotated according to rotationOffset is the desired position of the object. If grabbing a climbable object, it stores the offset between the hand and the grabbed object, to determine the desired position of the player
+		public Vector3		grabCCOffset;           // If grabbing a climbable object, this variable stores the offset between the hand and the character controller, to determine where to move the player to when climbing
+		public float		itemVelocityPercentage; // When items are first picked up their IVP = 0; over time grabbed approaches 1 linearly; this value determines the magnitude of the velocity (and angularVelocity) of the item
+
+
+		public GrabInformation() {
+			climbableGrabbed = null;
+			grabbedRigidbody = null;
+			grabbedItem = null;
+			grabNode = null;
+			grabRotation = Quaternion.Euler(0, 0, 0);
+			grabRotationLastFrame = Quaternion.Euler(0, 0, 0);
+			grabOffset = Vector3.zero;
+			grabCCOffset = Vector3.zero;
+			itemVelocityPercentage = 0;
+		}
+
+	}
+
+	[System.Serializable]
+	public class HandInformation {
+		public SteamVR_TrackedObject			controller;						// The SteamVR Tracked Object, used to get the position and rotation of the controller
+		public SteamVR_Controller.Device		controllerDevice;				// The SteamVR Controller Device for controllers; Used to get input
+		public GameObject						handGameObject;					// The player's hand GameObject
+		public Rigidbody						handRigidbody;					// The rigidbody of the hand
+	
+		public Vector3							controllerPosLastFrame;			// Used to determine the jumping velocity when jumping with the hands
+		public Vector3							handPosLastFrame;               // Used to determine which direction to throw items
+		public bool								itemReleasingDisabled;			// Used for picking up non-prop items. Used to disable item releasing when first grabbing an item as to make the grip function as a toggle rather than an on/off grab button
+
+		public bool								jumpLoaded;
+		public HandInformation () {
+
+		}
+	}
 
 	/*	Concept for step by step player movement process:
 	 * step 1: Get change in hmd move position
@@ -117,8 +152,8 @@ public class Player : MonoBehaviour {
 
 	void Start () {
 		characterController = GetComponent<CharacterController>();          // Grab the character controller at the start
-		handRigidbodyLeft = handLeft.GetComponent<Rigidbody>();
-		handRigidbodyRight = handRight.GetComponent<Rigidbody>();
+		handInfoLeft.handRigidbody = handInfoLeft.handGameObject.GetComponent<Rigidbody>();
+		handInfoRight.handRigidbody = handInfoRight.handGameObject.GetComponent<Rigidbody>();
 		audioManager = GameObject.Find("AudioManager").GetComponent<AudioManager>();
 		entity = GetComponent<Entity>();
 		Debug.Log("Vitals");
@@ -131,7 +166,11 @@ public class Player : MonoBehaviour {
 
 	void Update () {
 		CheckSetControllers();
-		UpdateControllerInput();
+		if (handInfoLeft.controllerDevice.index != 0 && handInfoRight.controllerDevice.index != 0) {
+			UpdateControllerInput("Left", grabInfoLeft, grabInfoRight, handInfoLeft, handInfoRight);
+			UpdateControllerInput("Right", grabInfoRight, grabInfoLeft, handInfoRight, handInfoLeft);
+		}
+		UpdatePlayerVelocity();
 		UpdatePlayerMovement();
 
 		windLoop.volume = Mathf.Lerp(windLoop.volume, Mathf.Clamp01(((Vector3.Distance(ccPositionLastFrame, characterController.transform.position) + platformMovementsAppliedLastFrame.magnitude) / Time.deltaTime) / 75) - 0.15f, 50 * Time.deltaTime);
@@ -142,8 +181,8 @@ public class Player : MonoBehaviour {
 			PlayFootstepSound();
 		}
 
-		controllerPosLastFrameLeft = controllerLeft.transform.position;
-		controllerPosLastFrameRight = controllerRight.transform.position;
+		handInfoLeft.controllerPosLastFrame = handInfoLeft.controller.transform.position;
+		handInfoRight.controllerPosLastFrame = handInfoRight.controller.transform.position;
 	}
 
 	void FixedUpdate () {
@@ -151,12 +190,12 @@ public class Player : MonoBehaviour {
 	}
 
 	void CheckSetControllers () {
-		if (controllerDeviceLeft == null) {
-			controllerDeviceLeft = SteamVR_Controller.Input((int)controllerLeft.index);
+		if (handInfoLeft.controllerDevice == null) {
+			handInfoLeft.controllerDevice = SteamVR_Controller.Input((int)handInfoLeft.controller.index);
 		}
 
-		if (controllerDeviceRight == null) {
-			controllerDeviceRight = SteamVR_Controller.Input((int)controllerRight.index);
+		if (handInfoRight.controllerDevice == null) {
+			handInfoRight.controllerDevice = SteamVR_Controller.Input((int)handInfoRight.controller.index);
 		}
 	}
 
@@ -166,166 +205,41 @@ public class Player : MonoBehaviour {
 		positionLastFootstepPlayed = new Vector3(characterController.transform.position.x, 0, characterController.transform.position.z);
 	}
 
-	void UpdateControllerInput () {
-		if (controllerDeviceLeft.index != 0 && controllerDeviceRight.index != 0) {
-
-			// Controller Left: Grip Down
-			if (controllerDeviceLeft.GetPressDown(Valve.VR.EVRButtonId.k_EButton_Grip)) {
-				if (grabbedRigidbodyLeft == true && grabbedItemLeft && grabbedItemLeft.itemType != Item.ItemType.Prop) {
-					itemReleasingDisabledLeft = false;
+	void UpdateControllerInput (string side, GrabInformation grabInfoCurrent, GrabInformation grabInfoOpposite, HandInformation handInfoCurrent, HandInformation handInfoOpposite) {
+		if (handInfoCurrent.controllerDevice.GetPress(Valve.VR.EVRButtonId.k_EButton_Grip)) {    // Grip Being Held
+			if (handInfoCurrent.controllerDevice.GetPressDown(Valve.VR.EVRButtonId.k_EButton_Grip)) {  // Grip Down
+				if (grabInfoCurrent.grabbedRigidbody == true && grabInfoCurrent.grabbedItem && grabInfoCurrent.grabbedItem.itemType != Item.ItemType.Prop) {
+					handInfoCurrent.itemReleasingDisabled = false;
 				} else {
-					itemReleasingDisabledLeft = true;
+					handInfoCurrent.itemReleasingDisabled = true;
 				}
-				GrabLeft();
-				handLeft.GetComponent<BoxCollider>().enabled = false;
-			}
-
-			// Controller Left: Grip Being Held
-			if (controllerDeviceLeft.GetPress(Valve.VR.EVRButtonId.k_EButton_Grip)) {
-				GrabLeft();
-			}
-
-			// Controller Left: Grip Up
-			if (controllerDeviceLeft.GetPressUp(Valve.VR.EVRButtonId.k_EButton_Grip)) {
-				if (grabbedRigidbodyLeft == false || ((grabbedItemLeft && grabbedItemLeft.itemType == Item.ItemType.Prop) || itemReleasingDisabledLeft == false)) {
-					ReleaseLeft();
-				}
-				handLeft.GetComponent<BoxCollider>().enabled = true;
-			}
-
-			// Controller Right: Grip Down
-			if (controllerDeviceRight.GetPressDown(Valve.VR.EVRButtonId.k_EButton_Grip)) {
-				if (grabbedRigidbodyRight == true && grabbedItemRight && grabbedItemRight.itemType != Item.ItemType.Prop) {
-					itemReleasingDisabledRight = false;
-				} else {
-					itemReleasingDisabledRight = true;
-				}
-				GrabRight();
-				handRight.GetComponent<BoxCollider>().enabled = false;
-			}
-
-			// Controller Right: Grip Being Held
-			if (controllerDeviceRight.GetPress(Valve.VR.EVRButtonId.k_EButton_Grip)) {
-				GrabRight();
-			}
-
-			// Controller Right: Grip Up
-			if (controllerDeviceRight.GetPressUp(Valve.VR.EVRButtonId.k_EButton_Grip)) {
-				if (grabbedRigidbodyRight == false || ((grabbedItemRight && grabbedItemRight.itemType == Item.ItemType.Prop) || itemReleasingDisabledRight == false)) {
-					ReleaseRight();
-				}
-				handRight.GetComponent<BoxCollider>().enabled = true;
-			}
-
-			if (grabbedItemLeft != null && grabNodeLeft != null) {
-				if (controllerDeviceLeft.GetHairTriggerDown()) {
-					InteractDown("Left", grabbedItemLeft);
-				}
-
-				if (controllerDeviceLeft.GetHairTriggerUp()) {
-					InteractUp("Left", grabbedItemLeft);
-				}
-
-				if (controllerDeviceLeft.GetHairTrigger()) {
-					InteractHold("Left", grabbedItemLeft);
-				} else {
-					InteractNull("Left", grabbedItemLeft);
-				}
-			}
-
-			if (grabbedItemRight != null && grabNodeRight != null) {
-				if (controllerDeviceRight.GetHairTriggerDown()) {
-					InteractDown("Right", grabbedItemRight);
-				}
-
-				if (controllerDeviceRight.GetHairTriggerUp()) {
-					InteractUp("Right", grabbedItemRight);
-				}
-
-				if (controllerDeviceRight.GetHairTrigger()) {
-					InteractHold("Right", grabbedItemRight);
-				} else {
-					InteractNull("Right", grabbedItemRight);
-				}
-			}
-
-			if (padPressed == true) {
-				if (!controllerDeviceLeft.GetPress(SteamVR_Controller.ButtonMask.Touchpad) && controllerDeviceLeft.GetAxis(Valve.VR.EVRButtonId.k_EButton_SteamVR_Touchpad) == Vector2.zero) {
-					//padPressed = false;
-				}
-			} else {
-				if (controllerDeviceLeft.GetPress(SteamVR_Controller.ButtonMask.Touchpad)) {
-					//padPressed = true;
-				}
-			}
-
-			float slopeSpeed = ((-slopeHighest + 45) / (characterController.slopeLimit * 2)) + 0.5f;
-			moveSpeedCurrent = Mathf.Lerp(moveSpeedCurrent, (heightCurrent > heightCutoffStanding ? (padPressed ? moveSpeedRunning : moveSpeedStanding) : (heightCurrent > heightCutoffCrouching ? moveSpeedCrouching : moveSpeedLaying)) * slopeSpeed, 5 * Time.deltaTime);
-			velocityDesired = new Vector3(controllerDeviceLeft.GetAxis(Valve.VR.EVRButtonId.k_EButton_SteamVR_Touchpad).x, velocityDesired.y, controllerDeviceLeft.GetAxis(Valve.VR.EVRButtonId.k_EButton_SteamVR_Touchpad).y) * moveSpeedCurrent;
-			velocityDesired = Quaternion.LookRotation(new Vector3(hmd.transform.forward.x, 0, hmd.transform.forward.z), Vector3.up) * velocityDesired;
-			if (climbableGrabbedLeft == null && climbableGrabbedRight == null) {
-				wasClimbingLastFrame = false;
-				if (grounded == true) {
-					velocityCurrent = Vector3.Lerp(velocityCurrent, new Vector3(velocityDesired.x, velocityCurrent.y, velocityDesired.z), 25 * Time.deltaTime);
-				} else {
-					if (controllerDeviceLeft.GetAxis(Valve.VR.EVRButtonId.k_EButton_SteamVR_Touchpad) != Vector2.zero) {
-						Vector3 normalizedVelocityDesired = new Vector3(velocityDesired.x, 0, velocityDesired.z).normalized * (Mathf.Clamp01(new Vector3(velocityDesired.x, 0, velocityDesired.z).magnitude) * Mathf.Clamp(new Vector3(velocityCurrent.x, 0, velocityCurrent.z).magnitude, moveSpeedCurrent, Mathf.Infinity));
-						velocityCurrent = Vector3.Lerp(velocityCurrent, new Vector3(normalizedVelocityDesired.x, velocityCurrent.y, normalizedVelocityDesired.z), 2.5f * Time.deltaTime);
-					}
-				}
-			} else {
-				Vector3 combinedClimbPositions = Vector3.zero;
-				Quaternion climbRotationLeft = Quaternion.Euler(0, 0, 0);
-				Quaternion climbRotationRight = Quaternion.Euler(0, 0, 0);
-				int climbCount = 0;
-
-				if (climbableGrabbedLeft == true) {
-					climbRotationLeft = Quaternion.Inverse(grabRotationLeft) * climbableGrabbedLeft.rotation;
-				}
-
-				if (climbableGrabbedRight == true) {
-					climbRotationRight = Quaternion.Inverse(grabRotationRight) * climbableGrabbedRight.rotation;
-				}
-
-				if (climbableGrabbedLeft == true) {
-					combinedClimbPositions += (climbableGrabbedLeft.position + climbRotationLeft * grabOffsetLeft) + (climbRotationLeft * grabCCOffsetLeft - (controllerLeft.transform.position - characterController.transform.position));
-					climbCount++;
-				}
-
-				if (climbableGrabbedRight == true) {
-					combinedClimbPositions += (climbableGrabbedRight.position + climbRotationRight * grabOffsetRight) + (climbRotationRight * grabCCOffsetRight - (controllerRight.transform.position - characterController.transform.position));
-					climbCount++;
-				}
-
-				combinedClimbPositions = combinedClimbPositions / climbCount;
-
-				velocityCurrent = Vector3.Lerp(velocityCurrent, (combinedClimbPositions - characterController.transform.position) / Time.deltaTime, 25 * Time.deltaTime);
-
-				if (wasClimbingLastFrame == true) {
-					if (climbableGrabbedLeft) {
-						if (climbableGrabbedRight) {
-							//RotatePlayer(Quaternion.Slerp(Quaternion.Inverse(grabRotationLastFrameLeft) * climbRotationLeft, Quaternion.Inverse(grabRotationLastFrameRight) * climbRotationRight, 0.5f));
-						} else {
-							//RotatePlayer(Quaternion.Inverse(grabRotationLastFrameLeft) * climbRotationLeft);
-						}
-					} else {
-						if (climbableGrabbedRight) {
-							//RotatePlayer(Quaternion.Inverse(grabRotationLastFrameRight) * climbRotationRight);
-						} else {
-							Debug.LogWarning("Why are we here?");
-						}
-					}
-				}
-
-				grabRotationLastFrameLeft = climbRotationLeft;
-				grabRotationLastFrameRight = climbRotationRight;
-				wasClimbingLastFrame = true;
+				Grab(side, grabInfoCurrent, grabInfoOpposite, handInfoCurrent, handInfoOpposite);
+				handInfoCurrent.handGameObject.GetComponent<BoxCollider>().enabled = false;
 			}
 		}
 
-		handPosLastFrameLeft = controllerLeft.transform.position;
-		handPosLastFrameRight = controllerRight.transform.position;
+		if (handInfoCurrent.controllerDevice.GetPressUp(Valve.VR.EVRButtonId.k_EButton_Grip)) {
+			if (grabInfoCurrent.grabbedRigidbody == false || ((grabInfoCurrent.grabbedItem && grabInfoCurrent.grabbedItem.itemType == Item.ItemType.Prop) || handInfoCurrent.itemReleasingDisabled == false)) {
+				Release(side, grabInfoCurrent, grabInfoOpposite, handInfoCurrent, handInfoOpposite);
+				handInfoCurrent.handGameObject.GetComponent<BoxCollider>().enabled = true;
+			}
+		}
 
+		if (grabInfoCurrent.grabbedItem != null && grabInfoCurrent.grabNode != null) {
+			if (handInfoCurrent.controllerDevice.GetHairTriggerDown()) {
+				InteractDown(side, grabInfoCurrent);
+			}
+
+			if (handInfoLeft.controllerDevice.GetHairTriggerUp()) {
+				InteractUp(side, grabInfoCurrent);
+			}
+
+			if (handInfoLeft.controllerDevice.GetHairTrigger()) {
+				InteractHold(side, grabInfoCurrent);
+			} else {
+				InteractNull(side, grabInfoCurrent);
+			}
+		}
 	}
 
 	void RotatePlayer (Quaternion rot) {
@@ -335,73 +249,73 @@ public class Player : MonoBehaviour {
 		rig.transform.rotation = rig.transform.rotation * rot;
 	}
 
-	void GrabLeft () {
-		if (climbableGrabbedLeft == null && grabbedRigidbodyLeft == null) {
+	void Grab (string side, GrabInformation grabInfoCurrent, GrabInformation grabInfoOpposite, HandInformation handInfoCurrent, HandInformation handInfoOpposite) {
+		if (grabInfoCurrent.climbableGrabbed == null && grabInfoCurrent.grabbedRigidbody == null) {
 			// Try and grab something
-			Vector3 originPosition = controllerLeft.transform.position + (controllerLeft.transform.rotation * new Vector3(handRigidbodyPositionOffset.x, handRigidbodyPositionOffset.y, handRigidbodyPositionOffset.z));
+			Vector3 originPosition = handInfoCurrent.controller.transform.position + (handInfoCurrent.controller.transform.rotation * new Vector3(handRigidbodyPositionOffset.x, handRigidbodyPositionOffset.y, handRigidbodyPositionOffset.z));
 			Collider[] itemColliders = Physics.OverlapSphere(originPosition, 0.2f, grabLayerMask);
 			foreach (Collider hitItem in itemColliders) {
 				if (hitItem.transform.gameObject.layer == LayerMask.NameToLayer("Item") || hitItem.transform.gameObject.layer == LayerMask.NameToLayer("Heavy Item")) {
-					StartCoroutine(TriggerHapticFeedback(controllerDeviceLeft, 0.1f));
+					StartCoroutine(TriggerHapticFeedback(handInfoCurrent.controllerDevice, 0.1f));
 
 					if (hitItem.transform.GetComponent<Rigidbody>()) {
-						grabbedRigidbodyLeft = hitItem.transform.GetComponent<Rigidbody>();
+						grabInfoCurrent.grabbedRigidbody = hitItem.transform.GetComponent<Rigidbody>();
 					} else if (hitItem.transform.parent.GetComponent<Rigidbody>()) {
-						grabbedRigidbodyLeft = hitItem.transform.parent.GetComponent<Rigidbody>();
+						grabInfoCurrent.grabbedRigidbody = hitItem.transform.parent.GetComponent<Rigidbody>();
 					} else if (hitItem.transform.parent.parent.GetComponent<Rigidbody>()) {
-						grabbedRigidbodyLeft = hitItem.transform.parent.parent.GetComponent<Rigidbody>();
+						grabInfoCurrent.grabbedRigidbody = hitItem.transform.parent.parent.GetComponent<Rigidbody>();
 					}
 
 					if (hitItem.transform.GetComponent<Item>()) {
-						grabbedItemLeft = hitItem.transform.GetComponent<Item>();
+						grabInfoCurrent.grabbedItem = hitItem.transform.GetComponent<Item>();
 					} else if (hitItem.transform.parent.GetComponent<Item>()) {
-						grabbedItemLeft = hitItem.transform.parent.GetComponent<Item>();
+						grabInfoCurrent.grabbedItem = hitItem.transform.parent.GetComponent<Item>();
 					} else if (hitItem.transform.parent.parent.GetComponent<Item>()) {
-						grabbedItemLeft = hitItem.transform.parent.parent.GetComponent<Item>();
+						grabInfoCurrent.grabbedItem = hitItem.transform.parent.parent.GetComponent<Item>();
 					}
 
-					grabbedRigidbodyLeft.useGravity = false;
+					grabInfoCurrent.grabbedRigidbody.useGravity = false;
 
-					if (grabbedRigidbodyLeft.transform.gameObject.layer == LayerMask.NameToLayer("Item")) {
+					if (grabInfoCurrent.grabbedRigidbody.transform.gameObject.layer == LayerMask.NameToLayer("Item")) {
 						GrabNode hitGrabNode = hitItem.GetComponent<GrabNode>();
 						if (hitGrabNode) {
 							if (hitGrabNode.referralNode == null) {
-								grabNodeLeft = hitGrabNode;
+								grabInfoCurrent.grabNode = hitGrabNode;
 							} else {
-								grabNodeLeft = hitGrabNode.referralNode;
+								grabInfoCurrent.grabNode = hitGrabNode.referralNode;
 							}
 
-							if (grabNodeLeft.grabType == GrabNode.GrabType.FixedPositionRotation) {
-								grabOffsetLeft = Quaternion.Euler(grabNodeLeft.rotation) * (-grabNodeLeft.transform.localPosition - grabNodeLeft.offset) + new Vector3(0, handRigidbodyPositionOffset.y, handRigidbodyPositionOffset.z);
-								grabRotationLeft = Quaternion.Euler(grabNodeLeft.rotation);
-							} else if (grabNodeLeft.grabType == GrabNode.GrabType.FixedPosition) {
-								grabOffsetLeft = Quaternion.Euler(grabNodeLeft.rotation) * (-grabNodeLeft.transform.localPosition - grabNodeLeft.offset) + new Vector3(0, handRigidbodyPositionOffset.y, handRigidbodyPositionOffset.z);
-								grabRotationLeft = Quaternion.Inverse(controllerLeft.transform.rotation) * grabbedRigidbodyLeft.transform.rotation;
-							} else if (grabNodeLeft.grabType == GrabNode.GrabType.Dynamic || grabNodeLeft.grabType == GrabNode.GrabType.Referral) {
-								grabOffsetLeft = Quaternion.Inverse(controllerLeft.transform.rotation) * (grabbedRigidbodyLeft.transform.position - controllerLeft.transform.position);
-								grabRotationLeft = Quaternion.Inverse(controllerLeft.transform.rotation) * grabbedRigidbodyLeft.transform.rotation;
+							if (grabInfoCurrent.grabNode.grabType == GrabNode.GrabType.FixedPositionRotation) {
+								grabInfoCurrent.grabOffset = Quaternion.Euler(grabInfoCurrent.grabNode.rotation) * (-grabInfoCurrent.grabNode.transform.localPosition - grabInfoCurrent.grabNode.offset) + new Vector3(0, handRigidbodyPositionOffset.y, handRigidbodyPositionOffset.z);
+								grabInfoCurrent.grabRotation = Quaternion.Euler(grabInfoCurrent.grabNode.rotation);
+							} else if (grabInfoCurrent.grabNode.grabType == GrabNode.GrabType.FixedPosition) {
+								grabInfoCurrent.grabOffset = Quaternion.Euler(grabInfoCurrent.grabNode.rotation) * (-grabInfoCurrent.grabNode.transform.localPosition - grabInfoCurrent.grabNode.offset) + new Vector3(0, handRigidbodyPositionOffset.y, handRigidbodyPositionOffset.z);
+								grabInfoCurrent.grabRotation = Quaternion.Inverse(handInfoCurrent.controller.transform.rotation) * grabInfoCurrent.grabbedRigidbody.transform.rotation;
+							} else if (grabInfoCurrent.grabNode.grabType == GrabNode.GrabType.Dynamic || grabInfoCurrent.grabNode.grabType == GrabNode.GrabType.Referral) {
+								grabInfoCurrent.grabOffset = Quaternion.Inverse(handInfoCurrent.controller.transform.rotation) * (grabInfoCurrent.grabbedRigidbody.transform.position - handInfoCurrent.controller.transform.position);
+								grabInfoCurrent.grabRotation = Quaternion.Inverse(handInfoCurrent.controller.transform.rotation) * grabInfoCurrent.grabbedRigidbody.transform.rotation;
 							}
 						} else {
-							grabOffsetLeft = Quaternion.Inverse(controllerLeft.transform.rotation) * (grabbedRigidbodyLeft.transform.position - controllerLeft.transform.position);
-							grabRotationLeft = Quaternion.Inverse(controllerLeft.transform.rotation) * grabbedRigidbodyLeft.transform.rotation;
+							grabInfoCurrent.grabOffset = Quaternion.Inverse(handInfoCurrent.controller.transform.rotation) * (grabInfoCurrent.grabbedRigidbody.transform.position - handInfoCurrent.controller.transform.position);
+							grabInfoCurrent.grabRotation = Quaternion.Inverse(handInfoCurrent.controller.transform.rotation) * grabInfoCurrent.grabbedRigidbody.transform.rotation;
 						}
-						if (grabbedRigidbodyLeft == grabbedRigidbodyRight) {      // Is the other hand already holding this item?
-							itemVelocityPercentageLeft = 0;
-							itemVelocityPercentageRight = 0;
-							if (grabNodeLeft.dominance > grabNodeRight.dominance) {
-								grabDualWieldDominantHand = "Left";
-								grabDualWieldDirection = Quaternion.Euler(grabNodeLeft.rotation) * Quaternion.Inverse(grabbedRigidbodyLeft.transform.rotation) * (controllerRight.transform.position - (grabNodeLeft.transform.position + grabbedRigidbodyLeft.transform.rotation * -grabNodeLeft.offset));
-							} else if (grabNodeLeft.dominance < grabNodeRight.dominance) {
-								grabDualWieldDominantHand = "Right";
-								grabDualWieldDirection = Quaternion.Inverse(controllerRight.transform.rotation) * (controllerLeft.transform.position - controllerRight.transform.position);
+						if (grabInfoCurrent.grabbedRigidbody == grabInfoOpposite.grabbedRigidbody) {      // Is the other hand already holding this item?
+							grabInfoCurrent.itemVelocityPercentage = 0;
+							grabInfoOpposite.itemVelocityPercentage = 0;
+							if (grabInfoCurrent.grabNode.dominance > grabInfoOpposite.grabNode.dominance) {
+								grabDualWieldDominantHand = side;
+								grabDualWieldDirection = Quaternion.Euler(grabInfoCurrent.grabNode.rotation) * Quaternion.Inverse(grabInfoCurrent.grabbedRigidbody.transform.rotation) * (handInfoOpposite.controller.transform.position - (grabInfoCurrent.grabNode.transform.position + grabInfoCurrent.grabbedRigidbody.transform.rotation * -grabInfoCurrent.grabNode.offset));
+							} else if (grabInfoCurrent.grabNode.dominance < grabInfoOpposite.grabNode.dominance) {
+								grabDualWieldDominantHand = side;
+								grabDualWieldDirection = Quaternion.Inverse(handInfoOpposite.controller.transform.rotation) * (handInfoCurrent.controller.transform.position - handInfoOpposite.controller.transform.position);
 							} else {
-								grabDualWieldDominantHand = "Right";
-								grabDualWieldDirection = Quaternion.Inverse(controllerRight.transform.rotation) * (controllerLeft.transform.position - controllerRight.transform.position);
+								grabDualWieldDominantHand = side;
+								grabDualWieldDirection = Quaternion.Inverse(handInfoOpposite.controller.transform.rotation) * (handInfoCurrent.controller.transform.position - handInfoOpposite.controller.transform.position);
 							}
 						}
-					} else if (grabbedRigidbodyLeft.transform.gameObject.layer == LayerMask.NameToLayer("Heavy Item")) {
-						grabOffsetLeft = Quaternion.Inverse(grabbedRigidbodyLeft.transform.rotation) * (controllerLeft.transform.position - grabbedRigidbodyLeft.transform.position);
-						grabRotationLeft = grabbedRigidbodyLeft.transform.rotation;
+					} else if (grabInfoCurrent.grabbedRigidbody.transform.gameObject.layer == LayerMask.NameToLayer("Heavy Item")) {
+						grabInfoCurrent.grabOffset = Quaternion.Inverse(grabInfoCurrent.grabbedRigidbody.transform.rotation) * (handInfoCurrent.controller.transform.position - grabInfoCurrent.grabbedRigidbody.transform.position);
+						grabInfoCurrent.grabRotation = grabInfoCurrent.grabbedRigidbody.transform.rotation;
 					}
 					return;
 				}
@@ -410,11 +324,11 @@ public class Player : MonoBehaviour {
 			Collider[] climbColliders = Physics.OverlapSphere(originPosition, 0.065f, grabLayerMask);
 			foreach (Collider hitClimb in climbColliders) {
 				if (hitClimb.transform.gameObject.layer == LayerMask.NameToLayer("Climbable") || (hitClimb.transform.gameObject.layer == LayerMask.NameToLayer("Environment") && (hmd.transform.position.y - rig.transform.position.y < heightCutoffCrouching))) {
-					grabOffsetLeft = characterController.transform.position - hitClimb.transform.position;
-					grabRotationLeft = hitClimb.transform.rotation;
-					grabCCOffsetLeft = controllerLeft.transform.position - characterController.transform.position;
-					climbableGrabbedLeft = hitClimb.transform;
-					StartCoroutine(TriggerHapticFeedback(controllerDeviceLeft, 0.1f));
+					grabInfoCurrent.grabOffset = characterController.transform.position - hitClimb.transform.position;
+					grabInfoCurrent.grabRotation = hitClimb.transform.rotation;
+					grabInfoCurrent.grabCCOffset = handInfoCurrent.controller.transform.position - characterController.transform.position;
+					grabInfoCurrent.climbableGrabbed = hitClimb.transform;
+					StartCoroutine(TriggerHapticFeedback(handInfoCurrent.controllerDevice, 0.1f));
 					return;
 				}
 			}
@@ -427,224 +341,65 @@ public class Player : MonoBehaviour {
 					RaycastHit environmentHit;
 					if (Physics.Raycast(currentOrigin + new Vector3(0, 0.05f, 0), Vector3.down, out environmentHit, 0.1f, grabLayerMask)) {
 						if (Vector3.Angle(environmentHit.normal, Vector3.up) < 45) {
-							grabOffsetLeft = characterController.transform.position - environmentHit.transform.position;
-							grabRotationLeft = environmentHit.transform.rotation;
-							grabCCOffsetLeft = controllerLeft.transform.position - characterController.transform.position;
-							climbableGrabbedLeft = environmentHit.transform;
-							StartCoroutine(TriggerHapticFeedback(controllerDeviceLeft, 0.1f));
+							grabInfoCurrent.grabOffset = characterController.transform.position - environmentHit.transform.position;
+							grabInfoCurrent.grabRotation = environmentHit.transform.rotation;
+							grabInfoCurrent.grabCCOffset = handInfoCurrent.controller.transform.position - characterController.transform.position;
+							grabInfoCurrent.climbableGrabbed = environmentHit.transform;
+							StartCoroutine(TriggerHapticFeedback(handInfoCurrent.controllerDevice, 0.1f));
 							return;
 						}
 					}
 				}
 			}
-		} else {
-			// Do nothing?
 		}
 	}
 
-	void ReleaseLeft () {
-		grabOffsetLeft = Vector3.zero;
-		grabCCOffsetLeft = Vector3.zero;
-		if (climbableGrabbedRight == null && climbableGrabbedLeft == true) {
+	void Release(string side, GrabInformation grabInfoCurrent, GrabInformation grabInfoOpposite, HandInformation handInfoCurrent, HandInformation handInfoOpposite) {
+		grabInfoCurrent.grabOffset = Vector3.zero;
+		grabInfoCurrent.grabCCOffset = Vector3.zero;
+		if (grabInfoOpposite.climbableGrabbed == null && grabInfoCurrent.climbableGrabbed == true) {
 			AttemptClamber();
 		}
-		if (grabbedRigidbodyLeft == true) {
-			if (grabbedRigidbodyRight != grabbedRigidbodyLeft) {
-				ThrowItem(grabbedRigidbodyLeft, (controllerLeft.transform.position - handPosLastFrameLeft) / Time.deltaTime);
+		if (grabInfoCurrent.grabbedRigidbody == true) {
+			if (grabInfoOpposite.grabbedRigidbody != grabInfoCurrent.grabbedRigidbody) {
+				ThrowItem(grabInfoCurrent.grabbedRigidbody, (handInfoCurrent.controller.transform.position - handInfoCurrent.handPosLastFrame) / Time.deltaTime);
 			} else {
-				if (grabNodeRight == null) {
-					itemVelocityPercentageLeft = 0;
-					itemVelocityPercentageRight = 0;
-					grabOffsetRight = Quaternion.Inverse(controllerRight.transform.rotation) * (grabbedRigidbodyRight.transform.position - controllerRight.transform.position);
-					grabRotationRight = Quaternion.Inverse(controllerRight.transform.rotation) * grabbedRigidbodyRight.transform.rotation;
+				if (grabInfoOpposite.grabNode == null) {
+					grabInfoCurrent.itemVelocityPercentage = 0;
+					grabInfoOpposite.itemVelocityPercentage = 0;
+					grabInfoOpposite.grabOffset = Quaternion.Inverse(handInfoOpposite.controller.transform.rotation) * (grabInfoOpposite.grabbedRigidbody.transform.position - handInfoOpposite.controller.transform.position);
+					grabInfoOpposite.grabRotation = Quaternion.Inverse(handInfoOpposite.controller.transform.rotation) * grabInfoOpposite.grabbedRigidbody.transform.rotation;
 				}
 			}
 		}
-		if (jumpLoadedLeft == true) {
-			if ((grounded == true || timeLastJumped + 0.1f > Time.timeSinceLevelLoad) && climbableGrabbedLeft == false && grabbedRigidbodyLeft == false) {
-				velocityCurrent += Vector3.ClampMagnitude((controllerPosLastFrameLeft - controllerLeft.transform.position) * 500, (timeLastJumped + 0.1f > Time.timeSinceLevelLoad) ? 1f : 5f);
-				jumpLoadedLeft = false;
+		if (handInfoCurrent.jumpLoaded == true) {
+			if ((grounded == true || timeLastJumped + 0.1f > Time.timeSinceLevelLoad) && grabInfoCurrent.climbableGrabbed == false && grabInfoCurrent.grabbedRigidbody == false) {
+				velocityCurrent += Vector3.ClampMagnitude((handInfoCurrent.controllerPosLastFrame - handInfoCurrent.controller.transform.position) * 500, (timeLastJumped + 0.1f > Time.timeSinceLevelLoad) ? 1f : 5f);
+				handInfoCurrent.jumpLoaded = false;
 				if (grounded == true) { timeLastJumped = Time.timeSinceLevelLoad; }
 			}
 		}
-		climbableGrabbedLeft = null;
-		grabbedRigidbodyLeft = null;
-		grabbedItemLeft = null;
-		grabNodeLeft = null;
+		grabInfoCurrent.climbableGrabbed = null;
+		grabInfoCurrent.grabbedRigidbody = null;
+		grabInfoCurrent.grabbedItem = null;
+		grabInfoCurrent.grabNode = null;
 	}
 
-	void GrabRight () {
-		if (climbableGrabbedRight == null && grabbedRigidbodyRight == null) {
-			// Try and grab something
-			Vector3 originPosition = controllerRight.transform.position + (controllerRight.transform.rotation * new Vector3(-handRigidbodyPositionOffset.x, handRigidbodyPositionOffset.y, handRigidbodyPositionOffset.z));
-			Collider[] itemColliders = Physics.OverlapSphere(originPosition, 0.2f, grabLayerMask);
-			if (itemColliders.Length > 0) {
-				Collider hitItemClosest = itemColliders[0];
-				float closestDistance = Mathf.Infinity;
-				foreach (Collider hitItem in itemColliders) {
-					GrabNode hitItemClass = null;
-					if (hitItem.GetComponent<GrabNode>()) {
-						hitItemClass = hitItem.GetComponent<GrabNode>();
-						if (Vector3.Distance(hitItem.transform.position + (hitItem.transform.parent.parent.rotation * hitItemClass.offset), controllerRight.transform.position) < closestDistance) {
-							hitItemClosest = hitItem;
-							closestDistance = Vector3.Distance(hitItem.transform.position + (hitItem.transform.parent.parent.rotation * hitItemClass.offset), controllerRight.transform.position);
-						}
-					} else {
-						if (Vector3.Distance(hitItem.transform.position, controllerRight.transform.position) < closestDistance) {
-							hitItemClosest = hitItem;
-							closestDistance = Vector3.Distance(hitItem.transform.position, controllerRight.transform.position);
-						}
-					}
-				}
-
-				if (hitItemClosest.transform.gameObject.layer == LayerMask.NameToLayer("Item") || hitItemClosest.transform.gameObject.layer == LayerMask.NameToLayer("Heavy Item")) {
-					StartCoroutine(TriggerHapticFeedback(controllerDeviceRight, 0.1f));
-
-					if (hitItemClosest.transform.GetComponent<Rigidbody>()) {
-						grabbedRigidbodyRight = hitItemClosest.transform.GetComponent<Rigidbody>();
-					} else if (hitItemClosest.transform.parent.GetComponent<Rigidbody>()) {
-						grabbedRigidbodyRight = hitItemClosest.transform.parent.GetComponent<Rigidbody>();
-					} else if (hitItemClosest.transform.parent.parent.GetComponent<Rigidbody>()) {
-						grabbedRigidbodyRight = hitItemClosest.transform.parent.parent.GetComponent<Rigidbody>();
-					}
-					
-					if (hitItemClosest.transform.GetComponent<Item>()) {
-						grabbedItemRight = hitItemClosest.transform.GetComponent<Item>();
-					} else if (hitItemClosest.transform.parent.GetComponent<Item>()) {
-						grabbedItemRight = hitItemClosest.transform.parent.GetComponent<Item>();
-					} else if (hitItemClosest.transform.parent.parent.GetComponent<Item>()) {
-						grabbedItemRight = hitItemClosest.transform.parent.parent.GetComponent<Item>();
-					}
-
-					grabbedRigidbodyRight.useGravity = false;
-
-					if (grabbedRigidbodyRight.transform.gameObject.layer == LayerMask.NameToLayer("Item")) {
-						GrabNode hitGrabNode = hitItemClosest.GetComponent<GrabNode>();
-						if (hitGrabNode) {
-							if (hitGrabNode.referralNode == null) {
-								grabNodeRight = hitGrabNode;
-							} else {
-								grabNodeRight = hitGrabNode.referralNode;
-							}
-
-							if (grabNodeRight.grabType == GrabNode.GrabType.FixedPositionRotation) {
-								grabOffsetRight = Quaternion.Euler(grabNodeRight.rotation) * (-grabNodeRight.transform.localPosition - grabNodeRight.offset) + new Vector3(0, handRigidbodyPositionOffset.y, handRigidbodyPositionOffset.z);
-								grabRotationRight = Quaternion.Euler(grabNodeRight.rotation);
-							} else if (grabNodeRight.grabType == GrabNode.GrabType.FixedPosition) {
-								grabOffsetRight = Quaternion.Euler(grabNodeRight.rotation) * (-grabNodeRight.transform.localPosition - grabNodeRight.offset) + new Vector3(0, handRigidbodyPositionOffset.y, handRigidbodyPositionOffset.z);
-								grabRotationRight = Quaternion.Inverse(controllerRight.transform.rotation) * grabbedRigidbodyRight.transform.rotation;
-							} else if (grabNodeRight.grabType == GrabNode.GrabType.Dynamic || grabNodeRight.grabType == GrabNode.GrabType.Referral) {
-								grabOffsetRight = Quaternion.Inverse(controllerRight.transform.rotation) * (grabbedRigidbodyRight.transform.position - controllerRight.transform.position);
-								grabRotationRight = Quaternion.Inverse(controllerRight.transform.rotation) * grabbedRigidbodyRight.transform.rotation;
-							}
-						} else {
-							grabOffsetRight = Quaternion.Inverse(controllerRight.transform.rotation) * (grabbedRigidbodyRight.transform.position - controllerRight.transform.position);
-							grabRotationRight = Quaternion.Inverse(controllerRight.transform.rotation) * grabbedRigidbodyRight.transform.rotation;
-						}
-						if (grabbedRigidbodyRight == grabbedRigidbodyLeft) {      // Is the other hand already holding this item?
-							itemVelocityPercentageLeft = 0;
-							itemVelocityPercentageRight = 0;
-							if (grabNodeRight.dominance > grabNodeLeft.dominance) {
-								grabDualWieldDominantHand = "Right";
-								grabDualWieldDirection = Quaternion.Euler(grabNodeRight.rotation) * Quaternion.Inverse(grabbedRigidbodyRight.transform.rotation) * (controllerLeft.transform.position - (grabNodeRight.transform.position + grabbedRigidbodyRight.transform.rotation * -grabNodeRight.offset));
-							} else if (grabNodeRight.dominance < grabNodeLeft.dominance) {
-								grabDualWieldDominantHand = "Left";
-								grabDualWieldDirection = Quaternion.Inverse(controllerLeft.transform.rotation) * (controllerRight.transform.position - controllerLeft.transform.position);
-							} else {
-								grabDualWieldDominantHand = "Left";
-								grabDualWieldDirection = Quaternion.Inverse(controllerLeft.transform.rotation) * (controllerRight.transform.position - controllerLeft.transform.position);
-							}
-						}
-					} else if (grabbedRigidbodyRight.transform.gameObject.layer == LayerMask.NameToLayer("Heavy Item")) {
-						grabOffsetRight = Quaternion.Inverse(grabbedRigidbodyRight.transform.rotation) * controllerRight.transform.position - grabbedRigidbodyRight.transform.position;
-						grabRotationRight = grabbedRigidbodyRight.transform.rotation;
-					}
-					return;
-				}
-			}
-
-			Collider[] climbColliders = Physics.OverlapSphere(originPosition, 0.065f, grabLayerMask);
-			foreach (Collider hitClimb in climbColliders) {
-				if (hitClimb.transform.gameObject.layer == LayerMask.NameToLayer("Climbable") || (hitClimb.transform.gameObject.layer == LayerMask.NameToLayer("Environment") && (hmd.transform.position.y - rig.transform.position.y < heightCutoffCrouching))) {
-					grabOffsetRight = characterController.transform.position - hitClimb.transform.position;
-					grabRotationRight = hitClimb.transform.rotation;
-					grabCCOffsetRight = controllerRight.transform.position - characterController.transform.position;
-					climbableGrabbedRight = hitClimb.transform;
-					StartCoroutine(TriggerHapticFeedback(controllerDeviceRight, 0.1f));
-					return;
-				}
-			}
-
-			int rings = 9;
-			int slices = 15;
-			for (int a = 0; a < rings; a++) {
-				for (int b = 0; b < slices; b++) {
-					Vector3 currentOrigin = originPosition + (Quaternion.Euler((a - (rings / 2)) * (180 / rings), b * (360 / slices), 0) * new Vector3(0, 0, 0.065f));
-					RaycastHit environmentHit;
-					if (Physics.Raycast(currentOrigin + new Vector3(0, 0.05f, 0), Vector3.down, out environmentHit, 0.1f, grabLayerMask)) {
-						if (Vector3.Angle(environmentHit.normal, Vector3.up) < 45) {
-							grabOffsetRight = characterController.transform.position - environmentHit.transform.position;
-							grabRotationRight = environmentHit.transform.rotation;
-							grabCCOffsetRight = controllerRight.transform.position - characterController.transform.position;
-							climbableGrabbedRight = environmentHit.transform;
-							StartCoroutine(TriggerHapticFeedback(controllerDeviceRight, 0.1f));
-							return;
-						}
-					}
-				}
-			}
-		} else {
-			// Do nothing?
-		}
-	}
-
-	void ReleaseRight () {
-		grabOffsetRight = Vector3.zero;
-		grabCCOffsetRight = Vector3.zero;
-		if (climbableGrabbedLeft == null && climbableGrabbedRight == true) {
-			AttemptClamber();
-		}
-		if (grabbedRigidbodyRight == true) {
-			if (grabbedRigidbodyLeft != grabbedRigidbodyRight) {
-				ThrowItem(grabbedRigidbodyRight, (controllerRight.transform.position - handPosLastFrameRight) / Time.deltaTime);
-			} else {
-				if (grabNodeLeft == null) {
-					itemVelocityPercentageLeft = 0;
-					itemVelocityPercentageRight = 0;
-					grabOffsetLeft = Quaternion.Inverse(controllerLeft.transform.rotation) * (grabbedRigidbodyLeft.transform.position - controllerLeft.transform.position);
-					grabRotationLeft = Quaternion.Inverse(controllerLeft.transform.rotation) * grabbedRigidbodyLeft.transform.rotation;
-				}
-			}
-		}
-		if (jumpLoadedRight == true) {
-			if ((grounded == true || timeLastJumped + 0.1f > Time.timeSinceLevelLoad) && climbableGrabbedRight == false && grabbedRigidbodyRight == false) {
-				velocityCurrent += Vector3.ClampMagnitude((controllerPosLastFrameRight - controllerRight.transform.position) * 500, (timeLastJumped + 0.1f > Time.timeSinceLevelLoad) ? 1f : 5f);
-				jumpLoadedRight = false;
-				if (grounded == true) { timeLastJumped = Time.timeSinceLevelLoad; }
-			}
-		}
-
-		climbableGrabbedRight = null;
-		grabbedRigidbodyRight = null;
-		grabbedItemRight = null;
-		grabNodeRight = null;
-	}
-
-	void InteractDown (string hand, Item currentItem) {
-		Weapon currentWeapon = currentItem.weapon;
-		if ((hand == "Left" ? grabNodeLeft : grabNodeRight).interactionType == GrabNode.InteractionType.Trigger) {
+	void InteractDown (string side, GrabInformation grabInfoCurrent) {
+		Weapon currentWeapon = grabInfoCurrent.grabbedItem.weapon;
+		if (grabInfoCurrent.grabNode.interactionType == GrabNode.InteractionType.Trigger) {
 			if (currentWeapon.chargingEnabled == false) {
-				AttemptToFireWeapon(hand, currentItem);
+				AttemptToFireWeapon(side, grabInfoCurrent.grabbedItem);
 			}
 		}
 	}
 
-	void InteractHold (string hand, Item currentItem) {
-		Weapon currentWeapon = currentItem.weapon;
+	void InteractHold (string side, GrabInformation grabInfoCurrent) {
+		Weapon currentWeapon = grabInfoCurrent.grabbedItem.weapon;
 		currentWeapon.triggerHeld = true;
-		if ((hand == "Left" ? grabNodeLeft : grabNodeRight).interactionType == GrabNode.InteractionType.Trigger) {
+		if (grabInfoCurrent.grabNode.interactionType == GrabNode.InteractionType.Trigger) {
 			if (currentWeapon.automatic == true) {
-				AttemptToFireWeapon(hand, currentItem);
+				AttemptToFireWeapon(side, grabInfoCurrent.grabbedItem);
 			}
 			if (currentWeapon.chargingEnabled == true) {
 				currentWeapon.chargeCurrent = Mathf.Clamp01(currentWeapon.chargeCurrent + (currentWeapon.chargeIncrement * Time.deltaTime));
@@ -652,26 +407,26 @@ public class Player : MonoBehaviour {
 		}
 	}
 
-	void InteractUp(string hand, Item currentItem) {
-		Weapon currentWeapon = currentItem.weapon;
+	void InteractUp(string side, GrabInformation grabInfoCurrent) {
+		Weapon currentWeapon = grabInfoCurrent.grabbedItem.weapon;
 		currentWeapon.triggerHeld = false;
-		if ((hand == "Left" ? grabNodeLeft : grabNodeRight).interactionType == GrabNode.InteractionType.Trigger) {
+		if (grabInfoCurrent.grabNode.interactionType == GrabNode.InteractionType.Trigger) {
 			if (currentWeapon.chargingEnabled == true) {
-				AttemptToFireWeapon(hand, currentItem);
+				AttemptToFireWeapon(side, grabInfoCurrent.grabbedItem);
 			}
 		}
 	}
 
-	void InteractNull (string hand, Item currentItem) {
-		Weapon currentWeapon = currentItem.weapon;
+	void InteractNull (string side, GrabInformation grabInfoCurrent) {
+		Weapon currentWeapon = grabInfoCurrent.grabbedItem.weapon;
 		currentWeapon.triggerHeld = false;
 	}
 
-	void AttemptToFireWeapon (string hand, Item currentItem) {
+	void AttemptToFireWeapon (string side, Item currentItem) {
 		Weapon currentWeapon = currentItem.weapon;
 		if (currentWeapon.timeLastFired + (1 / currentWeapon.firerate) <= Time.timeSinceLevelLoad) {
 			if (currentWeapon.chargingEnabled == false || (currentWeapon.chargeCurrent >= currentWeapon.chargeRequired)) {
-				StartCoroutine(FireWeapon(hand, currentItem));
+				StartCoroutine(FireWeapon(side, currentItem));
 				currentWeapon.timeLastFired = Time.timeSinceLevelLoad;
 			}
 		}
@@ -685,26 +440,26 @@ public class Player : MonoBehaviour {
 		for (int i = 0; i < Mathf.Clamp(currentWeapon.burstCount, 1, 100); i++) {           // For each burst shot in this fire
 			
 			// Step 1: Trigger haptic feedback
-			if (grabbedRigidbodyLeft == grabbedRigidbodyRight) {
-				StartCoroutine(TriggerHapticFeedback(controllerDeviceLeft, 0.1f));
-				StartCoroutine(TriggerHapticFeedback(controllerDeviceRight, 0.1f));
+			if (grabInfoLeft.grabbedRigidbody == grabInfoRight.grabbedRigidbody) {
+				StartCoroutine(TriggerHapticFeedback(handInfoLeft.controllerDevice, 0.1f));
+				StartCoroutine(TriggerHapticFeedback(handInfoRight.controllerDevice, 0.1f));
 			} else {
-				StartCoroutine(TriggerHapticFeedback((hand == "Left" ? controllerDeviceLeft : controllerDeviceRight), 0.1f));
+				StartCoroutine(TriggerHapticFeedback((hand == "Left" ? handInfoLeft.controllerDevice : handInfoRight.controllerDevice), 0.1f));
 			}
 
 			// Step 2: Apply velocity and angular velocity to weapon
-			if (grabbedItemLeft == grabbedItemRight) {
-				itemVelocityPercentageLeft = 0f;
-				itemVelocityPercentageRight = 0f;
+			if (grabInfoLeft.grabbedItem == grabInfoRight.grabbedItem) {
+				grabInfoLeft.itemVelocityPercentage = 0f;
+				grabInfoRight.itemVelocityPercentage = 0f;
 				currentRigidbody.velocity += (currentRigidbody.transform.forward * -currentWeapon.recoilLinear * 0.5f);
 				currentRigidbody.angularVelocity += new Vector3(Random.Range(-currentWeapon.recoilAngular, currentWeapon.recoilAngular), Random.Range(-currentWeapon.recoilAngular, currentWeapon.recoilAngular), Random.Range(-currentWeapon.recoilAngular, currentWeapon.recoilAngular)) * 0.5f;
 			} else {
 				currentRigidbody.velocity += (currentRigidbody.transform.forward * -currentWeapon.recoilLinear);
 				currentRigidbody.angularVelocity += new Vector3(Random.Range(-currentWeapon.recoilAngular, currentWeapon.recoilAngular), Random.Range(-currentWeapon.recoilAngular, currentWeapon.recoilAngular), Random.Range(-currentWeapon.recoilAngular, currentWeapon.recoilAngular));
 				if (hand == "Left") {
-					itemVelocityPercentageLeft = 0;
+					grabInfoLeft.itemVelocityPercentage = 0;
 				} else if (hand == "Right") {
-					itemVelocityPercentageRight = 0;
+					grabInfoRight.itemVelocityPercentage = 0;
 				}
 			}
 
@@ -777,8 +532,76 @@ public class Player : MonoBehaviour {
 		}
 	}
 
-	void UpdatePlayerMovement() {
-		if (climbableGrabbedLeft == null && climbableGrabbedRight == null) {
+	void UpdatePlayerVelocity () {
+		float slopeSpeed = ((-slopeHighest + 45) / (characterController.slopeLimit * 2)) + 0.5f;
+		moveSpeedCurrent = Mathf.Lerp(moveSpeedCurrent, (heightCurrent > heightCutoffStanding ? (padPressed ? moveSpeedRunning : moveSpeedStanding) : (heightCurrent > heightCutoffCrouching ? moveSpeedCrouching : moveSpeedLaying)) * slopeSpeed, 5 * Time.deltaTime);
+		velocityDesired = new Vector3(handInfoLeft.controllerDevice.GetAxis(Valve.VR.EVRButtonId.k_EButton_SteamVR_Touchpad).x, velocityDesired.y, handInfoLeft.controllerDevice.GetAxis(Valve.VR.EVRButtonId.k_EButton_SteamVR_Touchpad).y) * moveSpeedCurrent;
+		velocityDesired = Quaternion.LookRotation(new Vector3(hmd.transform.forward.x, 0, hmd.transform.forward.z), Vector3.up) * velocityDesired;
+		if (grabInfoLeft.climbableGrabbed == null && grabInfoRight.climbableGrabbed == null) {
+			wasClimbingLastFrame = false;
+			if (grounded == true) {
+				velocityCurrent = Vector3.Lerp(velocityCurrent, new Vector3(velocityDesired.x, velocityCurrent.y, velocityDesired.z), 25 * Time.deltaTime);
+			} else {
+				if (handInfoLeft.controllerDevice.GetAxis(Valve.VR.EVRButtonId.k_EButton_SteamVR_Touchpad) != Vector2.zero) {
+					Vector3 normalizedVelocityDesired = new Vector3(velocityDesired.x, 0, velocityDesired.z).normalized * (Mathf.Clamp01(new Vector3(velocityDesired.x, 0, velocityDesired.z).magnitude) * Mathf.Clamp(new Vector3(velocityCurrent.x, 0, velocityCurrent.z).magnitude, moveSpeedCurrent, Mathf.Infinity));
+					velocityCurrent = Vector3.Lerp(velocityCurrent, new Vector3(normalizedVelocityDesired.x, velocityCurrent.y, normalizedVelocityDesired.z), 2.5f * Time.deltaTime);
+				}
+			}
+		} else {
+			Vector3 combinedClimbPositions = Vector3.zero;
+			Quaternion climbRotationLeft = Quaternion.Euler(0, 0, 0);
+			Quaternion climbRotationRight = Quaternion.Euler(0, 0, 0);
+			int climbCount = 0;
+
+			if (grabInfoLeft.climbableGrabbed == true) {
+				climbRotationLeft = Quaternion.Inverse(grabInfoLeft.grabRotation) * grabInfoLeft.climbableGrabbed.rotation;
+			}
+
+			if (grabInfoRight.climbableGrabbed == true) {
+				climbRotationRight = Quaternion.Inverse(grabInfoRight.grabRotation) * grabInfoRight.climbableGrabbed.rotation;
+			}
+
+			if (grabInfoLeft.climbableGrabbed == true) {
+				combinedClimbPositions += (grabInfoLeft.climbableGrabbed.position + climbRotationLeft * grabInfoLeft.grabOffset) + (climbRotationLeft * grabInfoLeft.grabCCOffset - (handInfoLeft.controller.transform.position - characterController.transform.position));
+				climbCount++;
+			}
+
+			if (grabInfoRight.climbableGrabbed == true) {
+				combinedClimbPositions += (grabInfoRight.climbableGrabbed.position + climbRotationRight * grabInfoRight.grabOffset) + (climbRotationRight * grabInfoRight.grabCCOffset - (handInfoRight.controller.transform.position - characterController.transform.position));
+				climbCount++;
+			}
+
+			combinedClimbPositions = combinedClimbPositions / climbCount;
+
+			velocityCurrent = Vector3.Lerp(velocityCurrent, (combinedClimbPositions - characterController.transform.position) / Time.deltaTime, 25 * Time.deltaTime);
+
+			if (wasClimbingLastFrame == true) {
+				if (grabInfoLeft.climbableGrabbed) {
+					if (grabInfoRight.climbableGrabbed) {
+						//RotatePlayer(Quaternion.Slerp(Quaternion.Inverse(grabInfoLeft.grabRotationLastFrame) * climbRotationLeft, Quaternion.Inverse(grabInfoRight.grabRotationLastFrame) * climbRotationRight, 0.5f));
+					} else {
+						//RotatePlayer(Quaternion.Inverse(grabInfoLeft.grabRotationLastFrame) * climbRotationLeft);
+					}
+				} else {
+					if (grabInfoRight.climbableGrabbed) {
+						//RotatePlayer(Quaternion.Inverse(grabInfoRight.grabRotationLastFrame) * climbRotationRight);
+					} else {
+						Debug.LogWarning("Why are we here?");
+					}
+				}
+			}
+
+			grabInfoLeft.grabRotationLastFrame = climbRotationLeft;
+			grabInfoRight.grabRotationLastFrame = climbRotationRight;
+			wasClimbingLastFrame = true;
+		}
+		handInfoLeft.handPosLastFrame = handInfoLeft.controller.transform.position;
+		handInfoRight.handPosLastFrame = handInfoRight.controller.transform.position;
+
+	}
+
+	void UpdatePlayerMovement () {
+		if (grabInfoLeft.climbableGrabbed == null && grabInfoRight.climbableGrabbed == null) {
 			SetCharacterControllerHeight((hmd.transform.position.y - (rig.transform.position.y)) + 0.25f);
 		} else {
 			SetCharacterControllerHeight(0.25f);
@@ -823,7 +646,7 @@ public class Player : MonoBehaviour {
 		}
 
 		// Step ?: Gravity
-		if (climbableGrabbedLeft == null && climbableGrabbedRight == null) {
+		if (grabInfoLeft.climbableGrabbed == null && grabInfoRight.climbableGrabbed == null) {
 			velocityCurrent += new Vector3(0, -9.81f * Time.deltaTime, 0);          // Add Gravity this frame
 		}
 
@@ -855,11 +678,11 @@ public class Player : MonoBehaviour {
 
 		if (closestGroundDistance != Mathf.Infinity) {
 			if (closestGroundDistance < 0.05f) {
-				if (climbableGrabbedLeft == null && climbableGrabbedRight == null && velocityCurrent.y < 0) {
+				if (grabInfoLeft.climbableGrabbed == null && grabInfoRight.climbableGrabbed == null && velocityCurrent.y < 0) {
 					if (grounded == false) { PlayFootstepSound(); }
 					grounded = true;
-					jumpLoadedLeft = true;
-					jumpLoadedRight = true;
+					handInfoLeft.jumpLoaded = true;
+					handInfoRight.jumpLoaded = true;
 					velocityCurrent.y = -closestGroundDistance;
 					if (furthestGrounedDistance < 0.2f) {
 						Vector3 ccStart = characterController.transform.position;
@@ -871,8 +694,8 @@ public class Player : MonoBehaviour {
 			} else if (-closestGroundDistance > velocityCurrent.y * Time.deltaTime) {
 				if (grounded == false) { PlayFootstepSound(); }
 				grounded = true;
-				jumpLoadedLeft = true;
-				jumpLoadedRight = true;
+				handInfoLeft.jumpLoaded = true;
+				handInfoRight.jumpLoaded = true;
 				velocityCurrent.y = -closestGroundDistance;
 				// Fell to ground
 				// Take damage?
@@ -908,16 +731,16 @@ public class Player : MonoBehaviour {
 	}
 
 	void MoveItems (Vector3 deltaPosition) {
-		if (grabbedRigidbodyLeft == grabbedRigidbodyRight) {
-			if (grabbedRigidbodyLeft) {
-				grabbedRigidbodyLeft.MovePosition(grabbedRigidbodyLeft.transform.position + deltaPosition);
+		if (grabInfoLeft.grabbedRigidbody == grabInfoRight.grabbedRigidbody) {
+			if (grabInfoLeft.grabbedRigidbody) {
+				grabInfoLeft.grabbedRigidbody.MovePosition(grabInfoLeft.grabbedRigidbody.transform.position + deltaPosition);
 			}
 		} else {
-			if (grabbedRigidbodyLeft) {
-				grabbedRigidbodyLeft.MovePosition(grabbedRigidbodyLeft.transform.position + deltaPosition);
+			if (grabInfoLeft.grabbedRigidbody) {
+				grabInfoLeft.grabbedRigidbody.MovePosition(grabInfoLeft.grabbedRigidbody.transform.position + deltaPosition);
 			}
-			if (grabbedRigidbodyRight) {
-				grabbedRigidbodyRight.MovePosition(grabbedRigidbodyRight.transform.position + deltaPosition);
+			if (grabInfoRight.grabbedRigidbody) {
+				grabInfoRight.grabbedRigidbody.MovePosition(grabInfoRight.grabbedRigidbody.transform.position + deltaPosition);
 			}
 
 		}
@@ -933,35 +756,35 @@ public class Player : MonoBehaviour {
 	}
 
 	void SetCharacterControllerHeight(float desiredHeight) {
-		Vector3 handPositionBeforeLeft = handLeft.transform.position;
-		Vector3 handPositionBeforeRight = handRight.transform.position;
+		Vector3 handPositionBeforeLeft = handInfoLeft.handGameObject.transform.position;
+		Vector3 handPositionBeforeRight = handInfoRight.handGameObject.transform.position;
 
 		characterController.transform.position = new Vector3(characterController.transform.position.x, (hmd.transform.position.y + rig.transform.position.y) / 2, characterController.transform.position.z);
 		characterController.height = Mathf.Clamp(desiredHeight, characterController.radius * 2f, Mathf.Infinity);
 		characterController.stepOffset = characterController.height / 3.5f;
 
-		handLeft.transform.position = handPositionBeforeLeft;
-		handRight.transform.position = handPositionBeforeRight;
+		handInfoLeft.handGameObject.transform.position = handPositionBeforeLeft;
+		handInfoRight.handGameObject.transform.position = handPositionBeforeRight;
 	}
 
 	void UpdateHandAndItemPhysics () {
 		// Left Hand
-		itemVelocityPercentageLeft = Mathf.Clamp01(itemVelocityPercentageLeft + Time.deltaTime * (grabbedRigidbodyLeft != null ? 2 : -10));
-		UpdateHandPhysics("Left", handRigidbodyLeft, controllerLeft);
+		grabInfoLeft.itemVelocityPercentage = Mathf.Clamp01(grabInfoLeft.itemVelocityPercentage + Time.deltaTime * (grabInfoLeft.grabbedRigidbody != null ? 2 : -10));
+		UpdateHandPhysics("Left", handInfoLeft);
 
 		// Right Hand
-		itemVelocityPercentageRight = Mathf.Clamp01(itemVelocityPercentageRight + Time.deltaTime * (grabbedRigidbodyRight != null ? 2 : -10));
-		UpdateHandPhysics("Right", handRigidbodyRight, controllerRight);
+		grabInfoRight.itemVelocityPercentage = Mathf.Clamp01(grabInfoRight.itemVelocityPercentage + Time.deltaTime * (grabInfoRight.grabbedRigidbody != null ? 2 : -10));
+		UpdateHandPhysics("Right", handInfoRight);
 
 
 		// Item Physics
-		if (grabbedRigidbodyLeft != null && grabbedRigidbodyLeft == grabbedRigidbodyRight) {
+		if (grabInfoLeft.grabbedRigidbody != null && grabInfoLeft.grabbedRigidbody == grabInfoRight.grabbedRigidbody) {
 			// Physics - Dual Wielding
-			Rigidbody grabbedItemDominant = (grabDualWieldDominantHand == "Left") ? grabbedRigidbodyLeft : grabbedRigidbodyRight;
-			SteamVR_TrackedObject controllerDominant = (grabDualWieldDominantHand == "Left") ? controllerLeft : controllerRight;
-			Vector3 dualWieldDirectionCurrent = (((grabDualWieldDominantHand == "Left") ? controllerRight.transform.position : controllerLeft.transform.position) - ((grabDualWieldDominantHand == "Left") ? controllerLeft.transform.position : controllerRight.transform.position));
+			Rigidbody grabbedItemDominant = (grabDualWieldDominantHand == "Left") ? grabInfoLeft.grabbedRigidbody : grabInfoRight.grabbedRigidbody;
+			SteamVR_TrackedObject controllerDominant = (grabDualWieldDominantHand == "Left") ? handInfoLeft.controller : handInfoRight.controller;
+			Vector3 dualWieldDirectionCurrent = (((grabDualWieldDominantHand == "Left") ? handInfoRight.controller.transform.position : handInfoLeft.controller.transform.position) - ((grabDualWieldDominantHand == "Left") ? handInfoLeft.controller.transform.position : handInfoRight.controller.transform.position));
 			Quaternion dualWieldDirectionChangeRotation = Quaternion.FromToRotation(controllerDominant.transform.rotation * grabDualWieldDirection, dualWieldDirectionCurrent);
-			Quaternion rotationDeltaItem = (dualWieldDirectionChangeRotation * controllerDominant.transform.rotation * ((grabDualWieldDominantHand == "Left") ? grabRotationLeft : grabRotationRight)) * Quaternion.Inverse(grabbedRigidbodyLeft.transform.rotation);
+			Quaternion rotationDeltaItem = (dualWieldDirectionChangeRotation * controllerDominant.transform.rotation * ((grabDualWieldDominantHand == "Left") ? grabInfoLeft.grabRotation : grabInfoRight.grabRotation)) * Quaternion.Inverse(grabInfoLeft.grabbedRigidbody.transform.rotation);
 
 			float angleItem;
 			Vector3 axisItem;
@@ -970,36 +793,34 @@ public class Player : MonoBehaviour {
 				angleItem -= 360;
 			}
 
-			grabbedRigidbodyLeft.velocity = Vector3.Lerp(grabbedRigidbodyLeft.velocity, Vector3.ClampMagnitude(((controllerDominant.transform.position + (dualWieldDirectionChangeRotation * controllerDominant.transform.rotation * ((grabDualWieldDominantHand == "Left") ? grabOffsetLeft : grabOffsetRight))) - grabbedItemDominant.transform.position) / Time.fixedDeltaTime, (grabbedItemDominant.GetComponent<HingeJoint>()) ? 1 : 100) * Mathf.Lerp(itemVelocityPercentageLeft, itemVelocityPercentageRight, 0.5f), Mathf.Clamp01(50 * Time.deltaTime));
+			grabInfoLeft.grabbedRigidbody.velocity = Vector3.Lerp(grabInfoLeft.grabbedRigidbody.velocity, Vector3.ClampMagnitude(((controllerDominant.transform.position + (dualWieldDirectionChangeRotation * controllerDominant.transform.rotation * ((grabDualWieldDominantHand == "Left") ? grabInfoLeft.grabOffset : grabInfoRight.grabOffset))) - grabbedItemDominant.transform.position) / Time.fixedDeltaTime, (grabbedItemDominant.GetComponent<HingeJoint>()) ? 1 : 100) * Mathf.Lerp(grabInfoLeft.itemVelocityPercentage, grabInfoRight.itemVelocityPercentage, 0.5f), Mathf.Clamp01(50 * Time.deltaTime));
 
 			if (angleItem != float.NaN) {
-				grabbedRigidbodyLeft.maxAngularVelocity = Mathf.Infinity;
-				grabbedRigidbodyLeft.angularVelocity = Vector3.Lerp(grabbedRigidbodyLeft.angularVelocity, (angleItem * axisItem) * Mathf.Lerp(itemVelocityPercentageLeft, itemVelocityPercentageRight, 0.5f) * 0.95f, Mathf.Clamp01(50 * Time.deltaTime));
+				grabInfoLeft.grabbedRigidbody.maxAngularVelocity = Mathf.Infinity;
+				grabInfoLeft.grabbedRigidbody.angularVelocity = Vector3.Lerp(grabInfoLeft.grabbedRigidbody.angularVelocity, (angleItem * axisItem) * Mathf.Lerp(grabInfoLeft.itemVelocityPercentage, grabInfoRight.itemVelocityPercentage, 0.5f) * 0.95f, Mathf.Clamp01(50 * Time.deltaTime));
 			}
 
 			// Accuracy - Dual Wield
-			grabbedItemLeft.weapon.accuracyCurrent = Mathf.Clamp(grabbedItemLeft.weapon.accuracyCurrent + (grabbedItemLeft.weapon.accuracyIncrement * Time.deltaTime), grabbedItemLeft.weapon.accuracyMin, grabbedItemLeft.weapon.accuracyMax);
+			grabInfoLeft.grabbedItem.weapon.accuracyCurrent = Mathf.Clamp(grabInfoLeft.grabbedItem.weapon.accuracyCurrent + (grabInfoLeft.grabbedItem.weapon.accuracyIncrement * Time.deltaTime), grabInfoLeft.grabbedItem.weapon.accuracyMin, grabInfoLeft.grabbedItem.weapon.accuracyMax);
 
 		} else {
 			// Physics - Left
-			if (grabbedItemLeft) {
-				UpdateItemPhysics("Left", grabbedRigidbodyLeft, controllerLeft);
-				grabbedItemLeft.weapon.accuracyCurrent = Mathf.Clamp(grabbedItemLeft.weapon.accuracyCurrent + (grabbedItemLeft.weapon.accuracyIncrement * Time.deltaTime), grabbedItemLeft.weapon.accuracyMin, grabbedItemLeft.weapon.accuracyMax);
+			if (grabInfoLeft.grabbedItem) {
+				UpdateItemPhysics("Left", grabInfoLeft.grabbedRigidbody, handInfoLeft.controller);
+				grabInfoLeft.grabbedItem.weapon.accuracyCurrent = Mathf.Clamp(grabInfoLeft.grabbedItem.weapon.accuracyCurrent + (grabInfoLeft.grabbedItem.weapon.accuracyIncrement * Time.deltaTime), grabInfoLeft.grabbedItem.weapon.accuracyMin, grabInfoLeft.grabbedItem.weapon.accuracyMax);
 			}
 
 			// Physics - Right
-			if (grabbedItemRight) {
-				UpdateItemPhysics("Right", grabbedRigidbodyRight, controllerRight);
-				grabbedItemRight.weapon.accuracyCurrent = Mathf.Clamp(grabbedItemRight.weapon.accuracyCurrent + (grabbedItemRight.weapon.accuracyIncrement * Time.deltaTime), grabbedItemRight.weapon.accuracyMin, grabbedItemRight.weapon.accuracyMax);
+			if (grabInfoRight.grabbedItem) {
+				UpdateItemPhysics("Right", grabInfoRight.grabbedRigidbody, handInfoRight.controller);
+				grabInfoRight.grabbedItem.weapon.accuracyCurrent = Mathf.Clamp(grabInfoRight.grabbedItem.weapon.accuracyCurrent + (grabInfoRight.grabbedItem.weapon.accuracyIncrement * Time.deltaTime), grabInfoRight.grabbedItem.weapon.accuracyMin, grabInfoRight.grabbedItem.weapon.accuracyMax);
 			}
 		}
 	}
 
-	void UpdateHandPhysics(string hand, Rigidbody handRigidbodyCurrent, SteamVR_TrackedObject controllerCurrent) {
-		// Left Hand
-
-		handRigidbodyCurrent.velocity = (((controllerCurrent.transform.position + controllerCurrent.transform.rotation * new Vector3(handRigidbodyPositionOffset.x * (hand == "Left" ? 1 : -1), handRigidbodyPositionOffset.y, handRigidbodyPositionOffset.z)) - handRigidbodyCurrent.gameObject.transform.position) + verticalPusher.transform.localPosition) / Time.fixedDeltaTime;
-		Quaternion rotationDelta = (Quaternion.AngleAxis(30, controllerCurrent.transform.right) * controllerCurrent.transform.rotation) * Quaternion.Inverse(handRigidbodyCurrent.transform.rotation);
+	void UpdateHandPhysics(string side, HandInformation handInfoCurrent) {
+		handInfoCurrent.handRigidbody.velocity = (((handInfoCurrent.controller.transform.position + handInfoCurrent.controller.transform.rotation * new Vector3(handRigidbodyPositionOffset.x * (side == "Left" ? 1 : -1), handRigidbodyPositionOffset.y, handRigidbodyPositionOffset.z)) - handInfoCurrent.handGameObject.transform.position) + verticalPusher.transform.localPosition) / Time.fixedDeltaTime;
+		Quaternion rotationDelta = (Quaternion.AngleAxis(30, handInfoCurrent.controller.transform.right) * handInfoCurrent.controller.transform.rotation) * Quaternion.Inverse(handInfoCurrent.handRigidbody.transform.rotation);
 		float angle;
 		Vector3 axis;
 		rotationDelta.ToAngleAxis(out angle, out axis);
@@ -1008,18 +829,18 @@ public class Player : MonoBehaviour {
 		}
 
 		if (angle != float.NaN) {
-			handRigidbodyCurrent.maxAngularVelocity = Mathf.Infinity;
-			handRigidbodyCurrent.angularVelocity = (angle * axis);
+			handInfoCurrent.handRigidbody.maxAngularVelocity = Mathf.Infinity;
+			handInfoCurrent.handRigidbody.angularVelocity = (angle * axis);
 		}
 	}
 
 	void UpdateItemPhysics (string hand, Rigidbody itemRigidbodyCurrent, SteamVR_TrackedObject controllerCurrent) {
 		if (justStepped == false) {
 			if (itemRigidbodyCurrent.gameObject.layer == LayerMask.NameToLayer("Item")) {
-				itemRigidbodyCurrent.velocity = Vector3.Lerp(itemRigidbodyCurrent.velocity, Vector3.ClampMagnitude(((controllerCurrent.transform.position + (controllerCurrent.transform.rotation * (hand == "Left" ? grabOffsetLeft : grabOffsetRight))) - itemRigidbodyCurrent.transform.position) / Time.fixedDeltaTime, (itemRigidbodyCurrent.GetComponent<HingeJoint>()) ? 1 : 100) * (hand == "Left" ? itemVelocityPercentageLeft : itemVelocityPercentageRight), Mathf.Clamp01(50 * Time.deltaTime));
+				itemRigidbodyCurrent.velocity = Vector3.Lerp(itemRigidbodyCurrent.velocity, Vector3.ClampMagnitude(((controllerCurrent.transform.position + (controllerCurrent.transform.rotation * (hand == "Left" ? grabInfoLeft.grabOffset : grabInfoRight.grabOffset))) - itemRigidbodyCurrent.transform.position) / Time.fixedDeltaTime, (itemRigidbodyCurrent.GetComponent<HingeJoint>()) ? 1 : 100) * (hand == "Left" ? grabInfoLeft.itemVelocityPercentage : grabInfoRight.itemVelocityPercentage), Mathf.Clamp01(50 * Time.deltaTime));
 
 				if (!itemRigidbodyCurrent.GetComponent<HingeJoint>()) {
-					Quaternion rotationDeltaItem = (controllerCurrent.transform.rotation * (hand == "Left" ? grabRotationLeft : grabRotationRight)) * Quaternion.Inverse(itemRigidbodyCurrent.transform.rotation);
+					Quaternion rotationDeltaItem = (controllerCurrent.transform.rotation * (hand == "Left" ? grabInfoLeft.grabRotation : grabInfoRight.grabRotation)) * Quaternion.Inverse(itemRigidbodyCurrent.transform.rotation);
 					float angleItem;
 					Vector3 axisItem;
 					rotationDeltaItem.ToAngleAxis(out angleItem, out axisItem);
@@ -1029,7 +850,7 @@ public class Player : MonoBehaviour {
 
 					if (angleItem != float.NaN) {
 						itemRigidbodyCurrent.maxAngularVelocity = Mathf.Infinity;
-						itemRigidbodyCurrent.angularVelocity = Vector3.Lerp(itemRigidbodyCurrent.angularVelocity, (angleItem * axisItem) * (hand == "Left" ? itemVelocityPercentageLeft : itemVelocityPercentageRight) * 0.95f, Mathf.Clamp01(50 * Time.deltaTime));
+						itemRigidbodyCurrent.angularVelocity = Vector3.Lerp(itemRigidbodyCurrent.angularVelocity, (angleItem * axisItem) * (hand == "Left" ? grabInfoLeft.itemVelocityPercentage : grabInfoRight.itemVelocityPercentage) * 0.95f, Mathf.Clamp01(50 * Time.deltaTime));
 					}
 				}
 			}
@@ -1057,4 +878,3 @@ public class Player : MonoBehaviour {
 	}
 
 }
-
