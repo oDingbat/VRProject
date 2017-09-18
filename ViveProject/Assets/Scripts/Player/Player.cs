@@ -95,6 +95,10 @@ public class Player : MonoBehaviour {
 	bool							jumpLoadedRight = false;
 	bool							padPressed = false;
 	float							timeLastJumped = 0;
+	bool							justStepped;
+
+	public Camera					extCam;
+	public Camera					mainCam;
 
 	/*	Concept for step by step player movement process:
 	 * step 1: Get change in hmd move position
@@ -143,8 +147,7 @@ public class Player : MonoBehaviour {
 	}
 
 	void FixedUpdate () {
-		UpdateHandPhysics();
-		UpdateHeadPhysics();
+		UpdateHandAndItemPhysics();
 	}
 
 	void CheckSetControllers () {
@@ -776,7 +779,7 @@ public class Player : MonoBehaviour {
 
 	void UpdatePlayerMovement() {
 		if (climbableGrabbedLeft == null && climbableGrabbedRight == null) {
-			SetCharacterControllerHeight((hmd.transform.position.y - (rig.transform.position.y)) - 0.25f);
+			SetCharacterControllerHeight((hmd.transform.position.y - (rig.transform.position.y)) + 0.25f);
 		} else {
 			SetCharacterControllerHeight(0.25f);
 		}
@@ -893,7 +896,13 @@ public class Player : MonoBehaviour {
 
 		//if (characterController.transform.position.y - ccPositionBeforePad.y > 0.01f) {
 		if (grounded == true) {
-			verticalPusher.transform.localPosition -= new Vector3(0, (characterController.transform.position.y - ccPositionBeforePad.y), 0);
+			Vector3 difference = new Vector3(0, (characterController.transform.position.y - ccPositionBeforePad.y), 0);
+			verticalPusher.transform.localPosition -= difference;
+			if (Mathf.Abs(difference.y) > 0.1f) {
+				justStepped = true;
+			} else {
+				justStepped = false;
+			}
 		}
 
 	}
@@ -924,58 +933,25 @@ public class Player : MonoBehaviour {
 	}
 
 	void SetCharacterControllerHeight(float desiredHeight) {
-		if (grounded == true) {
-			characterController.transform.position = new Vector3(characterController.transform.position.x, (rig.transform.position.y) + (Mathf.Clamp(desiredHeight, characterController.radius * 2f, Mathf.Infinity) / 2), characterController.transform.position.z);
-		} else {
-			characterController.transform.position = new Vector3(characterController.transform.position.x, (hmd.transform.position.y - 0.25f) - (Mathf.Clamp(desiredHeight, characterController.radius * 2f, Mathf.Infinity) / 2), characterController.transform.position.z);
-		}
+		Vector3 handPositionBeforeLeft = handLeft.transform.position;
+		Vector3 handPositionBeforeRight = handRight.transform.position;
+
+		characterController.transform.position = new Vector3(characterController.transform.position.x, (hmd.transform.position.y + rig.transform.position.y) / 2, characterController.transform.position.z);
 		characterController.height = Mathf.Clamp(desiredHeight, characterController.radius * 2f, Mathf.Infinity);
 		characterController.stepOffset = characterController.height / 3.5f;
+
+		handLeft.transform.position = handPositionBeforeLeft;
+		handRight.transform.position = handPositionBeforeRight;
 	}
 
-	void UpdateHandPhysics () {
+	void UpdateHandAndItemPhysics () {
 		// Left Hand
-		if (grabbedRigidbodyLeft != null) {
-			itemVelocityPercentageLeft = Mathf.Clamp01(itemVelocityPercentageLeft + Time.deltaTime * 2f);
-		} else {
-			itemVelocityPercentageLeft = Mathf.Clamp01(itemVelocityPercentageLeft - Time.deltaTime * 10);
-		}
-
-		handRigidbodyLeft.velocity = ((controllerLeft.transform.position + controllerLeft.transform.rotation * new Vector3(handRigidbodyPositionOffset.x, handRigidbodyPositionOffset.y, handRigidbodyPositionOffset.z)) - handLeft.transform.position) / Time.fixedDeltaTime;
-		Quaternion rotationDeltaLeft = (Quaternion.AngleAxis(30, controllerLeft.transform.right) * controllerLeft.transform.rotation) * Quaternion.Inverse(handLeft.transform.rotation);
-		float angleLeft;
-		Vector3 axisLeft;
-		rotationDeltaLeft.ToAngleAxis(out angleLeft, out axisLeft);
-		if (angleLeft > 180) {
-			angleLeft -= 360;
-		}
-
-		if (angleLeft != float.NaN) {
-			handRigidbodyLeft.maxAngularVelocity = Mathf.Infinity;
-			handRigidbodyLeft.angularVelocity = (angleLeft * axisLeft);
-		}
+		itemVelocityPercentageLeft = Mathf.Clamp01(itemVelocityPercentageLeft + Time.deltaTime * (grabbedRigidbodyLeft != null ? 2 : -10));
+		UpdateHandPhysics("Left", handRigidbodyLeft, controllerLeft);
 
 		// Right Hand
-		if (grabbedRigidbodyRight != null) {
-			itemVelocityPercentageRight = Mathf.Clamp01(itemVelocityPercentageRight + Time.deltaTime * 2f);
-		} else {
-			itemVelocityPercentageRight = Mathf.Clamp01(itemVelocityPercentageRight - Time.deltaTime * 10);
-		}
-
-		handRigidbodyRight.velocity = ((controllerRight.transform.position + controllerRight.transform.rotation * new Vector3(-handRigidbodyPositionOffset.x, handRigidbodyPositionOffset.y, handRigidbodyPositionOffset.z)) - handRight.transform.position) / Time.fixedDeltaTime;
-		Quaternion rotationDeltaRight = (Quaternion.AngleAxis(30, controllerRight.transform.right) * controllerRight.transform.rotation) * Quaternion.Inverse(handRight.transform.rotation);
-		float angleRight;
-		Vector3 axisRight;
-		rotationDeltaRight.ToAngleAxis(out angleRight, out axisRight);
-		if (angleRight > 180) {
-			angleRight -= 360;
-		}
-
-		if (angleRight != float.NaN) {
-			handRigidbodyRight.maxAngularVelocity = Mathf.Infinity;
-			handRigidbodyRight.angularVelocity = (angleRight * axisRight);
-		}
-
+		itemVelocityPercentageRight = Mathf.Clamp01(itemVelocityPercentageRight + Time.deltaTime * (grabbedRigidbodyRight != null ? 2 : -10));
+		UpdateHandPhysics("Right", handRigidbodyRight, controllerRight);
 
 
 		// Item Physics
@@ -983,11 +959,8 @@ public class Player : MonoBehaviour {
 			// Physics - Dual Wielding
 			Rigidbody grabbedItemDominant = (grabDualWieldDominantHand == "Left") ? grabbedRigidbodyLeft : grabbedRigidbodyRight;
 			SteamVR_TrackedObject controllerDominant = (grabDualWieldDominantHand == "Left") ? controllerLeft : controllerRight;
-
 			Vector3 dualWieldDirectionCurrent = (((grabDualWieldDominantHand == "Left") ? controllerRight.transform.position : controllerLeft.transform.position) - ((grabDualWieldDominantHand == "Left") ? controllerLeft.transform.position : controllerRight.transform.position));
-
 			Quaternion dualWieldDirectionChangeRotation = Quaternion.FromToRotation(controllerDominant.transform.rotation * grabDualWieldDirection, dualWieldDirectionCurrent);
-
 			Quaternion rotationDeltaItem = (dualWieldDirectionChangeRotation * controllerDominant.transform.rotation * ((grabDualWieldDominantHand == "Left") ? grabRotationLeft : grabRotationRight)) * Quaternion.Inverse(grabbedRigidbodyLeft.transform.rotation);
 
 			float angleItem;
@@ -1009,69 +982,58 @@ public class Player : MonoBehaviour {
 
 		} else {
 			// Physics - Left
-			if (grabbedRigidbodyLeft != null) {
-				if (grabbedRigidbodyLeft.gameObject.layer == LayerMask.NameToLayer("Item")) {
-					grabbedRigidbodyLeft.velocity = Vector3.Lerp(grabbedRigidbodyLeft.velocity, Vector3.ClampMagnitude(((controllerLeft.transform.position + (controllerLeft.transform.rotation * grabOffsetLeft)) - grabbedRigidbodyLeft.transform.position) / Time.fixedDeltaTime, (grabbedRigidbodyLeft.GetComponent<HingeJoint>()) ? 1 : 100) * itemVelocityPercentageLeft, Mathf.Clamp01(50 * Time.deltaTime));
-
-					if (!grabbedRigidbodyLeft.GetComponent<HingeJoint>()) {
-						Quaternion rotationDeltaItemLeft = (controllerLeft.transform.rotation * grabRotationLeft) * Quaternion.Inverse(grabbedRigidbodyLeft.transform.rotation);
-						float angleItemLeft;
-						Vector3 axisItemLeft;
-						rotationDeltaItemLeft.ToAngleAxis(out angleItemLeft, out axisItemLeft);
-						if (angleItemLeft > 180) {
-							angleItemLeft -= 360;
-						}
-
-						if (angleItemLeft != float.NaN) {
-							grabbedRigidbodyLeft.maxAngularVelocity = Mathf.Infinity;
-							grabbedRigidbodyLeft.angularVelocity = Vector3.Lerp(grabbedRigidbodyLeft.angularVelocity, (angleItemLeft * axisItemLeft) * itemVelocityPercentageLeft * 0.95f, Mathf.Clamp01(50 * Time.deltaTime));
-						}
-					}
-				} else {
-					//Debug.DrawRay((grabbedRigidbodyLeft.transform.position + (grabbedRigidbodyLeft.transform.rotation * grabOffsetLeft)), Vector3.up, Color.red);
-					grabbedRigidbodyLeft.AddForceAtPosition((controllerLeft.transform.position - (grabbedRigidbodyLeft.transform.position + (grabbedRigidbodyLeft.transform.rotation * grabOffsetLeft))) * (grabbedRigidbodyLeft.mass * 0.01f) / Time.fixedDeltaTime, (grabbedRigidbodyLeft.transform.rotation * grabOffsetLeft));
-				}
-			}
-
-			// Accuracy - Left
 			if (grabbedItemLeft) {
+				UpdateItemPhysics("Left", grabbedRigidbodyLeft, controllerLeft);
 				grabbedItemLeft.weapon.accuracyCurrent = Mathf.Clamp(grabbedItemLeft.weapon.accuracyCurrent + (grabbedItemLeft.weapon.accuracyIncrement * Time.deltaTime), grabbedItemLeft.weapon.accuracyMin, grabbedItemLeft.weapon.accuracyMax);
 			}
-			
+
 			// Physics - Right
-			if (grabbedRigidbodyRight != null) {
-				if (grabbedRigidbodyRight.gameObject.layer == LayerMask.NameToLayer("Item")) {
-					//grabbedRigidbodyRight.velocity = Vector3.Lerp(grabbedRigidbodyRight.velocity, Vector3.ClampMagnitude(((controllerRight.transform.position + (controllerRight.transform.rotation * grabOffsetRight)) - grabbedRigidbodyRight.transform.position) / Time.fixedDeltaTime, (grabbedRigidbodyRight.GetComponent<HingeJoint>()) ? 1 : 100), itemVelocityPercentageRight);
-					grabbedRigidbodyRight.velocity = Vector3.Lerp(grabbedRigidbodyRight.velocity, Vector3.ClampMagnitude(((controllerRight.transform.position + (controllerRight.transform.rotation * grabOffsetRight)) - grabbedRigidbodyRight.transform.position) / Time.fixedDeltaTime, (grabbedRigidbodyRight.GetComponent<HingeJoint>()) ? 1 : 100) * itemVelocityPercentageRight, Mathf.Clamp01(50 * Time.deltaTime));
-
-					if (!grabbedRigidbodyRight.GetComponent<HingeJoint>()) {
-						Quaternion rotationDeltaItemRight = (controllerRight.transform.rotation * grabRotationRight) * Quaternion.Inverse(grabbedRigidbodyRight.transform.rotation);
-						float angleItemRight;
-						Vector3 axisItemRight;
-						rotationDeltaItemRight.ToAngleAxis(out angleItemRight, out axisItemRight);
-						if (angleItemRight > 180) {
-							angleItemRight -= 360;
-						}
-
-						if (angleItemRight != float.NaN) {
-							grabbedRigidbodyRight.maxAngularVelocity = Mathf.Infinity;
-							grabbedRigidbodyRight.angularVelocity = Vector3.Lerp(grabbedRigidbodyRight.angularVelocity, (angleItemRight * axisItemRight) * itemVelocityPercentageRight * 0.95f, Mathf.Clamp01(50 * Time.deltaTime));
-						}
-					}
-				} else {
-					grabbedRigidbodyRight.AddForceAtPosition((controllerRight.transform.position - (grabbedRigidbodyRight.transform.position + (grabbedRigidbodyRight.transform.rotation * grabOffsetRight))) * (grabbedRigidbodyRight.mass * 0.01f) / Time.fixedDeltaTime, (grabbedRigidbodyRight.transform.rotation * grabOffsetRight));
-				}
-			}
-
-			// Accuracy - Right
 			if (grabbedItemRight) {
+				UpdateItemPhysics("Right", grabbedRigidbodyRight, controllerRight);
 				grabbedItemRight.weapon.accuracyCurrent = Mathf.Clamp(grabbedItemRight.weapon.accuracyCurrent + (grabbedItemRight.weapon.accuracyIncrement * Time.deltaTime), grabbedItemRight.weapon.accuracyMin, grabbedItemRight.weapon.accuracyMax);
 			}
 		}
 	}
 
-	void UpdateHeadPhysics() {
+	void UpdateHandPhysics(string hand, Rigidbody handRigidbodyCurrent, SteamVR_TrackedObject controllerCurrent) {
+		// Left Hand
 
+		handRigidbodyCurrent.velocity = (((controllerCurrent.transform.position + controllerCurrent.transform.rotation * new Vector3(handRigidbodyPositionOffset.x * (hand == "Left" ? 1 : -1), handRigidbodyPositionOffset.y, handRigidbodyPositionOffset.z)) - handRigidbodyCurrent.gameObject.transform.position) + verticalPusher.transform.localPosition) / Time.fixedDeltaTime;
+		Quaternion rotationDelta = (Quaternion.AngleAxis(30, controllerCurrent.transform.right) * controllerCurrent.transform.rotation) * Quaternion.Inverse(handRigidbodyCurrent.transform.rotation);
+		float angle;
+		Vector3 axis;
+		rotationDelta.ToAngleAxis(out angle, out axis);
+		if (angle > 180) {
+			angle -= 360;
+		}
+
+		if (angle != float.NaN) {
+			handRigidbodyCurrent.maxAngularVelocity = Mathf.Infinity;
+			handRigidbodyCurrent.angularVelocity = (angle * axis);
+		}
+	}
+
+	void UpdateItemPhysics (string hand, Rigidbody itemRigidbodyCurrent, SteamVR_TrackedObject controllerCurrent) {
+		if (justStepped == false) {
+			if (itemRigidbodyCurrent.gameObject.layer == LayerMask.NameToLayer("Item")) {
+				itemRigidbodyCurrent.velocity = Vector3.Lerp(itemRigidbodyCurrent.velocity, Vector3.ClampMagnitude(((controllerCurrent.transform.position + (controllerCurrent.transform.rotation * (hand == "Left" ? grabOffsetLeft : grabOffsetRight))) - itemRigidbodyCurrent.transform.position) / Time.fixedDeltaTime, (itemRigidbodyCurrent.GetComponent<HingeJoint>()) ? 1 : 100) * (hand == "Left" ? itemVelocityPercentageLeft : itemVelocityPercentageRight), Mathf.Clamp01(50 * Time.deltaTime));
+
+				if (!itemRigidbodyCurrent.GetComponent<HingeJoint>()) {
+					Quaternion rotationDeltaItem = (controllerCurrent.transform.rotation * (hand == "Left" ? grabRotationLeft : grabRotationRight)) * Quaternion.Inverse(itemRigidbodyCurrent.transform.rotation);
+					float angleItem;
+					Vector3 axisItem;
+					rotationDeltaItem.ToAngleAxis(out angleItem, out axisItem);
+					if (angleItem > 180) {
+						angleItem -= 360;
+					}
+
+					if (angleItem != float.NaN) {
+						itemRigidbodyCurrent.maxAngularVelocity = Mathf.Infinity;
+						itemRigidbodyCurrent.angularVelocity = Vector3.Lerp(itemRigidbodyCurrent.angularVelocity, (angleItem * axisItem) * (hand == "Left" ? itemVelocityPercentageLeft : itemVelocityPercentageRight) * 0.95f, Mathf.Clamp01(50 * Time.deltaTime));
+					}
+				}
+			}
+		}
 	}
 
 	public void TakeDamage () {

@@ -55,7 +55,7 @@ public class Projectile : MonoBehaviour {
 						StartCoroutine(BreakProjectile(hit.point));
 					}
 
-					if (sticky == true && hit.transform.gameObject.tag == "Environment") {
+					if (sticky == true && (hit.transform.gameObject.tag == "Environment" || hit.transform.GetComponent<Rigidbody>())) {
 						transform.parent = hit.transform;
 					}
 
