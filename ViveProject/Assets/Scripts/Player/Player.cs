@@ -28,6 +28,7 @@ public class Player : MonoBehaviour {
 	[Header("Player GameObject References")]
 	public GameObject				head;
 	public GameObject				rig;
+	public GameObject				flashlight;
 	
 	[Space(10)]
 	[Header("Audio Sources")]
@@ -127,7 +128,7 @@ public class Player : MonoBehaviour {
 	
 		public Vector3							controllerPosLastFrame;			// Used to determine the jumping velocity when jumping with the hands
 		public Vector3							handPosLastFrame;               // Used to determine which direction to throw items
-		public bool								itemReleasingDisabled;			// Used for picking up non-prop items. Used to disable item releasing when first grabbing an item as to make the grip function as a toggle rather than an on/off grab button
+		public bool								itemReleasingDisabled;			// Used for picking up non-misc items. Used to disable item releasing when first grabbing an item as to make the grip function as a toggle rather than an on/off grab button
 
 		public bool								jumpLoaded;
 		public HandInformation () {
@@ -206,9 +207,15 @@ public class Player : MonoBehaviour {
 	}
 
 	void UpdateControllerInput (string side, GrabInformation grabInfoCurrent, GrabInformation grabInfoOpposite, HandInformation handInfoCurrent, HandInformation handInfoOpposite) {
+		if (side == "Right") {
+			if (handInfoCurrent.controllerDevice.GetPressDown(Valve.VR.EVRButtonId.k_EButton_ApplicationMenu)) {
+				flashlight.SetActive(!flashlight.activeSelf);
+			}
+		}
+
 		if (handInfoCurrent.controllerDevice.GetPress(Valve.VR.EVRButtonId.k_EButton_Grip)) {    // Grip Being Held
 			if (handInfoCurrent.controllerDevice.GetPressDown(Valve.VR.EVRButtonId.k_EButton_Grip)) {  // Grip Down
-				if (grabInfoCurrent.grabbedRigidbody == true && grabInfoCurrent.grabbedItem && grabInfoCurrent.grabbedItem.itemType != Item.ItemType.Prop) {
+				if (grabInfoCurrent.grabbedRigidbody == true && grabInfoCurrent.grabbedItem && (grabInfoCurrent.grabbedItem is Misc) == false) {
 					handInfoCurrent.itemReleasingDisabled = false;
 				} else {
 					handInfoCurrent.itemReleasingDisabled = true;
@@ -219,7 +226,7 @@ public class Player : MonoBehaviour {
 		}
 
 		if (handInfoCurrent.controllerDevice.GetPressUp(Valve.VR.EVRButtonId.k_EButton_Grip)) {
-			if (grabInfoCurrent.grabbedRigidbody == false || ((grabInfoCurrent.grabbedItem && grabInfoCurrent.grabbedItem.itemType == Item.ItemType.Prop) || handInfoCurrent.itemReleasingDisabled == false)) {
+			if (grabInfoCurrent.grabbedRigidbody == false || ((grabInfoCurrent.grabbedItem && grabInfoCurrent.grabbedItem is Misc) || handInfoCurrent.itemReleasingDisabled == false)) {
 				Release(side, grabInfoCurrent, grabInfoOpposite, handInfoCurrent, handInfoOpposite);
 				handInfoCurrent.handGameObject.GetComponent<BoxCollider>().enabled = true;
 			}
@@ -302,14 +309,16 @@ public class Player : MonoBehaviour {
 						if (grabInfoCurrent.grabbedRigidbody == grabInfoOpposite.grabbedRigidbody) {      // Is the other hand already holding this item?
 							grabInfoCurrent.itemVelocityPercentage = 0;
 							grabInfoOpposite.itemVelocityPercentage = 0;
-							if (grabInfoCurrent.grabNode.dominance > grabInfoOpposite.grabNode.dominance) {
-								grabDualWieldDominantHand = side;
-								grabDualWieldDirection = Quaternion.Euler(grabInfoCurrent.grabNode.rotation) * Quaternion.Inverse(grabInfoCurrent.grabbedRigidbody.transform.rotation) * (handInfoOpposite.controller.transform.position - (grabInfoCurrent.grabNode.transform.position + grabInfoCurrent.grabbedRigidbody.transform.rotation * -grabInfoCurrent.grabNode.offset));
-							} else if (grabInfoCurrent.grabNode.dominance < grabInfoOpposite.grabNode.dominance) {
-								grabDualWieldDominantHand = side;
-								grabDualWieldDirection = Quaternion.Inverse(handInfoOpposite.controller.transform.rotation) * (handInfoCurrent.controller.transform.position - handInfoOpposite.controller.transform.position);
+							if (grabInfoCurrent.grabNode && grabInfoOpposite.grabNode) {
+								if (grabInfoCurrent.grabNode.dominance > grabInfoOpposite.grabNode.dominance) {
+									grabDualWieldDominantHand = side;
+									grabDualWieldDirection = Quaternion.Euler(grabInfoCurrent.grabNode.rotation) * Quaternion.Inverse(grabInfoCurrent.grabbedRigidbody.transform.rotation) * (handInfoOpposite.controller.transform.position - (grabInfoCurrent.grabNode.transform.position + grabInfoCurrent.grabbedRigidbody.transform.rotation * -grabInfoCurrent.grabNode.offset));
+								} else if (grabInfoCurrent.grabNode.dominance < grabInfoOpposite.grabNode.dominance) {
+									grabDualWieldDominantHand = side;
+									grabDualWieldDirection = Quaternion.Inverse(handInfoOpposite.controller.transform.rotation) * (handInfoCurrent.controller.transform.position - handInfoOpposite.controller.transform.position);
+								}
 							} else {
-								grabDualWieldDominantHand = side;
+								grabDualWieldDominantHand = (side == "Right" ? "Left" : "Right");
 								grabDualWieldDirection = Quaternion.Inverse(handInfoOpposite.controller.transform.rotation) * (handInfoCurrent.controller.transform.position - handInfoOpposite.controller.transform.position);
 							}
 						}
@@ -386,44 +395,52 @@ public class Player : MonoBehaviour {
 	}
 
 	void InteractDown (string side, GrabInformation grabInfoCurrent) {
-		Weapon currentWeapon = grabInfoCurrent.grabbedItem.weapon;
-		if (grabInfoCurrent.grabNode.interactionType == GrabNode.InteractionType.Trigger) {
-			if (currentWeapon.chargingEnabled == false) {
-				AttemptToFireWeapon(side, grabInfoCurrent.grabbedItem);
+		if (grabInfoCurrent.grabbedItem is Weapon) {
+			Weapon currentWeapon = grabInfoCurrent.grabbedItem as Weapon;
+			if (grabInfoCurrent.grabNode.interactionType == GrabNode.InteractionType.Trigger) {
+				if (currentWeapon.chargingEnabled == false) {
+					AttemptToFireWeapon(side, grabInfoCurrent.grabbedItem);
+				}
 			}
 		}
 	}
 
 	void InteractHold (string side, GrabInformation grabInfoCurrent) {
-		Weapon currentWeapon = grabInfoCurrent.grabbedItem.weapon;
-		currentWeapon.triggerHeld = true;
-		if (grabInfoCurrent.grabNode.interactionType == GrabNode.InteractionType.Trigger) {
-			if (currentWeapon.automatic == true) {
-				AttemptToFireWeapon(side, grabInfoCurrent.grabbedItem);
-			}
-			if (currentWeapon.chargingEnabled == true) {
-				currentWeapon.chargeCurrent = Mathf.Clamp01(currentWeapon.chargeCurrent + (currentWeapon.chargeIncrement * Time.deltaTime));
+		if (grabInfoCurrent.grabbedItem is Weapon) {
+			Weapon currentWeapon = grabInfoCurrent.grabbedItem as Weapon;
+			currentWeapon.triggerHeld = true;
+			if (grabInfoCurrent.grabNode.interactionType == GrabNode.InteractionType.Trigger) {
+				if (currentWeapon.automatic == true) {
+					AttemptToFireWeapon(side, grabInfoCurrent.grabbedItem);
+				}
+				if (currentWeapon.chargingEnabled == true) {
+					currentWeapon.chargeCurrent = Mathf.Clamp01(currentWeapon.chargeCurrent + (currentWeapon.chargeIncrement * Time.deltaTime));
+				}
 			}
 		}
 	}
 
 	void InteractUp(string side, GrabInformation grabInfoCurrent) {
-		Weapon currentWeapon = grabInfoCurrent.grabbedItem.weapon;
-		currentWeapon.triggerHeld = false;
-		if (grabInfoCurrent.grabNode.interactionType == GrabNode.InteractionType.Trigger) {
-			if (currentWeapon.chargingEnabled == true) {
-				AttemptToFireWeapon(side, grabInfoCurrent.grabbedItem);
+		if (grabInfoCurrent.grabbedItem is Weapon) {
+			Weapon currentWeapon = grabInfoCurrent.grabbedItem as Weapon;
+			currentWeapon.triggerHeld = false;
+			if (grabInfoCurrent.grabNode.interactionType == GrabNode.InteractionType.Trigger) {
+				if (currentWeapon.chargingEnabled == true) {
+					AttemptToFireWeapon(side, grabInfoCurrent.grabbedItem);
+				}
 			}
 		}
 	}
 
 	void InteractNull (string side, GrabInformation grabInfoCurrent) {
-		Weapon currentWeapon = grabInfoCurrent.grabbedItem.weapon;
-		currentWeapon.triggerHeld = false;
+		if (grabInfoCurrent.grabbedItem is Weapon) {
+			Weapon currentWeapon = grabInfoCurrent.grabbedItem as Weapon;
+			currentWeapon.triggerHeld = false;
+		}
 	}
 
 	void AttemptToFireWeapon (string side, Item currentItem) {
-		Weapon currentWeapon = currentItem.weapon;
+		Weapon currentWeapon = currentItem as Weapon;
 		if (currentWeapon.timeLastFired + (1 / currentWeapon.firerate) <= Time.timeSinceLevelLoad) {
 			if (currentWeapon.chargingEnabled == false || (currentWeapon.chargeCurrent >= currentWeapon.chargeRequired)) {
 				StartCoroutine(FireWeapon(side, currentItem));
@@ -433,7 +450,7 @@ public class Player : MonoBehaviour {
 	}
 
 	IEnumerator FireWeapon(string hand, Item currentItem) {
-		Weapon currentWeapon = currentItem.weapon;
+		Weapon currentWeapon = currentItem as Weapon;
 		Rigidbody currentRigidbody = currentItem.transform.GetComponent<Rigidbody>();
 		Transform barrel = currentItem.transform.Find("(Barrel Point)");
 
@@ -520,8 +537,10 @@ public class Player : MonoBehaviour {
 	void ThrowItem (Rigidbody item, Vector3 velocity) { 
 		item.velocity = Vector3.ClampMagnitude(velocity.magnitude > 5 ? (velocity * 2f) : velocity, 100);
 		item.useGravity = true;
-		if (item.transform.GetComponent<Item>().weapon != null) {
-			item.transform.GetComponent<Item>().weapon.triggerHeld = false;
+		if (item.transform.GetComponent<Item>() != null) {
+			if (item.GetComponent<Item>() is Weapon) {
+				(item.transform.GetComponent<Item>() as Weapon).triggerHeld = false;
+			}
 		}
 	}
 
@@ -776,6 +795,13 @@ public class Player : MonoBehaviour {
 		grabInfoRight.itemVelocityPercentage = Mathf.Clamp01(grabInfoRight.itemVelocityPercentage + Time.deltaTime * (grabInfoRight.grabbedRigidbody != null ? 2 : -10));
 		UpdateHandPhysics("Right", handInfoRight);
 
+		Weapon weaponLeft = null;
+		Weapon weaponRight = null;
+
+		if (grabInfoLeft.grabbedItem is Weapon) {
+			weaponLeft = grabInfoLeft.grabbedItem as Weapon;
+			weaponRight = grabInfoRight.grabbedItem as Weapon;
+		}
 
 		// Item Physics
 		if (grabInfoLeft.grabbedRigidbody != null && grabInfoLeft.grabbedRigidbody == grabInfoRight.grabbedRigidbody) {
@@ -801,19 +827,25 @@ public class Player : MonoBehaviour {
 			}
 
 			// Accuracy - Dual Wield
-			grabInfoLeft.grabbedItem.weapon.accuracyCurrent = Mathf.Clamp(grabInfoLeft.grabbedItem.weapon.accuracyCurrent + (grabInfoLeft.grabbedItem.weapon.accuracyIncrement * Time.deltaTime), grabInfoLeft.grabbedItem.weapon.accuracyMin, grabInfoLeft.grabbedItem.weapon.accuracyMax);
-
+			if (grabInfoLeft.grabbedItem is Weapon) {
+				weaponLeft.accuracyCurrent = Mathf.Clamp(weaponLeft.accuracyCurrent + (weaponLeft.accuracyIncrement * Time.deltaTime), weaponLeft.accuracyMin, weaponLeft.accuracyMax);
+			}
+			
 		} else {
 			// Physics - Left
 			if (grabInfoLeft.grabbedItem) {
 				UpdateItemPhysics("Left", grabInfoLeft.grabbedRigidbody, handInfoLeft.controller);
-				grabInfoLeft.grabbedItem.weapon.accuracyCurrent = Mathf.Clamp(grabInfoLeft.grabbedItem.weapon.accuracyCurrent + (grabInfoLeft.grabbedItem.weapon.accuracyIncrement * Time.deltaTime), grabInfoLeft.grabbedItem.weapon.accuracyMin, grabInfoLeft.grabbedItem.weapon.accuracyMax);
+				if (weaponLeft) {
+					weaponLeft.accuracyCurrent = Mathf.Clamp(weaponLeft.accuracyCurrent + (weaponLeft.accuracyIncrement * Time.deltaTime), weaponLeft.accuracyMin, weaponLeft.accuracyMax);
+				}
 			}
 
 			// Physics - Right
 			if (grabInfoRight.grabbedItem) {
 				UpdateItemPhysics("Right", grabInfoRight.grabbedRigidbody, handInfoRight.controller);
-				grabInfoRight.grabbedItem.weapon.accuracyCurrent = Mathf.Clamp(grabInfoRight.grabbedItem.weapon.accuracyCurrent + (grabInfoRight.grabbedItem.weapon.accuracyIncrement * Time.deltaTime), grabInfoRight.grabbedItem.weapon.accuracyMin, grabInfoRight.grabbedItem.weapon.accuracyMax);
+				if (weaponLeft) {
+					weaponRight.accuracyCurrent = Mathf.Clamp(weaponRight.accuracyCurrent + (weaponRight.accuracyIncrement * Time.deltaTime), weaponRight.accuracyMin, weaponRight.accuracyMax);
+				}
 			}
 		}
 	}
