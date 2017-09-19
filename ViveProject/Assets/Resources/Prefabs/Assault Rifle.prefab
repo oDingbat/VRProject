@@ -11,6 +11,21 @@ Prefab:
   m_ParentPrefab: {fileID: 0}
   m_RootGameObject: {fileID: 1953632734251298}
   m_IsPrefabParent: 1
+--- !u!1 &1033229967053376
+GameObject:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 100100000}
+  serializedVersion: 5
+  m_Component:
+  - component: {fileID: 4163784409156970}
+  m_Layer: 0
+  m_Name: (Barrel Point)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
 --- !u!1 &1138686869877948
 GameObject:
   m_ObjectHideFlags: 1
@@ -104,7 +119,7 @@ GameObject:
   m_Component:
   - component: {fileID: 4995504091302694}
   - component: {fileID: 54691661401274304}
-  - component: {fileID: 114096746500259590}
+  - component: {fileID: 114798522993516976}
   m_Layer: 14
   m_Name: Assault Rifle
   m_TagString: Untagged
@@ -124,6 +139,19 @@ Transform:
   m_Children: []
   m_Father: {fileID: 4413484525172688}
   m_RootOrder: 1
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!4 &4163784409156970
+Transform:
+  m_ObjectHideFlags: 1
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 100100000}
+  m_GameObject: {fileID: 1033229967053376}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0.067, z: 0.478}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 4995504091302694}
+  m_RootOrder: 2
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!4 &4358544079473992
 Transform:
@@ -187,11 +215,12 @@ Transform:
   m_PrefabInternal: {fileID: 100100000}
   m_GameObject: {fileID: 1953632734251298}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -50.251, y: 0.482, z: -2.668}
+  m_LocalPosition: {x: 34.03, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children:
   - {fileID: 4513148569727766}
   - {fileID: 4413484525172688}
+  - {fileID: 4163784409156970}
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -302,17 +331,6 @@ Animator:
   m_WarningMessage: 
   m_HasTransformHierarchy: 1
   m_AllowConstantClipSamplingOptimization: 1
---- !u!114 &114096746500259590
-MonoBehaviour:
-  m_ObjectHideFlags: 1
-  m_PrefabParentObject: {fileID: 0}
-  m_PrefabInternal: {fileID: 100100000}
-  m_GameObject: {fileID: 1953632734251298}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 39929d88d81048145998643293736483, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!114 &114257323546063986
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -327,7 +345,9 @@ MonoBehaviour:
   rotation: {x: 0, y: 0, z: 0}
   offset: {x: 0, y: 0, z: 0}
   referralNode: {fileID: 114573531407313646}
+  dominance: 0
   grabType: 3
+  interactionType: 0
 --- !u!114 &114573531407313646
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -342,7 +362,9 @@ MonoBehaviour:
   rotation: {x: 0, y: 0, z: 0}
   offset: {x: 0, y: -0, z: 0}
   referralNode: {fileID: 0}
+  dominance: 0
   grabType: 2
+  interactionType: 0
 --- !u!114 &114670927786479002
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -357,4 +379,51 @@ MonoBehaviour:
   rotation: {x: 30, y: 0, z: 0}
   offset: {x: 0, y: -0.05, z: 0.08}
   referralNode: {fileID: 0}
+  dominance: 0
   grabType: 0
+  interactionType: 1
+--- !u!114 &114798522993516976
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 100100000}
+  m_GameObject: {fileID: 1953632734251298}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 876349dfc1de1ff4cb0faf541f1ef0f8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  automatic: 1
+  firerate: 10
+  timeLastFired: 0
+  burstCount: 1
+  burstDelay: 0
+  triggerHeld: 0
+  accuracyCurrent: 100
+  accuracyMax: 1
+  accuracyMin: 0.85
+  accuracyIncrement: 10
+  accuracyDecrement: 1.5
+  recoilLinear: 3
+  recoilAngular: 3
+  chargingEnabled: 0
+  chargeCurrent: 0
+  chargeIncrement: 0
+  chargeDecrement: 0
+  chargeDecrementPerShot: 0
+  chargeRequired: 0
+  chargeInfluenceVelocity: 0
+  projectileSpreads:
+  - {x: 0, y: 0}
+  projectileSpreadType: 0
+  projectileSpreadDeviation: 0
+  projectileRicochetCount: 10
+  projectileRicochetAngleMax: 0
+  projectileVelocity: 250
+  projectileGravity: 0
+  projectileDecelerationType: 0
+  projectileDeceleration: 10
+  projectileLifespan: 10
+  projectileIsSticky: 0
+  projectile: {fileID: 1799400920980828, guid: 39020ac0aa98a7b4b831dc99afcb86cb, type: 2}
+  soundFireNormal: {fileID: 8300000, guid: 1b50830133d42e445bd833041e678f7a, type: 3}

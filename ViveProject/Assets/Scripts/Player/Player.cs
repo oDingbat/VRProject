@@ -313,8 +313,8 @@ public class Player : MonoBehaviour {
 								if (grabInfoCurrent.grabNode.dominance > grabInfoOpposite.grabNode.dominance) {
 									grabDualWieldDominantHand = side;
 									grabDualWieldDirection = Quaternion.Euler(grabInfoCurrent.grabNode.rotation) * Quaternion.Inverse(grabInfoCurrent.grabbedRigidbody.transform.rotation) * (handInfoOpposite.controller.transform.position - (grabInfoCurrent.grabNode.transform.position + grabInfoCurrent.grabbedRigidbody.transform.rotation * -grabInfoCurrent.grabNode.offset));
-								} else if (grabInfoCurrent.grabNode.dominance < grabInfoOpposite.grabNode.dominance) {
-									grabDualWieldDominantHand = side;
+								} else if (grabInfoCurrent.grabNode.dominance <= grabInfoOpposite.grabNode.dominance) {
+									grabDualWieldDominantHand = (side == "Right" ? "Left" : "Right");
 									grabDualWieldDirection = Quaternion.Inverse(handInfoOpposite.controller.transform.rotation) * (handInfoCurrent.controller.transform.position - handInfoOpposite.controller.transform.position);
 								}
 							} else {
@@ -621,7 +621,7 @@ public class Player : MonoBehaviour {
 
 	void UpdatePlayerMovement () {
 		if (grabInfoLeft.climbableGrabbed == null && grabInfoRight.climbableGrabbed == null) {
-			SetCharacterControllerHeight((hmd.transform.position.y - (rig.transform.position.y)) + 0.25f);
+			SetCharacterControllerHeight(hmd.transform.position.y - (rig.transform.position.y));
 		} else {
 			SetCharacterControllerHeight(0.25f);
 		}
