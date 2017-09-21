@@ -13,8 +13,7 @@ public class Weapon : Item {
 	public float						burstDelay;
 	public bool							triggerHeld;
 
-	[Space(10)]
-	[Header("Accuracy Info")]
+	[Space(10)][Header("Accuracy Info")]
 	public float						accuracyCurrent;				// The current accuracy of the weapon
 	[Range (0, 1)]
 	public float						accuracyMax;                    // The maximum accuracy the weapon can have
@@ -23,13 +22,11 @@ public class Weapon : Item {
 	public float						accuracyIncrement;				// The amount of accuracy added to accuracyCurrent per second
 	public float						accuracyDecrement;              // The amount of accuracy subtracted from accuracyCurrent per fire
 
-	[Space(10)]
-	[Header("Recoil Info")]
+	[Space(10)][Header("Recoil Info")]
 	public float						recoilLinear;					// The amount of velocity added to the weapon when fired
 	public float						recoilAngular;					// The amount of angularVelocity added to the weapon when fired
 
-	[Space(10)]
-	[Header("Charge Info")]
+	[Space(10)][Header("Charge Info")]
 	public bool							chargingEnabled;				// Does the weapon use charging?
 	public float						chargeCurrent;					// The current percentage of charge
 	public float						chargeIncrement;				// The amount charge increases per second
@@ -38,8 +35,7 @@ public class Weapon : Item {
 	public float						chargeRequired;					// The amount of charge required to fire
 	public float						chargeInfluenceVelocity;		// The percentage of influence the charge amount has on projectile velocity
 
-	[Space(10)]
-	[Header("Projectile Info")]
+	[Space(10)][Header("Projectile Info")]
 	public Vector2[]					projectileSpreads;              // The projectile spreads of the weapon. Each index represents an individual spread the the rotation of that index being applied to it. Used for multi-projectile based weapons (ie: shotguns)
 	public SpreadType					projectileSpreadType;
 	public enum SpreadType				{ Circular, Custom }
@@ -54,8 +50,7 @@ public class Weapon : Item {
 	public bool							projectileIsSticky;
 	public GameObject					projectile;						// The projectile prefab which is instantiated when firing the weapon
 
-	[Space(10)]
-	[Header("Audio Info")]
+	[Space(10)][Header("Audio Info")]
 	public AudioClip		soundFireNormal;                // The normal audio clip player when firing the weapon
 
 	void Update() {

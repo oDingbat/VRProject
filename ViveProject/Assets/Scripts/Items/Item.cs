@@ -5,6 +5,9 @@ using UnityEngine;
 [System.Serializable]
 public abstract class Item : MonoBehaviour {
 
+	[Header("Information")]
+	public string itemName;
+
 	AudioSource audioSourceHit;
 	AudioSource audioSourceMove;
 

@@ -108,13 +108,16 @@
      <Compile Include="Assets\Scripts\Entities\Vitals.cs" />
      <Compile Include="Assets\Scripts\GrabNode.cs" />
      <Compile Include="Assets\Scripts\HolographicSight.cs" />
+     <Compile Include="Assets\Scripts\ImageEffects\Glow\GlowComposite.cs" />
+     <Compile Include="Assets\Scripts\ImageEffects\Glow\GlowController.cs" />
+     <Compile Include="Assets\Scripts\ImageEffects\Glow\GlowObjectCmd.cs" />
      <Compile Include="Assets\Scripts\Items\Consumable.cs" />
      <Compile Include="Assets\Scripts\Items\Item.cs" />
      <Compile Include="Assets\Scripts\Items\Misc.cs" />
+     <Compile Include="Assets\Scripts\Items\Projectile.cs" />
      <Compile Include="Assets\Scripts\Items\Weapon.cs" />
      <Compile Include="Assets\Scripts\PlatformController.cs" />
      <Compile Include="Assets\Scripts\Player\Player.cs" />
-     <Compile Include="Assets\Scripts\Weapons\Projectile.cs" />
      <Compile Include="Assets\SteamVR\Extras\SteamVR_GazeTracker.cs" />
      <Compile Include="Assets\SteamVR\Extras\SteamVR_LaserPointer.cs" />
      <Compile Include="Assets\SteamVR\Extras\SteamVR_Teleporter.cs" />
@@ -240,6 +243,7 @@
      <None Include="Assets\VertexPaint-master\Examples\FlowMapping\FlowMap.shader" />
      <None Include="Assets\VertexPaint-master\Examples\PivotBaking\pivot_aligned.shader" />
      <None Include="Assets\SteamVR\Resources\SteamVR_Fade.shader" />
+     <None Include="Assets\Shaders\GlowCmdShader.shader" />
      <None Include="Assets\PostProcessing\Resources\Shaders\MotionBlur.cginc" />
      <None Include="Assets\PostProcessing\Resources\Shaders\Fog.shader" />
      <None Include="Assets\PostProcessing\Editor Resources\Monitors\ParadeRender.shader" />
@@ -259,6 +263,7 @@
      <None Include="Assets\PostProcessing\Resources\Shaders\ACES.cginc" />
      <None Include="Assets\VertexPaint-master\Examples\SplatMapping\Shaders\SplatBlendSpecular_2Layer.shader" />
      <None Include="Assets\PostProcessing\Resources\Shaders\UberSecondPass.cginc" />
+     <None Include="Assets\Shaders\GlowReplace.shader" />
      <None Include="Assets\PostProcessing\Resources\Shaders\Tonemapping.cginc" />
      <None Include="Assets\PostProcessing\Editor Resources\Monitors\HistogramCompute.compute" />
      <None Include="Assets\VolumetricLighting-master\VolumetricLighting-master\Assets\VolumetricFog\Shaders\Debug.shader" />
@@ -287,6 +292,7 @@
      <None Include="Assets\VertexPaint-master\Examples\SplatMapping\Shaders\SplatBlendSpecular_4Layer.shader" />
      <None Include="Assets\VolumetricLighting-master\VolumetricLighting-master\Assets\TubeLight\Shaders\TubeLight.shader" />
      <None Include="Assets\VertexPaint-master\Examples\SplatMapping\Shaders\SplatBlend_2Layer.shader" />
+     <None Include="Assets\Shaders\Blur.shader" />
      <None Include="Assets\PostProcessing\Resources\Shaders\Bloom.cginc" />
      <None Include="Assets\PostProcessing\Resources\Shaders\TAA.shader" />
      <None Include="Assets\PostProcessing\Resources\Shaders\EyeHistogram.compute" />
@@ -299,12 +305,14 @@
      <None Include="Assets\VolumetricLighting-master\VolumetricLighting-master\Assets\VolumetricFog\Shaders\Shadowmap.shader" />
      <None Include="Assets\VolumetricLighting-master\VolumetricLighting-master\ProjectSettings\ProjectVersion.txt" />
      <None Include="Assets\PostProcessing\Resources\Shaders\FXAA.shader" />
+     <None Include="Assets\Shaders\Outline.shader" />
      <None Include="Assets\PostProcessing\Resources\Shaders\DiskKernels.cginc" />
      <None Include="Assets\PostProcessing\Resources\Shaders\DepthOfField.cginc" />
      <None Include="Assets\VertexPaint-master\Examples\SplatMapping\Shaders\SplatBlendSpecular_3Layer.shader" />
      <None Include="Assets\VolumetricLighting-master\VolumetricLighting-master\Assets\VolumetricFog\Shaders\CopyShadowParams.shader" />
      <None Include="Assets\PostProcessing\Resources\Shaders\ScreenSpaceRaytrace.cginc" />
      <None Include="Assets\VertexPaint-master\ReadMe.txt" />
+     <None Include="Assets\Shaders\GlowComposite.shader" />
      <None Include="Assets\PostProcessing\Resources\Shaders\Bloom.shader" />
      <None Include="Assets\VolumetricLighting-master\VolumetricLighting-master\Assets\Scenes\Materials\StandardAlphaBlended-VolumetricFog.shader" />
      <None Include="Assets\SteamVR\Resources\SteamVR_SphericalProjection.shader" />
