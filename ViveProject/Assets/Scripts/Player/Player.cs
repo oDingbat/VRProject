@@ -25,6 +25,7 @@ public class Player : MonoBehaviour {
 	public GameObject head;
 	public GameObject rig;
 	public GameObject flashlight;
+	public GameObject headlight;
 
 	[Space(10)][Header("Audio Sources")]
 	public AudioManager audioManager;
@@ -146,6 +147,7 @@ public class Player : MonoBehaviour {
 		handInfoRight.handRigidbody = handInfoRight.handGameObject.GetComponent<Rigidbody>();
 		audioManager = GameObject.Find("AudioManager").GetComponent<AudioManager>();
 		entity = GetComponent<Entity>();
+		headlight = hmd.transform.parent.Find("Headlight").gameObject;
 		Debug.Log("Vitals");
 
 		// Subscribe Events
@@ -233,7 +235,6 @@ public class Player : MonoBehaviour {
 			}
 
 			if (handInfoCurrent.controllerDevice.GetHairTrigger()) {
-				Debug.Log("Hair Hold");
 				InteractHold(side, grabInfoCurrent);
 			} else {
 				InteractNull(side, grabInfoCurrent);
@@ -281,7 +282,6 @@ public class Player : MonoBehaviour {
 
 					if (item != null && item.GetComponent<GlowObjectCmd>()) {
 						item.GetComponent<GlowObjectCmd>().handNear = true;
-						Debug.Log("hand near");
 					}
 					return;
 				}
@@ -313,6 +313,8 @@ public class Player : MonoBehaviour {
 					} else if (hitItem.transform.parent.parent.GetComponent<Item>()) {
 						grabInfoCurrent.grabbedItem = hitItem.transform.parent.parent.GetComponent<Item>();
 					}
+
+					grabInfoCurrent.grabbedItem.timeLastGrabbed = Time.timeSinceLevelLoad;
 
 					grabInfoCurrent.grabbedRigidbody.useGravity = false;
 
@@ -393,6 +395,13 @@ public class Player : MonoBehaviour {
 					}
 				}
 			}
+
+			if (grabInfoCurrent.climbableGrabbed == null && grabInfoCurrent.grabbedRigidbody == null) { // If we didn't grab anything
+				if (Vector3.Distance(handInfoCurrent.controller.transform.position, hmd.transform.position + hmd.transform.forward * - 0.15f) < 0.2125f) {
+					Debug.Log("Bottom " + headlight.activeSelf);
+					headlight.SetActive(!headlight.activeSelf);
+				}
+			}
 		}
 	}
 
@@ -428,8 +437,11 @@ public class Player : MonoBehaviour {
 	}
 
 	void InteractDown(string side, GrabInformation grabInfoCurrent) {
+		Debug.Log("Down");
 		if (grabInfoCurrent.grabbedItem is Weapon) {
 			Weapon currentWeapon = grabInfoCurrent.grabbedItem as Weapon;
+			currentWeapon.timeLastTriggered = Time.timeSinceLevelLoad;
+			currentWeapon.AdjustAmmo(0);
 			if (grabInfoCurrent.grabNode.interactionType == GrabNode.InteractionType.Trigger) {
 				if (currentWeapon.chargingEnabled == false) {
 					AttemptToFireWeapon(side, grabInfoCurrent.grabbedItem);
@@ -442,7 +454,7 @@ public class Player : MonoBehaviour {
 		if (grabInfoCurrent.grabbedItem is Weapon) {
 			Weapon currentWeapon = grabInfoCurrent.grabbedItem as Weapon;
 			currentWeapon.triggerHeld = true;
-			Debug.Log("Hold");
+			currentWeapon.timeLastTriggered = Time.timeSinceLevelLoad;
 			if (grabInfoCurrent.grabNode.interactionType == GrabNode.InteractionType.Trigger) {
 				if (currentWeapon.automatic == true) {
 					AttemptToFireWeapon(side, grabInfoCurrent.grabbedItem);
@@ -477,8 +489,13 @@ public class Player : MonoBehaviour {
 		Weapon currentWeapon = currentItem as Weapon;
 		if (currentWeapon.timeLastFired + (1 / currentWeapon.firerate) <= Time.timeSinceLevelLoad) {
 			if (currentWeapon.chargingEnabled == false || (currentWeapon.chargeCurrent >= currentWeapon.chargeRequired)) {
-				StartCoroutine(FireWeapon(side, currentItem));
-				currentWeapon.timeLastFired = Time.timeSinceLevelLoad;
+				if (currentWeapon.ammoCurrent >= currentWeapon.consumption) {       // Does the weapon enough ammo?
+					if (currentWeapon.consumePerBurst == false) {
+						currentWeapon.AdjustAmmo(-currentWeapon.consumption);
+					}
+					StartCoroutine(FireWeapon(side, currentItem));
+					currentWeapon.timeLastFired = Time.timeSinceLevelLoad;
+				}
 			}
 		}
 	}
@@ -489,65 +506,72 @@ public class Player : MonoBehaviour {
 		Transform barrel = currentItem.transform.Find("(Barrel Point)");
 
 		for (int i = 0; i < Mathf.Clamp(currentWeapon.burstCount, 1, 100); i++) {           // For each burst shot in this fire
-
-			// Step 1: Trigger haptic feedback
-			if (grabInfoLeft.grabbedRigidbody == grabInfoRight.grabbedRigidbody) {
-				StartCoroutine(TriggerHapticFeedback(handInfoLeft.controllerDevice, 0.1f));
-				StartCoroutine(TriggerHapticFeedback(handInfoRight.controllerDevice, 0.1f));
-			} else {
-				StartCoroutine(TriggerHapticFeedback((hand == "Left" ? handInfoLeft.controllerDevice : handInfoRight.controllerDevice), 0.1f));
-			}
-
-			// Step 2: Apply velocity and angular velocity to weapon
-			if (grabInfoLeft.grabbedItem == grabInfoRight.grabbedItem) {
-				grabInfoLeft.itemVelocityPercentage = 0f;
-				grabInfoRight.itemVelocityPercentage = 0f;
-				currentRigidbody.velocity += (currentRigidbody.transform.forward * -currentWeapon.recoilLinear * 0.5f);
-				currentRigidbody.angularVelocity += new Vector3(Random.Range(-currentWeapon.recoilAngular, currentWeapon.recoilAngular), Random.Range(-currentWeapon.recoilAngular, currentWeapon.recoilAngular), Random.Range(-currentWeapon.recoilAngular, currentWeapon.recoilAngular)) * 0.5f;
-			} else {
-				currentRigidbody.velocity += (currentRigidbody.transform.forward * -currentWeapon.recoilLinear);
-				currentRigidbody.angularVelocity += new Vector3(Random.Range(-currentWeapon.recoilAngular, currentWeapon.recoilAngular), Random.Range(-currentWeapon.recoilAngular, currentWeapon.recoilAngular), Random.Range(-currentWeapon.recoilAngular, currentWeapon.recoilAngular));
-				if (hand == "Left") {
-					grabInfoLeft.itemVelocityPercentage = 0;
-				} else if (hand == "Right") {
-					grabInfoRight.itemVelocityPercentage = 0;
+			if (currentWeapon.consumePerBurst == false || currentWeapon.ammoCurrent >= currentWeapon.consumption) {
+				if (currentWeapon.consumePerBurst == true) {
+					currentWeapon.AdjustAmmo(-currentWeapon.consumption);
 				}
-			}
 
-			// Step 3: Adjust weapon accuracy & get random accuracy
-			currentWeapon.accuracyCurrent = Mathf.Clamp(currentWeapon.accuracyCurrent - currentWeapon.accuracyDecrement, currentWeapon.accuracyMin, currentWeapon.accuracyMax);
-			float angleMax = Mathf.Abs(currentWeapon.accuracyCurrent - 1) * 5f;
-			Quaternion randomAccuracy = Quaternion.Euler(Random.Range(-angleMax, angleMax), Random.Range(-angleMax, angleMax), Random.Range(-angleMax, angleMax));
+				// Step 1: Trigger haptic feedback
+				if (grabInfoLeft.grabbedRigidbody == grabInfoRight.grabbedRigidbody) {
+					StartCoroutine(TriggerHapticFeedback(handInfoLeft.controllerDevice, 0.1f));
+					StartCoroutine(TriggerHapticFeedback(handInfoRight.controllerDevice, 0.1f));
+				} else {
+					StartCoroutine(TriggerHapticFeedback((hand == "Left" ? handInfoLeft.controllerDevice : handInfoRight.controllerDevice), 0.1f));
+				}
 
-			for (int j = 0; (j < currentWeapon.projectileSpreads.Length || (currentWeapon.projectileSpreads.Length == 0 && j == 0)); j++) {
-
-				// Step 5: Get random spread deviations
-				Quaternion projectileSpreadDeviation = Quaternion.Euler(Random.Range(-currentWeapon.projectileSpreadDeviation, currentWeapon.projectileSpreadDeviation), Random.Range(-currentWeapon.projectileSpreadDeviation, currentWeapon.projectileSpreadDeviation), 0);
-
-				// Step 4: Create new projectile
-				GameObject newProjectile = (GameObject)Instantiate(currentWeapon.projectile, barrel.position + barrel.forward * 0.2f, currentItem.transform.rotation * randomAccuracy);
-				if (currentWeapon.projectileSpreads.Length > 0) {
-					if (currentWeapon.projectileSpreadType == Weapon.SpreadType.Circular) {
-						newProjectile.transform.rotation *= projectileSpreadDeviation * Quaternion.Euler(0, 0, currentWeapon.projectileSpreads[j].x) * Quaternion.Euler(currentWeapon.projectileSpreads[j].y, 0, 0);
-					} else {
-						newProjectile.transform.rotation *= Quaternion.Euler(currentWeapon.projectileSpreads[j].y, currentWeapon.projectileSpreads[j].x, 0);
+				// Step 2: Apply velocity and angular velocity to weapon
+				if (grabInfoLeft.grabbedItem == grabInfoRight.grabbedItem) {
+					grabInfoLeft.itemVelocityPercentage = 0f;
+					grabInfoRight.itemVelocityPercentage = 0f;
+					currentRigidbody.velocity += (currentRigidbody.transform.forward * -currentWeapon.recoilLinear * 0.5f);
+					currentRigidbody.angularVelocity += new Vector3(Random.Range(-currentWeapon.recoilAngular, currentWeapon.recoilAngular), Random.Range(-currentWeapon.recoilAngular, currentWeapon.recoilAngular), Random.Range(-currentWeapon.recoilAngular, currentWeapon.recoilAngular)) * 0.5f;
+				} else {
+					currentRigidbody.velocity += (currentRigidbody.transform.forward * -currentWeapon.recoilLinear);
+					currentRigidbody.angularVelocity += new Vector3(Random.Range(-currentWeapon.recoilAngular, currentWeapon.recoilAngular), Random.Range(-currentWeapon.recoilAngular, currentWeapon.recoilAngular), Random.Range(-currentWeapon.recoilAngular, currentWeapon.recoilAngular));
+					if (hand == "Left") {
+						grabInfoLeft.itemVelocityPercentage = 0;
+					} else if (hand == "Right") {
+						grabInfoRight.itemVelocityPercentage = 0;
 					}
 				}
-				Projectile newProjectileClass = newProjectile.GetComponent<Projectile>();
-				if (currentWeapon.chargingEnabled == true) {
-					newProjectileClass.velocity = newProjectile.transform.forward * (currentWeapon.projectileVelocity - (currentWeapon.projectileVelocity * currentWeapon.chargeInfluenceVelocity * Mathf.Abs(currentWeapon.chargeCurrent - 1)));
-				} else {
-					newProjectileClass.velocity = newProjectile.transform.forward * currentWeapon.projectileVelocity;
-				}
-				newProjectileClass.deceleration = currentWeapon.projectileDeceleration;
-				newProjectileClass.decelerationType = currentWeapon.projectileDecelerationType;
-				newProjectileClass.gravity = currentWeapon.projectileGravity;
-				newProjectileClass.ricochetCount = currentWeapon.projectileRicochetCount;
-				newProjectileClass.ricochetAngleMax = currentWeapon.projectileRicochetAngleMax;
-				newProjectileClass.lifespan = currentWeapon.projectileLifespan;
-				newProjectileClass.sticky = currentWeapon.projectileIsSticky;
-				audioManager.PlayClipAtPoint(currentWeapon.soundFireNormal, barrel.position, 2f);
 
+				// Step 3: Adjust weapon accuracy & get random accuracy
+				currentWeapon.accuracyCurrent = Mathf.Clamp(currentWeapon.accuracyCurrent - currentWeapon.accuracyDecrement, currentWeapon.accuracyMin, currentWeapon.accuracyMax);
+				float angleMax = Mathf.Abs(currentWeapon.accuracyCurrent - 1) * 5f;
+				Quaternion randomAccuracy = Quaternion.Euler(Random.Range(-angleMax, angleMax), Random.Range(-angleMax, angleMax), Random.Range(-angleMax, angleMax));
+
+				for (int j = 0; (j < currentWeapon.projectileSpreads.Length || (currentWeapon.projectileSpreads.Length == 0 && j == 0)); j++) {
+
+					// Step 5: Get random spread deviations
+					Quaternion projectileSpreadDeviation = Quaternion.Euler(Random.Range(-currentWeapon.projectileSpreadDeviation, currentWeapon.projectileSpreadDeviation), Random.Range(-currentWeapon.projectileSpreadDeviation, currentWeapon.projectileSpreadDeviation), 0);
+
+					// Step 4: Create new projectile
+					GameObject newProjectile = (GameObject)Instantiate(currentWeapon.projectile, barrel.position + barrel.forward * 0.2f, currentItem.transform.rotation * randomAccuracy);
+					if (currentWeapon.projectileSpreads.Length > 0) {
+						if (currentWeapon.projectileSpreadType == Weapon.SpreadType.Circular) {
+							newProjectile.transform.rotation *= projectileSpreadDeviation * Quaternion.Euler(0, 0, currentWeapon.projectileSpreads[j].x) * Quaternion.Euler(currentWeapon.projectileSpreads[j].y, 0, 0);
+						} else {
+							newProjectile.transform.rotation *= Quaternion.Euler(currentWeapon.projectileSpreads[j].y, currentWeapon.projectileSpreads[j].x, 0);
+						}
+					}
+					Projectile newProjectileClass = newProjectile.GetComponent<Projectile>();
+					if (currentWeapon.chargingEnabled == true) {
+						newProjectileClass.velocity = newProjectile.transform.forward * (currentWeapon.projectileVelocity - (currentWeapon.projectileVelocity * currentWeapon.chargeInfluenceVelocity * Mathf.Abs(currentWeapon.chargeCurrent - 1)));
+					} else {
+						newProjectileClass.velocity = newProjectile.transform.forward * currentWeapon.projectileVelocity;
+					}
+					newProjectileClass.deceleration = currentWeapon.projectileDeceleration;
+					newProjectileClass.decelerationType = currentWeapon.projectileDecelerationType;
+					newProjectileClass.gravity = currentWeapon.projectileGravity;
+					newProjectileClass.ricochetCount = currentWeapon.projectileRicochetCount;
+					newProjectileClass.ricochetAngleMax = currentWeapon.projectileRicochetAngleMax;
+					newProjectileClass.lifespan = currentWeapon.projectileLifespan;
+					newProjectileClass.sticky = currentWeapon.projectileIsSticky;
+					audioManager.PlayClipAtPoint(currentWeapon.soundFireNormal, barrel.position, 2f);
+
+				}
+			} else {
+				// TODO: Dry shot
 			}
 			yield return new WaitForSeconds(currentWeapon.burstDelay);
 		}

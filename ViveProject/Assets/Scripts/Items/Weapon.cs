@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System;
 
 [System.Serializable]
 public class Weapon : Item {
@@ -9,9 +10,16 @@ public class Weapon : Item {
 	public bool							automatic;
 	public float						firerate;
 	public float						timeLastFired;
+	public float						timeLastTriggered;
 	public int							burstCount;
 	public float						burstDelay;
 	public bool							triggerHeld;
+
+	[Space(10)][Header("Accuracy Info")]
+	public int							ammoCurrent;
+	public int							ammoMax;
+	public int							consumption;
+	public bool							consumePerBurst;
 
 	[Space(10)][Header("Accuracy Info")]
 	public float						accuracyCurrent;				// The current accuracy of the weapon
@@ -53,12 +61,20 @@ public class Weapon : Item {
 	[Space(10)][Header("Audio Info")]
 	public AudioClip		soundFireNormal;                // The normal audio clip player when firing the weapon
 
+	// Events
+	public event Action eventAdjustAmmo;
+
 	void Update() {
 		if (triggerHeld == false) {
 			if (chargingEnabled == true) {
 				chargeCurrent = Mathf.Clamp01(chargeCurrent - (chargeDecrement * Time.deltaTime));
 			}
 		}
+	}
+
+	public void AdjustAmmo (int a) {
+		ammoCurrent = (int)Mathf.Clamp(ammoCurrent + a, 0, ammoMax);
+		eventAdjustAmmo.Invoke();
 	}
 
 	public override string GetItemType() {
