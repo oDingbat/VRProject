@@ -207,7 +207,7 @@ Transform:
   m_PrefabInternal: {fileID: 100100000}
   m_GameObject: {fileID: 1513921976490910}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 40.2944, y: -0.634, z: -0.146}
+  m_LocalPosition: {x: 40.2944, y: -0.634, z: 0.143}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children:
   - {fileID: 4577443580494556}
@@ -456,9 +456,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   itemName: 
   timeLastGrabbed: 0
+  grabNodes: {fileID: 0}
   automatic: 0
   firerate: 10
   timeLastFired: 0
+  timeLastTriggered: 0
   burstCount: 1
   burstDelay: 0
   triggerHeld: 0
@@ -468,7 +470,7 @@ MonoBehaviour:
   consumePerBurst: 0
   accuracyCurrent: 100
   accuracyMax: 1
-  accuracyMin: 0.954
+  accuracyMin: 0.95
   accuracyIncrement: 0
   accuracyDecrement: 0
   recoilLinear: 5
@@ -486,7 +488,7 @@ MonoBehaviour:
   projectileSpreadDeviation: 0
   projectileRicochetCount: 10
   projectileRicochetAngleMax: 30
-  projectileVelocity: 250
+  projectileVelocity: 1000
   projectileGravity: 0
   projectileDecelerationType: 0
   projectileDeceleration: 10

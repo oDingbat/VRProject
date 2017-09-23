@@ -13,6 +13,8 @@ public abstract class Item : MonoBehaviour {
 	AudioSource audioSourceHit;
 	AudioSource audioSourceMove;
 
+	public GrabNode grabNodes;
+
 	void OnCollisionEnter (Collision collision) {
 		if (audioSourceHit) {
 			if (collision.relativeVelocity.magnitude > 2) {
