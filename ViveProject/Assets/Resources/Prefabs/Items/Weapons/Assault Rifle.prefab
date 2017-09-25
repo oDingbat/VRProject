@@ -121,7 +121,7 @@ GameObject:
   - component: {fileID: 223477488292693494}
   - component: {fileID: 114343979176552316}
   m_Layer: 5
-  m_Name: (Canvas) (1)
+  m_Name: (Canvas)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -524,17 +524,17 @@ MonoBehaviour:
   burstCount: 1
   burstDelay: 0
   triggerHeld: 0
-  ammoCurrent: 60
-  ammoMax: 60
+  ammoCurrent: 6000
+  ammoMax: 6000
   consumption: 1
   consumePerBurst: 0
   accuracyCurrent: 100
   accuracyMax: 1
-  accuracyMin: 0.85
-  accuracyIncrement: 10
-  accuracyDecrement: 1.5
-  recoilLinear: 3
-  recoilAngular: 3
+  accuracyMin: 0.98
+  accuracyIncrement: 0.09
+  accuracyDecrement: 0.01
+  recoilLinear: 0.05
+  recoilAngular: 6
   chargingEnabled: 0
   chargeCurrent: 0
   chargeIncrement: 0
