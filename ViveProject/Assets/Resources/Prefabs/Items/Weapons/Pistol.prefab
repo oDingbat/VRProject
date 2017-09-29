@@ -474,7 +474,7 @@ MonoBehaviour:
   accuracyIncrement: 0
   accuracyDecrement: 0
   recoilLinear: 0.1
-  recoilAngular: 45
+  recoilAngular: 5
   chargingEnabled: 0
   chargeCurrent: 0
   chargeIncrement: 0

@@ -538,7 +538,6 @@ public class Player : MonoBehaviour {
 
 	IEnumerator FireWeapon(string hand, Item currentItem, HandInformation handInfoCurrent) {
 		Weapon currentWeapon = currentItem as Weapon;
-		Rigidbody currentRigidbody = currentItem.transform.GetComponent<Rigidbody>();
 		Transform barrel = currentItem.transform.Find("(Barrel Point)");
 
 		for (int i = 0; i < Mathf.Clamp(currentWeapon.burstCount, 1, 100); i++) {           // For each burst shot in this fire

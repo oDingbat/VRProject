@@ -4,12 +4,13 @@ using UnityEngine;
 
 public class GrabNode : MonoBehaviour {
 
-
+	[Space(10)][Header("Settings")]
 	public Vector3			rotation;
 	public Vector3			offset;
 	public GrabNode			referralNode;
 	public int				dominance;
 
+	[Space(10)][Header("Enums")]
 	public GrabType			grabType;
 	public enum				GrabType { FixedPositionRotation, FixedPosition, Dynamic, Referral }
 	public InteractionType	interactionType;

@@ -3,7 +3,10 @@ using System.Collections.Generic;
 using UnityEngine;
 
 [System.Serializable]
+[RequireComponent (typeof(GlowObjectCmd))]
 public abstract class Item : MonoBehaviour {
+
+	public Rigidbody itemRigidbody;
 
 	[Header("Information")]
 	public string itemName;
@@ -14,6 +17,10 @@ public abstract class Item : MonoBehaviour {
 	AudioSource audioSourceMove;
 
 	public GrabNode grabNodes;
+
+	void Start () {
+		itemRigidbody = GetComponent<Rigidbody>();
+	}
 
 	void OnCollisionEnter (Collision collision) {
 		if (audioSourceHit) {
