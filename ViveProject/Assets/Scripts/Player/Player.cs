@@ -61,16 +61,14 @@ public class Player : MonoBehaviour {
 	float maxLeanDistance = 0.375f;                                     // The value used to determine how far the player can lean over cover/obstacles. Once the player moves past the leanDistance he/she will be pulled back via rig movement.
 	public float leanDistance;                                          // The current distance the player is leaning. See maxLeanDistance.
 	Vector3 handRigidbodyPositionOffset = new Vector3(-0.02f, -0.025f, -0.075f);
-	float moveSpeedRunning = 5f;
-	float moveSpeedStanding = 2.75f;
-	float moveSpeedCrouching = 1f;
-	float moveSpeedLaying = 0.5f;
+	float moveSpeedStanding = 4f;
+	float moveSpeedCrouching = 2f;
+	float moveSpeedLaying = 1f;
 
 	[Space(10)][Header("Movement Variables")]
 	public Vector3 velocityCurrent;     // The current velocity of the player
 	public Vector3 velocityDesired;        // The desired velocity of the player
 	float moveSpeedCurrent;
-	float slopeHighest;
 	float slopeLowest;
 	public bool grounded = false;
 	float timeLastJumped = 0;
@@ -306,7 +304,8 @@ public class Player : MonoBehaviour {
 	void Grab(string side, GrabInformation grabInfoCurrent, GrabInformation grabInfoOpposite, HandInformation handInfoCurrent, HandInformation handInfoOpposite) {
 		if (grabInfoCurrent.climbableGrabbed == null && grabInfoCurrent.grabbedRigidbody == null) {
 			// Try and grab something
-			Vector3 originPosition = handInfoCurrent.controller.transform.position + (handInfoCurrent.controller.transform.rotation * new Vector3(handRigidbodyPositionOffset.x, handRigidbodyPositionOffset.y, handRigidbodyPositionOffset.z));
+			//Vector3 originPosition = handInfoCurrent.controller.transform.position + (handInfoCurrent.controller.transform.rotation * new Vector3(handRigidbodyPositionOffset.x, handRigidbodyPositionOffset.y, handRigidbodyPositionOffset.z));
+			Vector3 originPosition = handInfoCurrent.handGameObject.transform.position;
 			Collider[] itemColliders = Physics.OverlapSphere(originPosition, 0.2f, grabLayerMask);
 
 			List<ItemAndNode> itemAndNodes = new List<ItemAndNode>();
@@ -338,9 +337,9 @@ public class Player : MonoBehaviour {
 				foreach(ItemAndNode IAN in itemAndNodes) {
 					float thisDistance = closestDistance + 1;
 					if (IAN.node != null) {
-						thisDistance = Vector3.Distance(handInfoCurrent.controller.transform.position, IAN.item.transform.position + (IAN.item.transform.rotation * (IAN.node.transform.localPosition + IAN.node.offset)));
+						thisDistance = Vector3.Distance(handInfoCurrent.handGameObject.transform.position, IAN.item.transform.position + (IAN.item.transform.rotation * (IAN.node.transform.localPosition + IAN.node.offset)));
 					} else {
-						thisDistance = Vector3.Distance(handInfoCurrent.controller.transform.position, IAN.item.transform.position);
+						thisDistance = Vector3.Distance(handInfoCurrent.handGameObject.transform.position, IAN.item.transform.position);
 					}
 
 					if (thisDistance < closestDistance) {
@@ -365,12 +364,12 @@ public class Player : MonoBehaviour {
 							grabInfoCurrent.grabOffset = Quaternion.Euler(grabInfoCurrent.grabNode.rotation) * (-grabInfoCurrent.grabNode.transform.localPosition - grabInfoCurrent.grabNode.offset);
 							grabInfoCurrent.grabRotation = Quaternion.Inverse(handInfoCurrent.controller.transform.rotation) * grabInfoCurrent.grabbedRigidbody.transform.rotation;
 						} else if (grabInfoCurrent.grabNode.grabType == GrabNode.GrabType.Dynamic || grabInfoCurrent.grabNode.grabType == GrabNode.GrabType.Referral) {
-							grabInfoCurrent.grabOffset = Quaternion.Inverse(handInfoCurrent.controller.transform.rotation) * (grabInfoCurrent.grabbedRigidbody.transform.position - handInfoCurrent.controller.transform.position);
-							grabInfoCurrent.grabRotation = Quaternion.Inverse(handInfoCurrent.controller.transform.rotation) * grabInfoCurrent.grabbedRigidbody.transform.rotation;
+							grabInfoCurrent.grabOffset = Quaternion.Inverse(handInfoCurrent.handGameObject.transform.rotation) * (grabInfoCurrent.grabbedRigidbody.transform.position - handInfoCurrent.handGameObject.transform.position);
+							grabInfoCurrent.grabRotation = Quaternion.Inverse(handInfoCurrent.handGameObject.transform.rotation) * grabInfoCurrent.grabbedRigidbody.transform.rotation;
 						}
 					} else {
-						grabInfoCurrent.grabOffset = Quaternion.Inverse(handInfoCurrent.controller.transform.rotation) * (grabInfoCurrent.grabbedRigidbody.transform.position - handInfoCurrent.controller.transform.position);
-						grabInfoCurrent.grabRotation = Quaternion.Inverse(handInfoCurrent.controller.transform.rotation) * grabInfoCurrent.grabbedRigidbody.transform.rotation;
+						grabInfoCurrent.grabOffset = Quaternion.Inverse(handInfoCurrent.handGameObject.transform.rotation) * (grabInfoCurrent.grabbedRigidbody.transform.position - handInfoCurrent.handGameObject.transform.position);
+						grabInfoCurrent.grabRotation = Quaternion.Inverse(handInfoCurrent.handGameObject.transform.rotation) * grabInfoCurrent.grabbedRigidbody.transform.rotation;
 					}
 
 					if (grabInfoCurrent.grabbedRigidbody == grabInfoOpposite.grabbedRigidbody) {      // Is the other hand already holding this item?
@@ -454,8 +453,8 @@ public class Player : MonoBehaviour {
 				if (grabInfoOpposite.grabNode == null) {
 					grabInfoCurrent.itemVelocityPercentage = 0;
 					grabInfoOpposite.itemVelocityPercentage = 0;
-					grabInfoOpposite.grabOffset = Quaternion.Inverse(handInfoOpposite.controller.transform.rotation) * (grabInfoOpposite.grabbedRigidbody.transform.position - handInfoOpposite.controller.transform.position);
-					grabInfoOpposite.grabRotation = Quaternion.Inverse(handInfoOpposite.controller.transform.rotation) * grabInfoOpposite.grabbedRigidbody.transform.rotation;
+					grabInfoOpposite.grabOffset = Quaternion.Inverse(handInfoOpposite.handGameObject.transform.rotation) * (grabInfoOpposite.grabbedRigidbody.transform.position - handInfoOpposite.handGameObject.transform.position);
+					grabInfoOpposite.grabRotation = Quaternion.Inverse(handInfoOpposite.handGameObject.transform.rotation) * grabInfoOpposite.grabbedRigidbody.transform.rotation;
 				}
 			}
 		}
@@ -644,8 +643,8 @@ public class Player : MonoBehaviour {
 	}
 
 	void UpdatePlayerVelocity() {
-		float slopeSpeed = ((-slopeHighest + 45) / (characterController.slopeLimit * 2)) + 0.5f;
-		moveSpeedCurrent = Mathf.Lerp(moveSpeedCurrent, (heightCurrent > heightCutoffStanding ? (padPressed ? moveSpeedRunning : moveSpeedStanding) : (heightCurrent > heightCutoffCrouching ? moveSpeedCrouching : moveSpeedLaying)) * slopeSpeed, 5 * Time.deltaTime);
+		float slopeSpeed = Mathf.Clamp(slopeLowest * 0.5f, -0.5f, 0.1f) + 1;
+		moveSpeedCurrent = Mathf.Lerp(moveSpeedCurrent, (heightCurrent > heightCutoffStanding ? moveSpeedStanding : (heightCurrent > heightCutoffCrouching ? moveSpeedCrouching : moveSpeedLaying)) * slopeSpeed, 5 * Time.deltaTime);
 		velocityDesired = new Vector3(handInfoLeft.controllerDevice.GetAxis(Valve.VR.EVRButtonId.k_EButton_SteamVR_Touchpad).x, velocityDesired.y, handInfoLeft.controllerDevice.GetAxis(Valve.VR.EVRButtonId.k_EButton_SteamVR_Touchpad).y) * moveSpeedCurrent;
 		velocityDesired = Quaternion.LookRotation(new Vector3(hmd.transform.forward.x, 0, hmd.transform.forward.z), Vector3.up) * velocityDesired;
 		if (grabInfoLeft.climbableGrabbed == null && grabInfoRight.climbableGrabbed == null) {
@@ -761,8 +760,7 @@ public class Player : MonoBehaviour {
 			velocityCurrent += new Vector3(0, -9.81f * Time.deltaTime, 0);          // Add Gravity this frame
 		}
 
-		slopeHighest = 0;
-		slopeLowest = 180;
+		slopeLowest = Mathf.Infinity;
 
 		float closestGroundDistance = Mathf.Infinity;
 		float furthestGrounedDistance = 0;
@@ -775,8 +773,7 @@ public class Player : MonoBehaviour {
 						float groundCollisionDistance = Vector3.Distance(hit.point, origin);
 						if (groundCollisionDistance < closestGroundDistance) {
 							closestGroundDistance = groundCollisionDistance;
-							float normalAngle = Vector3.Angle(hit.normal, Vector3.up);
-							slopeHighest = ((normalAngle > slopeHighest) ? normalAngle : slopeHighest);
+							float normalAngle = Vector3.Dot(hit.normal, new Vector3(velocityCurrent.x, 0, velocityCurrent.z).normalized);
 							slopeLowest = ((normalAngle < slopeLowest) ? normalAngle : slopeLowest);
 						}
 						if (groundCollisionDistance > furthestGrounedDistance) {
@@ -786,6 +783,8 @@ public class Player : MonoBehaviour {
 				}
 			}
 		}
+
+		Debug.Log(slopeLowest);
 
 		if (closestGroundDistance != Mathf.Infinity) {
 			if (closestGroundDistance < 0.05f) {
