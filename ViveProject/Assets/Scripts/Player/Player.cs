@@ -58,7 +58,7 @@ public class Player : MonoBehaviour {
 	[Space(10)][Header("Constants")]
 	float heightCutoffStanding = 1f;                                    // If the player is standing above this height, they are considered standing
 	float heightCutoffCrouching = 0.5f;                                 // If the player is standing avove this height but below the standingCutoff, they are crouching. If the player is below the crouchingCutoff then they are laying
-	float maxLeanDistance = 0.375f;                                     // The value used to determine how far the player can lean over cover/obstacles. Once the player moves past the leanDistance he/she will be pulled back via rig movement.
+	float maxLeanDistance = 0.45f;                                     // The value used to determine how far the player can lean over cover/obstacles. Once the player moves past the leanDistance he/she will be pulled back via rig movement.
 	public float leanDistance;                                          // The current distance the player is leaning. See maxLeanDistance.
 	Vector3 handRigidbodyPositionOffset = new Vector3(-0.02f, -0.025f, -0.075f);
 	float moveSpeedStanding = 4f;
