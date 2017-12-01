@@ -26,6 +26,7 @@ public class Player : MonoBehaviour {
 	public GameObject rig;
 	public GameObject flashlight;
 	public GameObject headlight;
+	public GameObject torso;
 
 	[Space(10)][Header("Audio Sources")]
 	public AudioManager audioManager;
@@ -71,6 +72,7 @@ public class Player : MonoBehaviour {
 	float moveSpeedCurrent;
 	float slopeLowest;
 	public bool grounded = false;
+	float groundedTime;                             // Time the player has been grounded foor
 	float timeLastJumped = 0;
 	Vector3 platformMovementsAppliedLastFrame = Vector3.zero;
 	bool justStepped;
@@ -79,7 +81,7 @@ public class Player : MonoBehaviour {
 	[Space(10)][Header("Positional Variables")]
 	public float heightCurrent;                     // The current height of the hmd from the rig
 	Vector3 ccPositionLastFrame;
-	public float ccHeightChangeSpeed = 1;					// A value which is near 1 when climbing/grounded, but near 0 when airborne; this value changes how quickly the characterController's height is changed
+	float ccHeightChangeSpeed = 1;                  // A value which is near 1 when climbing/grounded, but near 0 when airborne; this value changes how quickly the characterController's height is changed
 
 	float handOffsetPositionMax = 0.5f;
 
@@ -466,11 +468,18 @@ public class Player : MonoBehaviour {
 		}
 		if (handInfoCurrent.jumpLoaded == true) {
 			if ((grounded == true || timeLastJumped + 0.1f > Time.timeSinceLevelLoad) && grabInfoCurrent.climbableGrabbed == false && grabInfoCurrent.grabbedRigidbody == false) {
-				velocityCurrent += Vector3.ClampMagnitude((handInfoCurrent.controllerPosLastFrame - handInfoCurrent.controller.transform.position) * 500, (timeLastJumped + 0.1f > Time.timeSinceLevelLoad) ? 1f : 4f);
+				Vector3 addedVelocity = Vector3.ClampMagnitude((handInfoCurrent.controllerPosLastFrame - handInfoCurrent.controller.transform.position) * 500, (timeLastJumped + 0.1f > Time.timeSinceLevelLoad) ? 1.25f : 3f);
+				addedVelocity = new Vector3(addedVelocity.x * 0.8f, Mathf.Clamp(addedVelocity.y, 0, Mathf.Infinity), addedVelocity.z * 0.8f);
+				velocityCurrent = Vector3.ClampMagnitude(velocityCurrent + addedVelocity, Mathf.Clamp(velocityCurrent.magnitude * 1.05f, 4.5f, Mathf.Infinity));
 				handInfoCurrent.jumpLoaded = false;
 				if (timeLastJumped + 0.1f < Time.timeSinceLevelLoad) {
-					SetCharacterControllerHeight((hmd.transform.position.y - (rig.transform.position.y)) / 3);
+					float velocityHeightMagnifier = Mathf.Clamp((new Vector3(velocityCurrent.x, 0, velocityCurrent.z).magnitude + velocityCurrent.y - 1f) * 0.5f, 1, 2.25f);
+					Debug.Log(velocityHeightMagnifier);
+					SetCharacterControllerHeight((hmd.transform.position.y - (rig.transform.position.y)) / velocityHeightMagnifier);
 				}
+
+				groundedTime = 0;
+
 				if (grounded == true) { timeLastJumped = Time.timeSinceLevelLoad; }
 			}
 		}
@@ -661,7 +670,7 @@ public class Player : MonoBehaviour {
 		if (grabInfoLeft.climbableGrabbed == null && grabInfoRight.climbableGrabbed == null) {
 			wasClimbingLastFrame = false;
 			if (grounded == true) {
-				velocityCurrent = Vector3.Lerp(velocityCurrent, new Vector3(velocityDesired.x, velocityCurrent.y, velocityDesired.z), 25 * Time.deltaTime);
+				velocityCurrent = Vector3.Lerp(velocityCurrent, new Vector3(velocityDesired.x, velocityCurrent.y, velocityDesired.z), 25 * Time.deltaTime * Mathf.Clamp01(groundedTime));
 			} else {
 				if (handInfoLeft.controllerDevice.GetAxis(Valve.VR.EVRButtonId.k_EButton_SteamVR_Touchpad) != Vector2.zero) {
 					Vector3 normalizedVelocityDesired = new Vector3(velocityDesired.x, 0, velocityDesired.z).normalized * (Mathf.Clamp01(new Vector3(velocityDesired.x, 0, velocityDesired.z).magnitude) * Mathf.Clamp(new Vector3(velocityCurrent.x, 0, velocityCurrent.z).magnitude, moveSpeedCurrent, Mathf.Infinity));
@@ -886,7 +895,7 @@ public class Player : MonoBehaviour {
 			if (grounded == true) {
 				ccHeightChangeSpeed = Mathf.Clamp01(Mathf.Lerp(ccHeightChangeSpeed, 0.9f, 50 * Time.deltaTime));
 			} else {
-				ccHeightChangeSpeed = Mathf.Clamp01(Mathf.Lerp(ccHeightChangeSpeed, 0.25f, 50 * Time.deltaTime));
+				ccHeightChangeSpeed = Mathf.Clamp01(Mathf.Lerp(ccHeightChangeSpeed, 0.4f, 50 * Time.deltaTime));
 			}
 			SetCharacterControllerHeight(Mathf.Lerp(characterController.height, normalHeight, ccHeightChangeSpeed * 10 * Time.deltaTime));                               // If Not Climbing: set height to player's real height
 		}
@@ -965,9 +974,9 @@ public class Player : MonoBehaviour {
 					velocityCurrent.y = -closestGroundDistance;
 					if (furthestGrounedDistance < 0.2f) {
 						Vector3 ccStart = characterController.transform.position;
-						characterController.Move(new Vector3(0, -closestGroundDistance + characterController.skinWidth, 0));
+						//characterController.Move(new Vector3(0, -closestGroundDistance + characterController.skinWidth, 0));
 						Vector3 ccDelta = (characterController.transform.position - ccStart);
-						rig.transform.position += ccDelta;
+						//rig.transform.position += ccDelta;
 					}
 				}
 			} else if (-closestGroundDistance > velocityCurrent.y * Time.deltaTime) {
@@ -983,6 +992,12 @@ public class Player : MonoBehaviour {
 			}
 		} else {
 			grounded = false;
+		}
+
+		if (grounded == true) {
+			groundedTime += Time.deltaTime;
+		} else {
+			groundedTime = 0;
 		}
 
 		// Check Ceiling collision
@@ -1087,6 +1102,7 @@ public class Player : MonoBehaviour {
 		characterController.transform.position = new Vector3(characterController.transform.position.x, hmd.transform.position.y - (desiredHeight / 2), characterController.transform.position.z);
 		//characterController.stepOffset = characterController.height / 3.5f;
 		characterController.stepOffset = 0;
+		torso.transform.localScale = new Vector3(0.4f, characterController.height - 0.2f, 0.2f);
 
 		handInfoLeft.handGameObject.transform.position = handPositionBeforeLeft;
 		handInfoRight.handGameObject.transform.position = handPositionBeforeRight;
