@@ -72,6 +72,7 @@ public class Player : MonoBehaviour {
 	float moveSpeedCurrent;
 	float slopeLowest;
 	public bool grounded = false;
+	Vector3 groundNormal;
 	float groundedTime;                             // Time the player has been grounded foor
 	float timeLastJumped = 0;
 	Vector3 platformMovementsAppliedLastFrame = Vector3.zero;
@@ -80,7 +81,7 @@ public class Player : MonoBehaviour {
 
 	[Space(10)][Header("Positional Variables")]
 	public float heightCurrent;                     // The current height of the hmd from the rig
-	Vector3 ccPositionLastFrame;
+	Vector3 bodyPositionLastFrame;
 	float bodyHeightChangeSpeed = 1;                  // A value which is near 1 when climbing/grounded, but near 0 when airborne; this value changes how quickly the bodyCC's height is changed
 
 	float handOffsetPositionMax = 0.5f;
@@ -164,6 +165,8 @@ public class Player : MonoBehaviour {
 		// Subscribe Events
 		entity.eventTakeDamage += TakeDamage;
 
+		//RealignRig();		// Realign the rig at the start to ensure that the player and their rig are at the same location
+
 		StartCoroutine(UpdateVitals());
 	}
 
@@ -177,8 +180,8 @@ public class Player : MonoBehaviour {
 		UpdateCharacterControllerHeight();
 		UpdatePlayerMovement();
 
-		windLoop.volume = Mathf.Lerp(windLoop.volume, Mathf.Clamp01(((Vector3.Distance(ccPositionLastFrame, bodyCC.transform.position) + platformMovementsAppliedLastFrame.magnitude) / Time.deltaTime) / 75) - 0.15f, 50 * Time.deltaTime);
-		ccPositionLastFrame = bodyCC.transform.position;
+		windLoop.volume = Mathf.Lerp(windLoop.volume, Mathf.Clamp01(((Vector3.Distance(bodyPositionLastFrame, bodyCC.transform.position) + platformMovementsAppliedLastFrame.magnitude) / Time.deltaTime) / 75) - 0.15f, 50 * Time.deltaTime);
+		bodyPositionLastFrame = bodyCC.transform.position;
 		platformMovementsAppliedLastFrame = Vector3.zero;
 
 		if (grounded == true && Vector3.Distance(new Vector3(bodyCC.transform.position.x, 0, bodyCC.transform.position.z), positionLastFootstepPlayed) > 2f) {
@@ -453,7 +456,7 @@ public class Player : MonoBehaviour {
 		grabInfoCurrent.grabOffset = Vector3.zero;
 		grabInfoCurrent.grabCCOffset = Vector3.zero;
 		if (grabInfoOpposite.climbableGrabbed == null && grabInfoCurrent.climbableGrabbed == true) {
-			AttemptClamber();
+			velocityCurrent = Vector3.ClampMagnitude(velocityCurrent, 5f);
 		}
 		if (grabInfoCurrent.grabbedRigidbody == true) {
 			if (grabInfoOpposite.grabbedRigidbody != grabInfoCurrent.grabbedRigidbody) {
@@ -468,6 +471,7 @@ public class Player : MonoBehaviour {
 			}
 		}
 		if (handInfoCurrent.jumpLoaded == true) {
+			Debug.Log("Jump");
 			if ((grounded == true || timeLastJumped + 0.1f > Time.timeSinceLevelLoad) && grabInfoCurrent.climbableGrabbed == false && grabInfoCurrent.grabbedRigidbody == false) {
 				Vector3 addedVelocity = Vector3.ClampMagnitude((handInfoCurrent.controllerPosLastFrame - handInfoCurrent.controller.transform.position) * 500, (timeLastJumped + 0.1f > Time.timeSinceLevelLoad) ? 1.75f : 5f);
 				addedVelocity = new Vector3(addedVelocity.x * 0.8f, Mathf.Clamp(addedVelocity.y, 0, Mathf.Infinity), addedVelocity.z * 0.8f);
@@ -475,11 +479,13 @@ public class Player : MonoBehaviour {
 				handInfoCurrent.jumpLoaded = false;
 				if (timeLastJumped + 0.1f < Time.timeSinceLevelLoad) {
 					float velocityHeightMagnifier = Mathf.Clamp((new Vector3(velocityCurrent.x, 0, velocityCurrent.z).magnitude + velocityCurrent.y - 1f) * 0.5f, 1, 2.25f);
-					Debug.Log(velocityHeightMagnifier);
+					grounded = false;
 					SetBodyHeight((hmd.transform.position.y - (rig.transform.position.y)) / velocityHeightMagnifier);
 				}
 
 				groundedTime = 0;
+
+				
 
 				if (grounded == true) { timeLastJumped = Time.timeSinceLevelLoad; }
 			}
@@ -633,19 +639,6 @@ public class Player : MonoBehaviour {
 		}
 	}
 
-	void AttemptClamber() {
-		velocityCurrent = Vector3.ClampMagnitude(velocityCurrent, 5f);
-		RaycastHit hit;
-		if (Physics.Raycast(hmd.transform.position, Vector3.down, out hit, (hmd.transform.position.y - rig.transform.position.y), bodyCCLayerMask)) {
-			bodyHeightChangeSpeed = 1;
-			grounded = true;
-			Vector3 rigVerticalChange = new Vector3(0, hit.point.y, 0) - new Vector3(0, rig.transform.position.y, 0);
-			//rig.transform.position += rigVerticalChange;
-			//verticalPusher.transform.localPosition = -rigVerticalChange;
-			bodyCC.Move(rigVerticalChange);
-		}
-	}
-
 	void ThrowItem(Rigidbody item, Vector3 velocity) {
 		item.velocity = Vector3.ClampMagnitude(velocity.magnitude > 5 ? (velocity * 2f) : velocity, 100);
 		item.useGravity = true;
@@ -665,7 +658,7 @@ public class Player : MonoBehaviour {
 
 	void UpdatePlayerVelocity() {
 		float slopeSpeed = Mathf.Clamp(slopeLowest * 0.5f, -0.5f, 0.1f) + 1;
-		moveSpeedCurrent = Mathf.Lerp(moveSpeedCurrent, (heightCurrent > heightCutoffStanding ? moveSpeedStanding : (heightCurrent > heightCutoffCrouching ? moveSpeedCrouching : moveSpeedLaying)) * slopeSpeed, 5 * Time.deltaTime);
+		moveSpeedCurrent = Mathf.Lerp(moveSpeedCurrent, (bodyCC.height > heightCutoffStanding ? moveSpeedStanding : (bodyCC.height > heightCutoffCrouching ? moveSpeedCrouching : moveSpeedLaying)) * slopeSpeed, 5 * Time.deltaTime);
 		velocityDesired = new Vector3(handInfoLeft.controllerDevice.GetAxis(Valve.VR.EVRButtonId.k_EButton_SteamVR_Touchpad).x, velocityDesired.y, handInfoLeft.controllerDevice.GetAxis(Valve.VR.EVRButtonId.k_EButton_SteamVR_Touchpad).y) * moveSpeedCurrent;
 		velocityDesired = Quaternion.LookRotation(new Vector3(hmd.transform.forward.x, 0, hmd.transform.forward.z), Vector3.up) * velocityDesired;
 		if (grabInfoLeft.climbableGrabbed == null && grabInfoRight.climbableGrabbed == null) {
@@ -719,111 +712,128 @@ public class Player : MonoBehaviour {
 		// This function updates the bodyCC's height, growing it taller when standing/airborne, and smaller when climbing/jumping.
 		// This makes things like clambering and jumping over obstacles far easier.
 
-		float realHeight = hmd.transform.position.y - (rig.transform.position.y);		// This finds the actual real current height of the player measuring from the rig to the hmd.
-
 		if (isClimbing == true) {      // Are we currently climbing?
 			bodyHeightChangeSpeed = Mathf.Clamp01(Mathf.Lerp(bodyHeightChangeSpeed, 0.75f, 50 * Time.deltaTime));
-			SetBodyHeight(Mathf.Lerp(bodyCC.height, Mathf.Clamp(realHeight, 0, 0.5f), bodyHeightChangeSpeed * 10 * Time.deltaTime));       // If Climbing: set height to player's real height clamped at 0.25f
+			SetBodyHeight(Mathf.Lerp(bodyCC.height, Mathf.Clamp(GetPlayerRealLifeHeight(), 0, 0.5f), bodyHeightChangeSpeed * 10 * Time.deltaTime));       // If Climbing: set height to player's real height clamped at 0.25f
 		} else {
 			if (grounded == true) {
 				bodyHeightChangeSpeed = Mathf.Clamp01(Mathf.Lerp(bodyHeightChangeSpeed, 0.9f, 50 * Time.deltaTime));
 			} else {
 				bodyHeightChangeSpeed = Mathf.Clamp01(Mathf.Lerp(bodyHeightChangeSpeed, 0.4f, 50 * Time.deltaTime));
 			}
-			SetBodyHeight(Mathf.Lerp(bodyCC.height, realHeight, bodyHeightChangeSpeed * 10 * Time.deltaTime));                               // If Not Climbing: set height to player's real height
+			SetBodyHeight(Mathf.Lerp(bodyCC.height, GetPlayerRealLifeHeight(), bodyHeightChangeSpeed * 10 * Time.deltaTime));                               // If Not Climbing: set height to player's real height
 		}
 	}
 
 	void UpdatePlayerMovement() {
 
-		ccPositionLastFrame = bodyCC.transform.position;
+		// Move the player's headCC and bodyCC through the HMD movement
+		MovePlayerViaHMD();
 
-		RaycastHit hit;
+		// Move the player
+		MovePlayerViaVelocity();
 
-		// Step 1: HMD movement
-		Vector3 hmdPosDelta = ((hmd.transform.position - ((verticalPusher.transform.localPosition) * Mathf.Clamp01(Time.deltaTime * 15))) - headCC.transform.position);
-		MoveHeadCC(hmdPosDelta);            // Move the headCC to the hmdPosition, and pull it back if 
+		bodyPositionLastFrame = bodyCC.transform.position;
+	}
 
-		// Step 3: Attempt to move the bodyCC to the HMD
-		Vector3 neckOffset = new Vector3(hmd.transform.forward.x + hmd.transform.up.x, 0, hmd.transform.forward.z + hmd.transform.up.z).normalized * -0.15f;
-		Vector3 hmdCCDifference = ((hmd.transform.position + neckOffset) - bodyCC.transform.position);
-		hmdCCDifference.y = 0;
-		bodyCC.Move(hmdCCDifference);
+	void MovePlayerViaHMD() {
+		Vector3 bodyPositionBefore = bodyCC.transform.position;
+		Vector3 hmdPositionBefore = hmd.transform.position;
 
-		// Lean Distance Debug
-		Debug.DrawLine(hmd.transform.position, new Vector3(bodyCC.transform.position.x, hmd.transform.position.y, bodyCC.transform.position.z), Color.red, 0, false);
+		verticalPusher.transform.localPosition = Vector3.Lerp(verticalPusher.transform.localPosition, Vector3.zero, 10 * Time.deltaTime);
 
-		// Step 4: If HMD leanDistance is too far (greater than maxLeanDistance) then pull back the HMD (by moving the camera rig)
-		leanDistance = Vector3.Distance(new Vector3(hmd.transform.position.x, 0, hmd.transform.position.z) + neckOffset, new Vector3(bodyCC.transform.position.x, 0, bodyCC.transform.position.z));
-
-		if (leanDistance > maxLeanDistance) {
-			Vector3 leanPullBack = (bodyCC.transform.position - hmd.transform.position); // The direction to pull the hmd back
-			leanPullBack = new Vector3(leanPullBack.x, 0, leanPullBack.z).normalized;
-			rig.transform.position += leanPullBack * (leanDistance - maxLeanDistance);
+		// Step 1: Move HeadCC to HMD					// Get the difference between the head position and the HMD position and apply that movement to the headCC
+		//Vector3 headToHmdDelta = ((hmd.transform.position - ((verticalPusher.transform.localPosition) * Mathf.Clamp01(Time.deltaTime * 5))) - headCC.transform.position);     // Delta position moving from headCC to HMD (smoothing applied through the verticalPusher)
+		Vector3 headToHmdDelta = (hmd.transform.position - headCC.transform.position);     // Delta position moving from headCC to HMD (smoothing applied through the verticalPusher)
+		headCC.Move(headToHmdDelta); // Attempt to move the headCC			
+		if (grabInfoLeft.climbableGrabbed == null && grabInfoRight.climbableGrabbed == null) { // Are we not climbing?
+			verticalPusher.transform.position += new Vector3(0, (headCC.transform.position - hmd.transform.position).y, 0); // Move the vertical pusher to accomodate for HMD moving too far vertically through geometry (ie: down into box, up into desk)
 		}
 
-		// Step ?: Gravity
-		if (grabInfoLeft.climbableGrabbed == null && grabInfoRight.climbableGrabbed == null) {
-			velocityCurrent += new Vector3(0, -9.81f * Time.deltaTime, 0);          // Add Gravity this frame
+		// Step 2: Move BodyCC to HeadCC (Horizontally Only)
+		GetGroundInformation();
+		Vector3 neckOffset = new Vector3(hmd.transform.forward.x + hmd.transform.up.x, 0, hmd.transform.forward.z + hmd.transform.up.z).normalized * -0.15f;        // The current neck offset for how far away the bodyCC should be from the center of the headCC
+		Vector3 bodyToHeadDeltaXZ = ((headCC.transform.position + neckOffset) - bodyCC.transform.position);
+		bodyToHeadDeltaXZ.y = 0;
+		bodyCC.Move(GetSlopeMovement(bodyToHeadDeltaXZ));
+
+		// Step 3: Move Rig according to BodyDelta (Vertically Only)
+		Vector3 bodyDeltaPosition = bodyCC.transform.position - bodyPositionBefore;
+		rig.transform.position += bodyDeltaPosition;
+
+		// Step 4: Repeat Step 1 (Vertically Only)
+		Vector3 headToHmdDelta2 = (hmd.transform.position - headCC.transform.position);     // Delta position moving from headCC to HMD (smoothing applied through the verticalPusher)
+		headToHmdDelta2.x = 0; headToHmdDelta2.z = 0;
+		headCC.Move(headToHmdDelta2); // Attempt to move the headCC			
+		if (grabInfoLeft.climbableGrabbed == null && grabInfoRight.climbableGrabbed == null) { // Are we not climbing?
+			verticalPusher.transform.position += new Vector3(0, (headCC.transform.position - hmd.transform.position).y, 0); // Move the vertical pusher to accomodate for HMD moving too far vertically through geometry (ie: down into box, up into desk)
 		}
 
-		slopeLowest = Mathf.Infinity;
+		// Step 5: Move HeadCC if leaning too far
+		Debug.DrawLine(hmd.transform.position, new Vector3(bodyCC.transform.position.x, hmd.transform.position.y, bodyCC.transform.position.z), Color.red, 0, false);   // Shows a line representing lean distance drawing from the bodyCC to the headCC
+		leanDistance = Vector3.Distance(new Vector3(headCC.transform.position.x, 0, headCC.transform.position.z) + neckOffset, new Vector3(bodyCC.transform.position.x, 0, bodyCC.transform.position.z));       // Current lean distance
+		if (leanDistance > maxLeanDistance) {       // Is the player currently leaning further than the max lean distance allows?
+			Vector3 leanPullBack = (bodyCC.transform.position - headCC.transform.position); // The direction to pull the hmd back
+			leanPullBack = new Vector3(leanPullBack.x, 0, leanPullBack.z).normalized * (leanDistance - maxLeanDistance);
+			headCC.Move(leanPullBack);
+		}
 
-		float closestGroundDistance = Mathf.Infinity;
-		float furthestGrounedDistance = 0;
-		for (int k = 0; k < 15; k++) {          // Vertical Slices
-			for (int l = 0; l < 15; l++) {      // Rings
-				Vector3 origin = bodyCC.transform.position + new Vector3(0, 0.004f, 0) + new Vector3(0, (Mathf.Clamp(bodyCC.height, bodyCC.radius * 2, Mathf.Infinity) / -2) + bodyCC.radius, 0) + Quaternion.Euler(0, (360 / 15) * k, 0) * Quaternion.Euler((180 / 15) * l, 0, 0) * new Vector3(0, 0, bodyCC.radius);
-				Debug.DrawLine(origin, origin + Vector3.down * 0.005f, Color.blue, 0, false);
-				if (Physics.Raycast(origin, Vector3.down, out hit, Mathf.Infinity, bodyCCLayerMask)) {
-					if (hit.transform) {
-						float groundCollisionDistance = Vector3.Distance(hit.point, origin);
-						if (groundCollisionDistance < closestGroundDistance) {
-							closestGroundDistance = groundCollisionDistance;
-							float normalAngle = Vector3.Dot(hit.normal, new Vector3(velocityCurrent.x, 0, velocityCurrent.z).normalized);
-							slopeLowest = ((normalAngle < slopeLowest) ? normalAngle : slopeLowest);
-						}
-						if (groundCollisionDistance > furthestGrounedDistance) {
-							furthestGrounedDistance = groundCollisionDistance;
-						}
-					}
-				}
+		// Step 6: Realign Rig
+		RealignRig();
+		
+	}
+
+	void MovePlayerViaVelocity() {
+		Vector3 bodyPositionBefore = bodyCC.transform.position;
+		Vector3 hmdPositionBefore = hmd.transform.position;
+
+		Debug.DrawRay(bodyCC.transform.position, velocityCurrent, Color.green);
+
+		// Step 1: Apply Gravity for this frame
+		velocityCurrent += new Vector3(0, -9.8f * Time.deltaTime, 0);
+
+		// Step 2: Move BodyCC with velocityCurrent
+		GetGroundInformation();		// First, get ground information to know if we're on a slope/grounded/airborne
+		bodyCC.Move(GetSlopeMovement(velocityCurrent * Time.deltaTime));
+
+		// Step 3: Move Rig according to BodyDelta
+		Vector3 rigToBodyDelta = bodyCC.transform.position - bodyPositionBefore;
+		rig.transform.position += rigToBodyDelta;
+
+		// Step 4: Move HeadCC to HMD
+		Vector3 headToHmdDelta = (hmd.transform.position - headCC.transform.position);     // Delta position moving from headCC to HMD (smoothing applied through the verticalPusher)
+		headCC.Move(headToHmdDelta); // Attempt to move the headCC			
+		if (isClimbing == false) { // Are we not climbing?
+			verticalPusher.transform.position += new Vector3(0, (headCC.transform.position - hmd.transform.position).y, 0); // Move the vertical pusher to accomodate for HMD moving too far vertically through geometry (ie: down into box, up into desk)
+		}
+
+		// Step 5: Move HeadCC if leaning too far
+		Vector3 neckOffset = new Vector3(hmd.transform.forward.x + hmd.transform.up.x, 0, hmd.transform.forward.z + hmd.transform.up.z).normalized * -0.15f;        // The current neck offset for how far away the bodyCC should be from the center of the headCC
+		Debug.DrawLine(hmd.transform.position, new Vector3(bodyCC.transform.position.x, hmd.transform.position.y, bodyCC.transform.position.z), Color.red, 0, false);   // Shows a line representing lean distance drawing from the bodyCC to the headCC
+		leanDistance = Vector3.Distance(new Vector3(headCC.transform.position.x, 0, headCC.transform.position.z) + neckOffset, new Vector3(bodyCC.transform.position.x, 0, bodyCC.transform.position.z));       // Current lean distance
+		if (leanDistance > maxLeanDistance) {       // Is the player currently leaning further than the max lean distance allows?
+			Vector3 leanPullBack = (bodyCC.transform.position - headCC.transform.position); // The direction to pull the hmd back
+			leanPullBack = new Vector3(leanPullBack.x, 0, leanPullBack.z).normalized * (leanDistance - maxLeanDistance);
+			headCC.Move(leanPullBack);
+		}
+
+		// Step 6: Check for ceiling collision
+		if (velocityCurrent.y > 0) {
+			RaycastHit hit;
+			sphereCastOrigin = headCC.transform.position + new Vector3(0, -headCC.skinWidth / 2, 0);
+			sphereCastDirection = Vector3.up;
+			sphereCastRadius = headCC.radius - (headCC.skinWidth / 2);
+			sphereCastLength = 0.01f + (headCC.skinWidth * 2);
+			if (isClimbing == false && Physics.SphereCast(sphereCastOrigin, sphereCastRadius, sphereCastDirection, out hit, sphereCastLength, bodyCCLayerMask)) {
+				velocityCurrent.y = 0;
 			}
 		}
 
-		if (closestGroundDistance != Mathf.Infinity) {
-			if (closestGroundDistance < 0.05f) {
-				if (grabInfoLeft.climbableGrabbed == null && grabInfoRight.climbableGrabbed == null && velocityCurrent.y < 0) {
-					if (grounded == false) { PlayFootstepSound(); }
-					grounded = true;
-					//Vector3 heightDeltaChange = new Vector3(0, -((hmd.transform.position.y - (rig.transform.position.y)) - bodyCC.height), 0);
-					//SetCharacterControllerHeight(hmd.transform.position.y - (rig.transform.position.y));
-					//ccHeightChangeSpeed = 1;
-					//verticalPusher.transform.localPosition += heightDeltaChange;
-					handInfoLeft.jumpLoaded = true;
-					handInfoRight.jumpLoaded = true;
-					velocityCurrent.y = -closestGroundDistance;
-					if (furthestGrounedDistance < 0.2f) {
-						Vector3 ccStart = bodyCC.transform.position;
-						//bodyCC.Move(new Vector3(0, -closestGroundDistance + bodyCC.skinWidth, 0));
-						Vector3 ccDelta = (bodyCC.transform.position - ccStart);
-						//rig.transform.position += ccDelta;
-					}
-				}
-			} else if (-closestGroundDistance > velocityCurrent.y * Time.deltaTime) {
-				if (grounded == false) { PlayFootstepSound(); }
-				grounded = true;
-				handInfoLeft.jumpLoaded = true;
-				handInfoRight.jumpLoaded = true;
-				velocityCurrent.y = -closestGroundDistance;
-				// Fell to ground
-				// Take damage?
-			} else {
-				grounded = false;
-			}
-		} else {
-			grounded = false;
-		}
+		// Step 7: Realign Rig
+		RealignRig();
+		
+		// Step 8: Move Items held by player
+		MoveItems(bodyCC.transform.position - bodyPositionBefore);
 
 		if (grounded == true) {
 			groundedTime += Time.deltaTime;
@@ -831,76 +841,77 @@ public class Player : MonoBehaviour {
 			groundedTime = 0;
 		}
 
-		// Check Ceiling collision
+	}
 
-		float closestCeilingDistance = Mathf.Infinity;
+	void RealignRig() {
+		// Realigns the rig to put the hmd in the same position as the headCC by moving the rig (which in turn, moves the hmd into position)
+		Vector3 hmdHeadDifference = head.transform.position - hmd.transform.position;
+		rig.transform.position += hmdHeadDifference;
+	}
 
-		for (float k = 0; k < 20; k++) {          // Vertical Slices
-			for (float l = 0; l < 15; l++) {      // Rings
-				Vector3 ceilingOrigin = bodyCC.transform.position + new Vector3(0, (bodyCC.height / 2) + (headCC.height + headCC.skinWidth) - (bodyCC.radius + 0.005f), 0) + (Quaternion.Euler(0, 360 / 15 * l, 0) * Quaternion.Euler(90 / 20 * k, 0, 0) * new Vector3(0, bodyCC.radius, 0));
-				Debug.DrawRay(ceilingOrigin, Vector3.up * 0.01f, Color.magenta);
-				if (Physics.Raycast(ceilingOrigin, Vector3.up, out hit, Mathf.Infinity, bodyCCLayerMask)) {
-					if (hit.transform) {
-						float ceilingCollisionDistance = Vector3.Distance(hit.point, ceilingOrigin);
-						if (ceilingCollisionDistance < closestCeilingDistance) {
-							closestCeilingDistance = ceilingCollisionDistance;
-						}
-					}
-					if (k == 14) {
-						break;
-					}
-				}
+	Vector3 sphereCastOrigin;
+	Vector3 sphereCastDirection;
+	float sphereCastRadius;
+	float sphereCastLength;
+
+	void GetGroundInformation () {
+		// This function will get ground infromation:
+			// 1. Are we touching the ground?
+			// 2. What is the normal of the ground?
+		
+		RaycastHit hit;
+
+		Vector3 sphereCastOrigin = bodyCC.transform.position + new Vector3(0, (-bodyCC.height / 2) + bodyCC.radius + bodyCC.skinWidth, 0);
+		Vector3 sphereCastDirection = Vector3.down;
+		float sphereCastRadius = bodyCC.radius - (bodyCC.skinWidth / 2);
+		float sphereCastLength = 0.0125f + (bodyCC.skinWidth * 2);
+
+		if (isClimbing == false && Physics.SphereCast(sphereCastOrigin, sphereCastRadius, sphereCastDirection, out hit, sphereCastLength, bodyCCLayerMask)) {
+			if (grounded == false) {
+				float heightDifference = GetPlayerRealLifeHeight() - bodyCC.height;
+				verticalPusher.transform.position += new Vector3(0, -heightDifference, 0);
+				rig.transform.position += new Vector3(0, heightDifference, 0);
 			}
+			handInfoLeft.jumpLoaded = true;
+			handInfoRight.jumpLoaded = true;
+			velocityCurrent.y = 0;
+			grounded = true;
+			groundNormal = hit.normal;
+		} else {
+			grounded = false;
+			groundNormal = Vector3.zero;
 		}
+	}
 
-		if (velocityCurrent.y > 0) {
-			if (closestCeilingDistance != Mathf.Infinity && velocityCurrent.y > Mathf.Clamp(closestCeilingDistance - 0.005f, 0, Mathf.Infinity) / Time.deltaTime) {
-				Debug.Log("Clamp " + closestCeilingDistance);
-				velocityCurrent.y = 0;
-			}
-		}
 
-		// Step 6: Get secondary controller trackpad input as character controller velocity
-		Vector3 ccPositionBeforePad = bodyCC.transform.position;
-		bodyCC.Move(velocityCurrent * Time.deltaTime);
-		headCC.Move(velocityCurrent * Time.deltaTime);
-		//MoveHeadCC(velocityCurrent * Time.deltaTime);
-		Vector3 netCCMovement = (bodyCC.transform.position - ccPositionBeforePad);
-		rig.transform.position += netCCMovement;
+	Vector3 GetSlopeMovement (Vector3 movementInput) {
+		Vector3 movementOutput = Vector3.zero;
 
-		heightCurrent = hmd.transform.position.y - (rig.transform.position.y);
-
-		MoveItems(bodyCC.transform.position - ccPositionLastFrame);
-
-		//if (bodyCC.transform.position.y - ccPositionBeforePad.y > 0.01f) {
-		if (grounded == true) {
-			Vector3 difference = new Vector3(0, (bodyCC.transform.position.y - ccPositionBeforePad.y), 0);
-			verticalPusher.transform.localPosition -= difference;
-			if (Mathf.Abs(difference.y) > 0.1f) {
-				justStepped = true;
+		if (grounded && Vector3.Angle(Vector3.up, groundNormal) < 50) {     // Is the player currently grounded && the normal angle is less than 50 degrees?
+			if (isClimbing == true || timeLastJumped + 0.1f > Time.timeSinceLevelLoad) {
+				movementOutput = movementInput;
 			} else {
-				justStepped = false;
+				movementOutput = Vector3.ProjectOnPlane(movementInput, groundNormal);
+				movementOutput *= Mathf.Clamp(Vector3.Angle(movementOutput, Vector3.up) / 105f, 0.75f, 1.25f);
 			}
+		} else {
+			movementOutput = movementInput;
 		}
-
+		
+		return movementOutput;
 	}
 
-	void MoveHeadCC (Vector3 deltaPosition) {
-		headCC.Move(deltaPosition); // Attempt to move the headCC
-		Vector3 hmdOffsetHorizontal = headCC.transform.position - hmd.transform.position; hmdOffsetHorizontal.y = 0; // Get the offset from where we want the head to where it is																										 // Move the vertical pusher to accomodate for HMD moving too far vertically through geometry (ie: down into box, up into desk)
-		if (grabInfoLeft.climbableGrabbed == null && grabInfoRight.climbableGrabbed == null) { // Are we climbing?
-			verticalPusher.transform.position += new Vector3(0, (headCC.transform.position - hmd.transform.position).y, 0); // Move the verticalPusher
-		}
-		rig.transform.position += hmdOffsetHorizontal;      // Move the rig horizontally
+	float GetPlayerRealLifeHeight () {
+		return (hmd.transform.position.y - rig.transform.position.y);
 	}
 
-	void MoveBodyCC (Vector3 deltaPosition) {
-		Vector3 bodyCCPositionBefore = bodyCC.transform.position;
-		bodyCC.Move(deltaPosition);
-		Vector3 verticalDelta = new Vector3(0, (bodyCC.transform.position - bodyCCPositionBefore).y, 0);
-		rig.transform.position += verticalDelta;
+	void OnDrawGizmosSelected () {
+		Gizmos.color = Color.red;
+		Gizmos.DrawWireSphere(sphereCastOrigin, sphereCastRadius);
+		Gizmos.color = Color.cyan;
+		Gizmos.DrawWireSphere(sphereCastOrigin + (sphereCastDirection * sphereCastLength), sphereCastRadius);
 	}
-
+	 
 	void MoveItems(Vector3 deltaPosition) {
 		// This function moves items along with the player's movement every frame. This is NOT the function for moving objects along with the player's hands
 		if (grabInfoLeft.grabbedRigidbody == grabInfoRight.grabbedRigidbody) {
@@ -920,9 +931,9 @@ public class Player : MonoBehaviour {
 
 	public void MovePlayer(Vector3 deltaPosition) {
 		Debug.Log("Move Player");
-		Vector3 ccPositionBefore = bodyCC.transform.position;
+		Vector3 bodyPositionBefore = bodyCC.transform.position;
 		bodyCC.Move(deltaPosition);
-		Vector3 netCCMovement = (bodyCC.transform.position - ccPositionBefore);
+		Vector3 netCCMovement = (bodyCC.transform.position - bodyPositionBefore);
 		rig.transform.position += netCCMovement;
 		platformMovementsAppliedLastFrame += netCCMovement;
 	}
@@ -931,13 +942,14 @@ public class Player : MonoBehaviour {
 		Vector3 handPositionBeforeLeft = handInfoLeft.handGameObject.transform.position;
 		Vector3 handPositionBeforeRight = handInfoRight.handGameObject.transform.position;
 
-		//bodyCC.transform.position = new Vector3(bodyCC.transform.position.x, (hmd.transform.position.y + rig.transform.position.y) / 2, bodyCC.transform.position.z);
-		bodyCC.height = Mathf.Clamp(desiredHeight, bodyCC.radius * 2f, 2.25f);
-		bodyCC.transform.position = new Vector3(bodyCC.transform.position.x, hmd.transform.position.y - (desiredHeight / 2), bodyCC.transform.position.z);
-		//bodyCC.stepOffset = bodyCC.height / 3.5f;
-		bodyCC.stepOffset = 0;
-		//torso.transform.localScale = new Vector3(0.4f, bodyCC.height - 0.2f, 0.2f);
-
+		if (grounded == true && isClimbing == false) {
+			bodyCC.height = Mathf.Clamp(desiredHeight, bodyCC.radius * 2f, 2.25f);          // Set the body height to the desired body height, clamping it between the diameter of the body minimum, and 2.25 meters maximum
+			bodyCC.transform.position = new Vector3(bodyCC.transform.position.x, (hmd.transform.position.y - (GetPlayerRealLifeHeight() - desiredHeight)) - (desiredHeight / 2), bodyCC.transform.position.z);
+		} else {
+			bodyCC.height = Mathf.Clamp(desiredHeight, bodyCC.radius * 2f, 2.25f);          // Set the body height to the desired body height, clamping it between the diameter of the body minimum, and 2.25 meters maximum
+			bodyCC.transform.position = new Vector3(bodyCC.transform.position.x, (hmd.transform.position.y - (desiredHeight / 2)), bodyCC.transform.position.z);
+		}
+		
 		handInfoLeft.handGameObject.transform.position = handPositionBeforeLeft;
 		handInfoRight.handGameObject.transform.position = handPositionBeforeRight;
 	}
