@@ -70,7 +70,6 @@ public class Player : MonoBehaviour {
 	public Vector3 velocityCurrent;     // The current velocity of the player
 	public Vector3 velocityDesired;        // The desired velocity of the player
 	float moveSpeedCurrent;
-	float slopeLowest;
 	public bool grounded = false;
 	Vector3 groundNormal;
 	float groundedTime;                             // Time the player has been grounded foor
@@ -81,7 +80,6 @@ public class Player : MonoBehaviour {
 
 	[Space(10)][Header("Positional Variables")]
 	public float heightCurrent;                     // The current height of the hmd from the rig
-	Vector3 bodyPositionLastFrame;
 	float bodyHeightChangeSpeed = 1;                  // A value which is near 1 when climbing/grounded, but near 0 when airborne; this value changes how quickly the bodyCC's height is changed
 
 	float handOffsetPositionMax = 0.5f;
@@ -95,7 +93,8 @@ public class Player : MonoBehaviour {
 		public Quaternion grabRotation;				// This value is used differently depending on the case. If grabbing an item, it stores the desired rotation of the item relative to the hand's rotation. If grabbing a climbable object, it stores the rotation of the object when first grabbed.
 		public Quaternion grabRotationLastFrame;	// This value is used to record the grabRotation last frame. It is (was) used for an experimental formula which rotates the player along with it's grabbed object's rotation.		// TODO: do we still need this variable?
 		public Vector3 grabOffset;					// This value is used differently depending on the case. If grabbing an item, it stores the offset between the hand and the item which when rotated according to rotationOffset is the desired position of the object. If grabbing a climbable object, it stores the offset between the hand and the grabbed object, to determine the desired position of the player
-		public Vector3 grabCCOffset;				// If grabbing a climbable object, this variable stores the offset between the hand and the character controller, to determine where to move the player to when climbing
+		public Vector3 grabCCOffset;                // If grabbing a climbable object, this variable stores the offset between the hand and the character controller, to determine where to move the player to when climbing
+		public Vector3 grabPoint;					// (For dynamic-grabNode or non-grabNode items) records the exact point at which the item was grabbed
 		public float itemVelocityPercentage;		// When items are first picked up their IVP = 0; over time grabbed approaches 1 linearly; this value determines the magnitude of the velocity (and angularVelocity) of the item
 
 
@@ -180,8 +179,7 @@ public class Player : MonoBehaviour {
 		UpdateCharacterControllerHeight();
 		UpdatePlayerMovement();
 
-		windLoop.volume = Mathf.Lerp(windLoop.volume, Mathf.Clamp01(((Vector3.Distance(bodyPositionLastFrame, bodyCC.transform.position) + platformMovementsAppliedLastFrame.magnitude) / Time.deltaTime) / 75) - 0.15f, 50 * Time.deltaTime);
-		bodyPositionLastFrame = bodyCC.transform.position;
+
 		platformMovementsAppliedLastFrame = Vector3.zero;
 
 		if (grounded == true && Vector3.Distance(new Vector3(bodyCC.transform.position.x, 0, bodyCC.transform.position.z), positionLastFootstepPlayed) > 2f) {
@@ -376,12 +374,11 @@ public class Player : MonoBehaviour {
 							grabInfoCurrent.grabOffset = Quaternion.Euler(grabInfoCurrent.grabNode.rotation) * (-grabInfoCurrent.grabNode.transform.localPosition - grabInfoCurrent.grabNode.offset);
 							grabInfoCurrent.grabRotation = Quaternion.Inverse(handInfoCurrent.controller.transform.rotation) * grabInfoCurrent.grabbedRigidbody.transform.rotation;
 						} else if (grabInfoCurrent.grabNode.grabType == GrabNode.GrabType.Dynamic || grabInfoCurrent.grabNode.grabType == GrabNode.GrabType.Referral) {
-							grabInfoCurrent.grabOffset = Quaternion.Inverse(handInfoCurrent.handGameObject.transform.rotation) * (grabInfoCurrent.grabbedRigidbody.transform.position - handInfoCurrent.handGameObject.transform.position);
-							grabInfoCurrent.grabRotation = Quaternion.Inverse(handInfoCurrent.handGameObject.transform.rotation) * grabInfoCurrent.grabbedRigidbody.transform.rotation;
+							// Here
+							GetDynamicItemGrabInfo(ref grabInfoCurrent, ref handInfoCurrent);
 						}
 					} else {
-						grabInfoCurrent.grabOffset = Quaternion.Inverse(handInfoCurrent.handGameObject.transform.rotation) * (grabInfoCurrent.grabbedRigidbody.transform.position - handInfoCurrent.handGameObject.transform.position);
-						grabInfoCurrent.grabRotation = Quaternion.Inverse(handInfoCurrent.handGameObject.transform.rotation) * grabInfoCurrent.grabbedRigidbody.transform.rotation;
+						GetDynamicItemGrabInfo(ref grabInfoCurrent, ref handInfoCurrent);
 					}
 
 					if (grabInfoCurrent.grabbedRigidbody == grabInfoOpposite.grabbedRigidbody) {      // Is the other hand already holding this item?
@@ -390,14 +387,28 @@ public class Player : MonoBehaviour {
 						if (grabInfoCurrent.grabNode && grabInfoOpposite.grabNode) {
 							if (grabInfoCurrent.grabNode.dominance > grabInfoOpposite.grabNode.dominance) {
 								grabDualWieldDominantHand = side;
+								//if (grabInfoOpposite.grabPoint != Vector3.zero) {
+								//grabDualWieldDirection = new Vector3(-grabInfoCurrent.grabOffset.x, grabInfoCurrent.grabOffset.y, grabInfoCurrent.grabOffset.z) - new Vector3(0, grabInfoOpposite.grabOffset.y, grabInfoOpposite.grabOffset.z);
+								//} else {
 								grabDualWieldDirection = Quaternion.Euler(grabInfoCurrent.grabNode.rotation) * Quaternion.Inverse(grabInfoCurrent.grabbedRigidbody.transform.rotation) * (handInfoOpposite.handRigidbody.transform.position - (grabInfoCurrent.grabNode.transform.position + grabInfoCurrent.grabbedRigidbody.transform.rotation * -grabInfoCurrent.grabNode.offset));
+								//grabDualWieldDirection = handInfoOpposite.handRigidbody.transform.position - handInfoCurrent.handRigidbody.transform.position;
+								//}
+								Debug.Log(grabInfoCurrent.grabOffset);
 							} else if (grabInfoCurrent.grabNode.dominance <= grabInfoOpposite.grabNode.dominance) {
 								grabDualWieldDominantHand = (side == "Right" ? "Left" : "Right");
-								grabDualWieldDirection = Quaternion.Inverse(handInfoOpposite.handRigidbody.transform.rotation) * (handInfoCurrent.handRigidbody.transform.position - handInfoOpposite.handRigidbody.transform.position);
+								if (grabInfoCurrent.grabPoint != Vector3.zero) {
+									grabDualWieldDirection = Quaternion.Inverse(handInfoOpposite.handRigidbody.transform.rotation) * (grabInfoCurrent.grabPoint - handInfoOpposite.handRigidbody.transform.position);
+								} else {
+									grabDualWieldDirection = Quaternion.Inverse(handInfoOpposite.handRigidbody.transform.rotation) * (handInfoCurrent.handRigidbody.transform.position - handInfoOpposite.handRigidbody.transform.position);
+								}
 							}
 						} else {
 							grabDualWieldDominantHand = (side == "Right" ? "Left" : "Right");
-							grabDualWieldDirection = Quaternion.Inverse(handInfoOpposite.handRigidbody.transform.rotation) * (handInfoCurrent.handRigidbody.transform.position - handInfoOpposite.handRigidbody.transform.position);
+							if (grabInfoCurrent.grabPoint != Vector3.zero) {
+								grabDualWieldDirection = Quaternion.Inverse(handInfoOpposite.handRigidbody.transform.rotation) * (grabInfoCurrent.grabPoint - handInfoOpposite.handRigidbody.transform.position);
+							} else {
+								grabDualWieldDirection = Quaternion.Inverse(handInfoOpposite.handRigidbody.transform.rotation) * (handInfoCurrent.handRigidbody.transform.position - handInfoOpposite.handRigidbody.transform.position);
+							}
 						}
 					}
 				}
@@ -437,6 +448,15 @@ public class Player : MonoBehaviour {
 		}
 	}
 
+	void GetDynamicItemGrabInfo (ref GrabInformation grabInfoCurrent, ref HandInformation handInfoCurrent) {
+		// The purpose of this method is to make items grabbed by dual weilding and items that do not have grabNodes be grabbed on their surfaces rather than being suspended away from the hands.
+
+		grabInfoCurrent.grabPoint = grabInfoCurrent.grabNode.transform.GetComponent<Collider>().ClosestPoint(handInfoCurrent.handRigidbody.transform.position);
+		grabInfoCurrent.grabOffset = Quaternion.Inverse(handInfoCurrent.handGameObject.transform.rotation) * Quaternion.AngleAxis(60, handInfoCurrent.controller.transform.right) * (grabInfoCurrent.grabbedRigidbody.transform.position - grabInfoCurrent.grabPoint);
+		grabInfoCurrent.grabRotation = Quaternion.Inverse(handInfoCurrent.handGameObject.transform.rotation) * Quaternion.AngleAxis(60, handInfoCurrent.controller.transform.right) * grabInfoCurrent.grabbedRigidbody.transform.rotation;
+
+	}
+
 	public class ItemAndNode {
 		public Item item = null;
 		public GrabNode node = null;
@@ -471,7 +491,6 @@ public class Player : MonoBehaviour {
 			}
 		}
 		if (handInfoCurrent.jumpLoaded == true) {
-			Debug.Log("Jump");
 			if ((grounded == true || timeLastJumped + 0.1f > Time.timeSinceLevelLoad) && grabInfoCurrent.climbableGrabbed == false && grabInfoCurrent.grabbedRigidbody == false) {
 				Vector3 addedVelocity = Vector3.ClampMagnitude((handInfoCurrent.controllerPosLastFrame - handInfoCurrent.controller.transform.position) * 500, (timeLastJumped + 0.1f > Time.timeSinceLevelLoad) ? 1.75f : 5f);
 				addedVelocity = new Vector3(addedVelocity.x * 0.8f, Mathf.Clamp(addedVelocity.y, 0, Mathf.Infinity), addedVelocity.z * 0.8f);
@@ -494,6 +513,7 @@ public class Player : MonoBehaviour {
 		grabInfoCurrent.grabbedRigidbody = null;
 		grabInfoCurrent.grabbedItem = null;
 		grabInfoCurrent.grabNode = null;
+		grabInfoCurrent.grabPoint = Vector3.zero;
 	}
 
 	void InteractDown(string side, GrabInformation grabInfoCurrent, HandInformation handInfoCurrent) {
@@ -657,8 +677,7 @@ public class Player : MonoBehaviour {
 	}
 
 	void UpdatePlayerVelocity() {
-		float slopeSpeed = Mathf.Clamp(slopeLowest * 0.5f, -0.5f, 0.1f) + 1;
-		moveSpeedCurrent = Mathf.Lerp(moveSpeedCurrent, (bodyCC.height > heightCutoffStanding ? moveSpeedStanding : (bodyCC.height > heightCutoffCrouching ? moveSpeedCrouching : moveSpeedLaying)) * slopeSpeed, 5 * Time.deltaTime);
+		moveSpeedCurrent = Mathf.Lerp(moveSpeedCurrent, (bodyCC.height > heightCutoffStanding ? moveSpeedStanding : (bodyCC.height > heightCutoffCrouching ? moveSpeedCrouching : moveSpeedLaying)), 5 * Time.deltaTime);
 		velocityDesired = new Vector3(handInfoLeft.controllerDevice.GetAxis(Valve.VR.EVRButtonId.k_EButton_SteamVR_Touchpad).x, velocityDesired.y, handInfoLeft.controllerDevice.GetAxis(Valve.VR.EVRButtonId.k_EButton_SteamVR_Touchpad).y) * moveSpeedCurrent;
 		velocityDesired = Quaternion.LookRotation(new Vector3(hmd.transform.forward.x, 0, hmd.transform.forward.z), Vector3.up) * velocityDesired;
 		if (grabInfoLeft.climbableGrabbed == null && grabInfoRight.climbableGrabbed == null) {
@@ -725,22 +744,51 @@ public class Player : MonoBehaviour {
 		}
 	}
 
-	void UpdatePlayerMovement() {
+	void SetBodyHeight(float desiredHeight) {
+		Vector3 handPositionBeforeLeft = handInfoLeft.handGameObject.transform.position;
+		Vector3 handPositionBeforeRight = handInfoRight.handGameObject.transform.position;
 
-		// Move the player's headCC and bodyCC through the HMD movement
+		if (grounded == true && isClimbing == false) {
+			bodyCC.height = Mathf.Clamp(desiredHeight, bodyCC.radius * 2f, 2.25f);          // Set the body height to the desired body height, clamping it between the diameter of the body minimum, and 2.25 meters maximum
+			bodyCC.transform.position = new Vector3(bodyCC.transform.position.x, (hmd.transform.position.y - (GetPlayerRealLifeHeight() - desiredHeight)) - (desiredHeight / 2), bodyCC.transform.position.z);
+		} else {
+			bodyCC.height = Mathf.Clamp(desiredHeight, bodyCC.radius * 2f, 2.25f);          // Set the body height to the desired body height, clamping it between the diameter of the body minimum, and 2.25 meters maximum
+			bodyCC.transform.position = new Vector3(bodyCC.transform.position.x, (hmd.transform.position.y - (desiredHeight / 2)), bodyCC.transform.position.z);
+		}
+
+		handInfoLeft.handGameObject.transform.position = handPositionBeforeLeft;
+		handInfoRight.handGameObject.transform.position = handPositionBeforeRight;
+	}
+
+	float GetPlayerRealLifeHeight() {
+		// Returns the player's real life height (not accounting for verticalPusher offset)		// TODO: should we be?
+		return (hmd.transform.position.y - rig.transform.position.y);
+	}
+
+	void UpdatePlayerMovement() {
+		Vector3 bodyPositionBeforeMovement = bodyCC.transform.position;
+
+		// Move the player through the HMD movement
 		MovePlayerViaHMD();
 
-		// Move the player
+		// Move the player through applying velocity
 		MovePlayerViaVelocity();
 
-		bodyPositionLastFrame = bodyCC.transform.position;
+		// Move held items
+		Vector3 deltaPosition = (bodyCC.transform.position - bodyPositionBeforeMovement);
+		MoveItems(deltaPosition);
+		handInfoLeft.handRigidbody.transform.position += (deltaPosition);
+		handInfoRight.handRigidbody.transform.position += (deltaPosition);
+
+		// Change volume of windLoop depending on how fast the player is moving
+		windLoop.volume = Mathf.Lerp(windLoop.volume, Mathf.Clamp01(((Vector3.Distance(bodyPositionBeforeMovement, bodyCC.transform.position) + platformMovementsAppliedLastFrame.magnitude) / Time.deltaTime) / 75) - 0.15f, 50 * Time.deltaTime);
 	}
 
 	void MovePlayerViaHMD() {
+		// This function moves the player's headCC and in turn, bodyCC according to the current frame of HMD movement
 		Vector3 bodyPositionBefore = bodyCC.transform.position;
-		Vector3 hmdPositionBefore = hmd.transform.position;
 
-		verticalPusher.transform.localPosition = Vector3.Lerp(verticalPusher.transform.localPosition, Vector3.zero, 10 * Time.deltaTime);
+		verticalPusher.transform.localPosition = Vector3.Lerp(verticalPusher.transform.localPosition, Vector3.zero, 7.5f * Time.deltaTime);		// Smooth the vertical pusher into it's default 0,0,0 position
 
 		// Step 1: Move HeadCC to HMD					// Get the difference between the head position and the HMD position and apply that movement to the headCC
 		//Vector3 headToHmdDelta = ((hmd.transform.position - ((verticalPusher.transform.localPosition) * Mathf.Clamp01(Time.deltaTime * 5))) - headCC.transform.position);     // Delta position moving from headCC to HMD (smoothing applied through the verticalPusher)
@@ -784,10 +832,10 @@ public class Player : MonoBehaviour {
 	}
 
 	void MovePlayerViaVelocity() {
+		// This function moves the player's bodyCC, and in turn headCC, by applying movement based on the player's velocity
 		Vector3 bodyPositionBefore = bodyCC.transform.position;
-		Vector3 hmdPositionBefore = hmd.transform.position;
 
-		Debug.DrawRay(bodyCC.transform.position, velocityCurrent, Color.green);
+		Debug.DrawRay(bodyCC.transform.position, velocityCurrent, Color.green);		// Debug ray showing player velocity
 
 		// Step 1: Apply Gravity for this frame
 		velocityCurrent += new Vector3(0, -9.8f * Time.deltaTime, 0);
@@ -820,10 +868,10 @@ public class Player : MonoBehaviour {
 		// Step 6: Check for ceiling collision
 		if (velocityCurrent.y > 0) {
 			RaycastHit hit;
-			sphereCastOrigin = headCC.transform.position + new Vector3(0, -headCC.skinWidth / 2, 0);
-			sphereCastDirection = Vector3.up;
-			sphereCastRadius = headCC.radius - (headCC.skinWidth / 2);
-			sphereCastLength = 0.01f + (headCC.skinWidth * 2);
+			Vector3 sphereCastOrigin = headCC.transform.position + new Vector3(0, -headCC.skinWidth / 2, 0);
+			Vector3 sphereCastDirection = Vector3.up;
+			float sphereCastRadius = headCC.radius - (headCC.skinWidth / 2);
+			float sphereCastLength = 0.01f + (headCC.skinWidth * 2);
 			if (isClimbing == false && Physics.SphereCast(sphereCastOrigin, sphereCastRadius, sphereCastDirection, out hit, sphereCastLength, bodyCCLayerMask)) {
 				velocityCurrent.y = 0;
 			}
@@ -832,15 +880,11 @@ public class Player : MonoBehaviour {
 		// Step 7: Realign Rig
 		RealignRig();
 		
-		// Step 8: Move Items held by player
-		MoveItems(bodyCC.transform.position - bodyPositionBefore);
-
 		if (grounded == true) {
 			groundedTime += Time.deltaTime;
 		} else {
 			groundedTime = 0;
 		}
-
 	}
 
 	void RealignRig() {
@@ -849,11 +893,6 @@ public class Player : MonoBehaviour {
 		rig.transform.position += hmdHeadDifference;
 	}
 
-	Vector3 sphereCastOrigin;
-	Vector3 sphereCastDirection;
-	float sphereCastRadius;
-	float sphereCastLength;
-
 	void GetGroundInformation () {
 		// This function will get ground infromation:
 			// 1. Are we touching the ground?
@@ -861,28 +900,27 @@ public class Player : MonoBehaviour {
 		
 		RaycastHit hit;
 
-		Vector3 sphereCastOrigin = bodyCC.transform.position + new Vector3(0, (-bodyCC.height / 2) + bodyCC.radius + bodyCC.skinWidth, 0);
+		Vector3 sphereCastOrigin = bodyCC.transform.position + new Vector3(0, (-bodyCC.height / 2) + bodyCC.radius, 0);
 		Vector3 sphereCastDirection = Vector3.down;
-		float sphereCastRadius = bodyCC.radius - (bodyCC.skinWidth / 2);
-		float sphereCastLength = 0.0125f + (bodyCC.skinWidth * 2);
+		float sphereCastRadius = bodyCC.radius - (bodyCC.skinWidth / 8);
+		float sphereCastLength = 0.025f + (bodyCC.skinWidth * 2);
 
 		if (isClimbing == false && Physics.SphereCast(sphereCastOrigin, sphereCastRadius, sphereCastDirection, out hit, sphereCastLength, bodyCCLayerMask)) {
 			if (grounded == false) {
 				float heightDifference = GetPlayerRealLifeHeight() - bodyCC.height;
 				verticalPusher.transform.position += new Vector3(0, -heightDifference, 0);
-				rig.transform.position += new Vector3(0, heightDifference, 0);
+				rig.transform.position += new Vector3(0, heightDifference, 0);									// TODO: yikes, should a Get function really be messing with stuff like this?
 			}
 			handInfoLeft.jumpLoaded = true;
 			handInfoRight.jumpLoaded = true;
 			velocityCurrent.y = 0;
 			grounded = true;
-			groundNormal = hit.normal;
+			groundNormal = Vector3.Lerp(groundNormal, hit.normal, 25 * Time.deltaTime);
 		} else {
 			grounded = false;
-			groundNormal = Vector3.zero;
+			groundNormal = Vector3.Lerp(groundNormal, Vector3.up, 25 * Time.deltaTime); ;
 		}
 	}
-
 
 	Vector3 GetSlopeMovement (Vector3 movementInput) {
 		Vector3 movementOutput = Vector3.zero;
@@ -900,30 +938,19 @@ public class Player : MonoBehaviour {
 		
 		return movementOutput;
 	}
-
-	float GetPlayerRealLifeHeight () {
-		return (hmd.transform.position.y - rig.transform.position.y);
-	}
-
-	void OnDrawGizmosSelected () {
-		Gizmos.color = Color.red;
-		Gizmos.DrawWireSphere(sphereCastOrigin, sphereCastRadius);
-		Gizmos.color = Color.cyan;
-		Gizmos.DrawWireSphere(sphereCastOrigin + (sphereCastDirection * sphereCastLength), sphereCastRadius);
-	}
 	 
 	void MoveItems(Vector3 deltaPosition) {
 		// This function moves items along with the player's movement every frame. This is NOT the function for moving objects along with the player's hands
 		if (grabInfoLeft.grabbedRigidbody == grabInfoRight.grabbedRigidbody) {
 			if (grabInfoLeft.grabbedRigidbody) {
-				grabInfoLeft.grabbedRigidbody.MovePosition(grabInfoLeft.grabbedRigidbody.transform.position + deltaPosition);
+				grabInfoLeft.grabbedRigidbody.transform.position = (grabInfoLeft.grabbedRigidbody.transform.position + deltaPosition);
 			}
 		} else {
 			if (grabInfoLeft.grabbedRigidbody) {
-				grabInfoLeft.grabbedRigidbody.MovePosition(grabInfoLeft.grabbedRigidbody.transform.position + deltaPosition);
+				grabInfoLeft.grabbedRigidbody.transform.position = (grabInfoLeft.grabbedRigidbody.transform.position + deltaPosition);
 			}
 			if (grabInfoRight.grabbedRigidbody) {
-				grabInfoRight.grabbedRigidbody.MovePosition(grabInfoRight.grabbedRigidbody.transform.position + deltaPosition);
+				grabInfoRight.grabbedRigidbody.transform.position = (grabInfoRight.grabbedRigidbody.transform.position + deltaPosition);
 			}
 
 		}
@@ -936,22 +963,6 @@ public class Player : MonoBehaviour {
 		Vector3 netCCMovement = (bodyCC.transform.position - bodyPositionBefore);
 		rig.transform.position += netCCMovement;
 		platformMovementsAppliedLastFrame += netCCMovement;
-	}
-
-	void SetBodyHeight (float desiredHeight) {
-		Vector3 handPositionBeforeLeft = handInfoLeft.handGameObject.transform.position;
-		Vector3 handPositionBeforeRight = handInfoRight.handGameObject.transform.position;
-
-		if (grounded == true && isClimbing == false) {
-			bodyCC.height = Mathf.Clamp(desiredHeight, bodyCC.radius * 2f, 2.25f);          // Set the body height to the desired body height, clamping it between the diameter of the body minimum, and 2.25 meters maximum
-			bodyCC.transform.position = new Vector3(bodyCC.transform.position.x, (hmd.transform.position.y - (GetPlayerRealLifeHeight() - desiredHeight)) - (desiredHeight / 2), bodyCC.transform.position.z);
-		} else {
-			bodyCC.height = Mathf.Clamp(desiredHeight, bodyCC.radius * 2f, 2.25f);          // Set the body height to the desired body height, clamping it between the diameter of the body minimum, and 2.25 meters maximum
-			bodyCC.transform.position = new Vector3(bodyCC.transform.position.x, (hmd.transform.position.y - (desiredHeight / 2)), bodyCC.transform.position.z);
-		}
-		
-		handInfoLeft.handGameObject.transform.position = handPositionBeforeLeft;
-		handInfoRight.handGameObject.transform.position = handPositionBeforeRight;
 	}
 
 	void UpdateHandAndItemPhysics() {
@@ -1026,7 +1037,9 @@ public class Player : MonoBehaviour {
 	void UpdateHandPhysics(string side, HandInformation handInfoCurrent, GrabInformation grabInfoCurrent) {
 		Vector3 handOffsetDefault = Quaternion.Euler(handInfoCurrent.handOffsetRotation) * handInfoCurrent.controller.transform.rotation * new Vector3(handRigidbodyPositionOffset.x * (side == "Left" ? 1 : -1), handRigidbodyPositionOffset.y, handRigidbodyPositionOffset.z);
 		Vector3 handOffsetKick = handInfoCurrent.handOffsetPosition;
-		handInfoCurrent.handRigidbody.velocity = (((handInfoCurrent.controller.transform.position + handOffsetDefault + handOffsetKick) - handInfoCurrent.handGameObject.transform.position) + verticalPusher.transform.localPosition) / Time.fixedDeltaTime;
+		//handInfoCurrent.handRigidbody.velocity = (((handInfoCurrent.controller.transform.position + handOffsetDefault + handOffsetKick) - handInfoCurrent.handGameObject.transform.position) + verticalPusher.transform.localPosition) / Time.fixedDeltaTime;
+		handInfoCurrent.handRigidbody.velocity = (((handInfoCurrent.controller.transform.position + handOffsetDefault + handOffsetKick) - handInfoCurrent.handGameObject.transform.position)) / Time.fixedDeltaTime;
+
 
 		handInfoCurrent.handOffsetPosition = Vector3.Lerp(handInfoCurrent.handOffsetPosition, Vector3.zero, 5 * Time.deltaTime);
 		handInfoCurrent.handOffsetRotation = Vector3.Lerp(handInfoCurrent.handOffsetRotation, new Vector3(0, 0, 0), 10 * Time.deltaTime);
