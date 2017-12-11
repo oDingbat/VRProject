@@ -10,8 +10,11 @@ public abstract class Item : MonoBehaviour {
 
 	[Header("Information")]
 	public string itemName;
-	
 	public float timeLastGrabbed;
+
+	[Header("Pocketing Info")]
+	public GrabNode pocketGrabNode;
+	public Pocket pocketCurrent;
 
 	AudioSource audioSourceHit;
 	AudioSource audioSourceMove;

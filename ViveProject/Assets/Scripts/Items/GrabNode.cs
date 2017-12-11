@@ -12,7 +12,7 @@ public class GrabNode : MonoBehaviour {
 
 	[Space(10)][Header("Enums")]
 	public GrabType			grabType;
-	public enum				GrabType { FixedPositionRotation, FixedPosition, Dynamic, Referral }
+	public enum				GrabType { FixedPositionRotation, FixedPosition, Dynamic, Referral, PocketOnly }
 	public InteractionType	interactionType;
 	public enum				InteractionType { None, Trigger }
 

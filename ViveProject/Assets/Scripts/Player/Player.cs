@@ -14,6 +14,7 @@ public class Player : MonoBehaviour {
 	public LayerMask hmdLayerMask;  // The layerMask for the hmd, defines objects which the player cannot put their head through
 	public LayerMask bodyCCLayerMask;
 	public LayerMask grabLayerMask;
+	public LayerMask pocketMask;
 
 	[Space(10)][Header("Cameras")]
 	public Camera mainCam;
@@ -27,6 +28,10 @@ public class Player : MonoBehaviour {
 	public GameObject flashlight;
 	public GameObject headlight;
 	public GameObject torso;
+
+	[Space(10)][Header("Avatar References")]
+	public Transform avatar;
+	public Transform avatarTorso;
 
 	[Space(10)][Header("Audio Sources")]
 	public AudioManager audioManager;
@@ -155,6 +160,8 @@ public class Player : MonoBehaviour {
 
 	void Start() {
 		bodyCC = GetComponent<CharacterController>();          // Grab the character controller at the start
+		avatar = transform.parent.Find("Avatar");
+		avatarTorso = avatar.Find("Torso");
 		handInfoLeft.handRigidbody = handInfoLeft.handGameObject.GetComponent<Rigidbody>();
 		handInfoRight.handRigidbody = handInfoRight.handGameObject.GetComponent<Rigidbody>();
 		audioManager = GameObject.Find("AudioManager").GetComponent<AudioManager>();
@@ -164,9 +171,7 @@ public class Player : MonoBehaviour {
 
 		// Subscribe Events
 		entity.eventTakeDamage += TakeDamage;
-
-		//RealignRig();		// Realign the rig at the start to ensure that the player and their rig are at the same location
-
+		
 		StartCoroutine(UpdateVitals());
 	}
 
@@ -179,7 +184,7 @@ public class Player : MonoBehaviour {
 		UpdatePlayerVelocity();
 		UpdateCharacterControllerHeight();
 		UpdatePlayerMovement();
-
+		UpdateAvatar();
 
 		platformMovementsAppliedLastFrame = Vector3.zero;
 
@@ -367,6 +372,11 @@ public class Player : MonoBehaviour {
 					grabInfoCurrent.grabbedItem.timeLastGrabbed = Time.timeSinceLevelLoad;      // TODO: move?
 					grabInfoCurrent.grabbedRigidbody.useGravity = false;
 
+					if (grabInfoCurrent.grabbedItem.pocketCurrent != null) {
+						grabInfoCurrent.grabbedItem.pocketCurrent.pocketedItem = null;
+						grabInfoCurrent.grabbedItem.pocketCurrent = null;
+					}
+
 					if (grabInfoCurrent.grabNode) {
 						if (grabInfoCurrent.grabNode.grabType == GrabNode.GrabType.FixedPositionRotation) {
 							grabInfoCurrent.grabOffset = Quaternion.Euler(grabInfoCurrent.grabNode.rotation) * (-grabInfoCurrent.grabNode.transform.localPosition - grabInfoCurrent.grabNode.offset);
@@ -482,7 +492,7 @@ public class Player : MonoBehaviour {
 		}
 		if (grabInfoCurrent.grabbedRigidbody == true) {
 			if (grabInfoOpposite.grabbedRigidbody != grabInfoCurrent.grabbedRigidbody) {
-				ThrowItem(grabInfoCurrent.grabbedRigidbody, (handInfoCurrent.controller.transform.position - handInfoCurrent.handPosLastFrame) / Time.deltaTime);
+				ThrowItem(handInfoCurrent, grabInfoCurrent, (handInfoCurrent.controller.transform.position - handInfoCurrent.handPosLastFrame) / Time.deltaTime);
 			} else {
 				if (grabInfoOpposite.grabNode == null) {
 					grabInfoCurrent.itemVelocityPercentage = 0;
@@ -665,14 +675,43 @@ public class Player : MonoBehaviour {
 		}
 	}
 
-	void ThrowItem(Rigidbody item, Vector3 velocity) {
-		item.velocity = Vector3.ClampMagnitude(velocity.magnitude > 5 ? (velocity * 2f) : velocity, 100);
-		item.useGravity = true;
-		if (item.transform.GetComponent<Item>() != null) {
-			if (item.GetComponent<Item>() is Weapon) {
-				(item.transform.GetComponent<Item>() as Weapon).triggerHeld = false;
+	void ThrowItem(HandInformation handInfoCurrent, GrabInformation grabInfoCurrent, Vector3 velocity) {
+		grabInfoCurrent.grabbedRigidbody.velocity = Vector3.ClampMagnitude(velocity.magnitude > 5 ? (velocity * 2f) : velocity, 100);
+		grabInfoCurrent.grabbedRigidbody.useGravity = true;
+		if (grabInfoCurrent.grabbedRigidbody.transform.GetComponent<Item>() != null) {
+			if (grabInfoCurrent.grabbedRigidbody.GetComponent<Item>() is Weapon) {
+				(grabInfoCurrent.grabbedRigidbody.transform.GetComponent<Item>() as Weapon).triggerHeld = false;
 			}
 		}
+
+		// Check for pockets
+		Collider[] pockets = Physics.OverlapSphere(handInfoCurrent.handRigidbody.transform.position, 0.125f, pocketMask);
+		if (pockets.Length > 0) {
+			Collider choosenPocket = pockets[0];
+
+			// Find closest Pocket
+			if (pockets.Length > 1) {
+				float closestPocketDistance = Vector3.Distance(choosenPocket.transform.position, handInfoCurrent.handRigidbody.transform.position);
+				for (int i = 1; i < pockets.Length; i++) {
+					float thisPocketDistance = Vector3.Distance(pockets[i].transform.position, handInfoCurrent.handRigidbody.transform.position);
+					if (thisPocketDistance < closestPocketDistance) {
+						closestPocketDistance = thisPocketDistance;
+						choosenPocket = pockets[i];
+					}
+				}
+			}
+
+			// Asign Pocket Info
+			if (choosenPocket.GetComponent<Pocket>()) {
+				Pocket choosenPocketObject = choosenPocket.transform.GetComponent<Pocket>();
+				if (choosenPocketObject.pocketedItem == null) {
+					choosenPocketObject.pocketedItem = grabInfoCurrent.grabbedItem;        // Set Item
+					choosenPocketObject.timePocketed = Time.timeSinceLevelLoad;
+					grabInfoCurrent.grabbedItem.pocketCurrent = choosenPocketObject;       // Set Pocket
+				}
+			}
+		}
+
 	}
 
 	IEnumerator TriggerHapticFeedback(SteamVR_Controller.Device device, float duration) {
@@ -806,7 +845,7 @@ public class Player : MonoBehaviour {
 
 		// Step 2: Move BodyCC to HeadCC (Horizontally Only)
 		GetGroundInformation();
-		Vector3 neckOffset = new Vector3(hmd.transform.forward.x + hmd.transform.up.x, 0, hmd.transform.forward.z + hmd.transform.up.z).normalized * -0.15f;        // The current neck offset for how far away the bodyCC should be from the center of the headCC
+		Vector3 neckOffset = new Vector3(hmd.transform.forward.x + hmd.transform.up.x, 0, hmd.transform.forward.z + hmd.transform.up.z).normalized * -0.075f;        // The current neck offset for how far away the bodyCC should be from the center of the headCC
 		Vector3 bodyToHeadDeltaXZ = ((headCC.transform.position + neckOffset) - bodyCC.transform.position);
 		bodyToHeadDeltaXZ.y = 0;
 		bodyCC.Move(GetSlopeMovement(bodyToHeadDeltaXZ));
@@ -944,7 +983,7 @@ public class Player : MonoBehaviour {
 		
 		return movementOutput;
 	}
-	 
+	
 	void MoveItems(Vector3 deltaPosition) {
 		// This function moves items along with the player's movement every frame. This is NOT the function for moving objects along with the player's hands
 		if (grabInfoLeft.grabbedRigidbody == grabInfoRight.grabbedRigidbody) {
@@ -960,6 +999,16 @@ public class Player : MonoBehaviour {
 			}
 
 		}
+	}
+
+	void UpdateAvatar() {
+		avatar.position = bodyCC.transform.position - new Vector3(0, bodyCC.height / 2f, 0);
+		avatarTorso.position = new Vector3(bodyCC.transform.position.x, headCC.transform.position.y - 0.3f, bodyCC.transform.position.z);
+		Vector3 hmdFlatForward = new Vector3(hmd.transform.forward.x, 0, hmd.transform.forward.z).normalized;
+		Vector3 hmdFlatUp = new Vector3(hmd.transform.up.x, 0, hmd.transform.up.z).normalized;
+
+		Vector3 hmdFlatFinal = Vector3.Lerp(hmdFlatForward, hmdFlatUp, Mathf.Clamp01(Vector3.Angle(hmd.transform.up, Vector3.up) / 90));
+		avatar.rotation = Quaternion.LookRotation(hmdFlatFinal, Vector3.up);
 	}
 
 	public void MovePlayer(Vector3 deltaPosition) {
