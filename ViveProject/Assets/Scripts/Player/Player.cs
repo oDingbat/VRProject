@@ -95,8 +95,8 @@ public class Player : MonoBehaviour {
 		public Vector3 grabOffset;					// This value is used differently depending on the case. If grabbing an item, it stores the offset between the hand and the item which when rotated according to rotationOffset is the desired position of the object. If grabbing a climbable object, it stores the offset between the hand and the grabbed object, to determine the desired position of the player
 		public Vector3 grabCCOffset;                // If grabbing a climbable object, this variable stores the offset between the hand and the character controller, to determine where to move the player to when climbing
 		public Vector3 grabPoint;					// (For dynamic-grabNode or non-grabNode items) records the exact point at which the item was grabbed
-		public float itemVelocityPercentage;		// When items are first picked up their IVP = 0; over time grabbed approaches 1 linearly; this value determines the magnitude of the velocity (and angularVelocity) of the item
-
+		public float itemVelocityPercentage;        // When items are first picked up their IVP = 0; over time grabbed approaches 1 linearly; this value determines the magnitude of the velocity (and angularVelocity) of the item
+		public string side;							// Which side hand is this? "Left" or "Right"
 
 		public GrabInformation() {
 			climbableGrabbed = null;
@@ -108,6 +108,7 @@ public class Player : MonoBehaviour {
 			grabOffset = Vector3.zero;
 			grabCCOffset = Vector3.zero;
 			itemVelocityPercentage = 0;
+			side = "null";
 		}
 
 	}
@@ -387,13 +388,7 @@ public class Player : MonoBehaviour {
 						if (grabInfoCurrent.grabNode && grabInfoOpposite.grabNode) {
 							if (grabInfoCurrent.grabNode.dominance > grabInfoOpposite.grabNode.dominance) {
 								grabDualWieldDominantHand = side;
-								//if (grabInfoOpposite.grabPoint != Vector3.zero) {
-								//grabDualWieldDirection = new Vector3(-grabInfoCurrent.grabOffset.x, grabInfoCurrent.grabOffset.y, grabInfoCurrent.grabOffset.z) - new Vector3(0, grabInfoOpposite.grabOffset.y, grabInfoOpposite.grabOffset.z);
-								//} else {
 								grabDualWieldDirection = Quaternion.Euler(grabInfoCurrent.grabNode.rotation) * Quaternion.Inverse(grabInfoCurrent.grabbedRigidbody.transform.rotation) * (handInfoOpposite.handRigidbody.transform.position - (grabInfoCurrent.grabNode.transform.position + grabInfoCurrent.grabbedRigidbody.transform.rotation * -grabInfoCurrent.grabNode.offset));
-								//grabDualWieldDirection = handInfoOpposite.handRigidbody.transform.position - handInfoCurrent.handRigidbody.transform.position;
-								//}
-								Debug.Log(grabInfoCurrent.grabOffset);
 							} else if (grabInfoCurrent.grabNode.dominance <= grabInfoOpposite.grabNode.dominance) {
 								grabDualWieldDominantHand = (side == "Right" ? "Left" : "Right");
 								if (grabInfoCurrent.grabPoint != Vector3.zero) {
@@ -451,9 +446,16 @@ public class Player : MonoBehaviour {
 	void GetDynamicItemGrabInfo (ref GrabInformation grabInfoCurrent, ref HandInformation handInfoCurrent) {
 		// The purpose of this method is to make items grabbed by dual weilding and items that do not have grabNodes be grabbed on their surfaces rather than being suspended away from the hands.
 
-		grabInfoCurrent.grabPoint = grabInfoCurrent.grabNode.transform.GetComponent<Collider>().ClosestPoint(handInfoCurrent.handRigidbody.transform.position);
-		grabInfoCurrent.grabOffset = Quaternion.Inverse(handInfoCurrent.handGameObject.transform.rotation) * Quaternion.AngleAxis(60, handInfoCurrent.controller.transform.right) * (grabInfoCurrent.grabbedRigidbody.transform.position - grabInfoCurrent.grabPoint);
-		grabInfoCurrent.grabRotation = Quaternion.Inverse(handInfoCurrent.handGameObject.transform.rotation) * Quaternion.AngleAxis(60, handInfoCurrent.controller.transform.right) * grabInfoCurrent.grabbedRigidbody.transform.rotation;
+		Vector3 closestColliderPoint = Vector3.zero;
+		if (grabInfoCurrent.grabNode == true) {
+			closestColliderPoint = grabInfoCurrent.grabNode.transform.GetComponent<Collider>().ClosestPoint(handInfoCurrent.handRigidbody.transform.position);
+		} else {
+			closestColliderPoint = grabInfoCurrent.grabbedItem.transform.GetComponent<Collider>().ClosestPoint(handInfoCurrent.handRigidbody.transform.position);
+		}
+
+		grabInfoCurrent.grabPoint = (closestColliderPoint);
+		grabInfoCurrent.grabOffset = Quaternion.Inverse(handInfoCurrent.handGameObject.transform.rotation) * Quaternion.AngleAxis(0, handInfoCurrent.controller.transform.right) * (grabInfoCurrent.grabbedRigidbody.transform.position - grabInfoCurrent.grabPoint);
+		grabInfoCurrent.grabRotation = Quaternion.Inverse(handInfoCurrent.handGameObject.transform.rotation) * Quaternion.AngleAxis(0, handInfoCurrent.controller.transform.right) * grabInfoCurrent.grabbedRigidbody.transform.rotation;
 
 	}
 
@@ -485,8 +487,12 @@ public class Player : MonoBehaviour {
 				if (grabInfoOpposite.grabNode == null) {
 					grabInfoCurrent.itemVelocityPercentage = 0;
 					grabInfoOpposite.itemVelocityPercentage = 0;
-					grabInfoOpposite.grabOffset = Quaternion.Inverse(handInfoOpposite.handGameObject.transform.rotation) * (grabInfoOpposite.grabbedRigidbody.transform.position - handInfoOpposite.handGameObject.transform.position);
-					grabInfoOpposite.grabRotation = Quaternion.Inverse(handInfoOpposite.handGameObject.transform.rotation) * grabInfoOpposite.grabbedRigidbody.transform.rotation;
+					if (grabDualWieldDominantHand != grabInfoCurrent.side) {
+						GetDynamicItemGrabInfo(ref grabInfoOpposite, ref handInfoOpposite);
+					} else {
+						grabInfoOpposite.grabOffset = Quaternion.Inverse(handInfoOpposite.handGameObject.transform.rotation) * (grabInfoOpposite.grabbedRigidbody.transform.position - handInfoOpposite.handGameObject.transform.position);
+						grabInfoOpposite.grabRotation = Quaternion.Inverse(handInfoOpposite.handGameObject.transform.rotation) * grabInfoOpposite.grabbedRigidbody.transform.rotation;
+					}
 				}
 			}
 		}
@@ -1045,7 +1051,7 @@ public class Player : MonoBehaviour {
 		handInfoCurrent.handOffsetRotation = Vector3.Lerp(handInfoCurrent.handOffsetRotation, new Vector3(0, 0, 0), 10 * Time.deltaTime);
 
 		Quaternion rotationDelta = Quaternion.Euler(0, 0, 0);
-		if (grabInfoCurrent.grabbedRigidbody != null && grabInfoCurrent.grabNode != null) {
+		if (grabInfoCurrent.grabbedRigidbody != null && grabInfoCurrent.grabNode != null && (grabInfoCurrent.grabNode.grabType != GrabNode.GrabType.Dynamic && grabInfoCurrent.grabNode.grabType != GrabNode.GrabType.FixedPosition)) {
 			rotationDelta = (Quaternion.Euler(handInfoCurrent.handOffsetRotation) * Quaternion.AngleAxis(-30, handInfoCurrent.controller.transform.right) * handInfoCurrent.controller.transform.rotation * Quaternion.Euler(grabInfoCurrent.grabNode.rotation)) * Quaternion.Inverse(handInfoCurrent.handRigidbody.transform.rotation);
 		} else {
 			rotationDelta = (Quaternion.Euler(handInfoCurrent.handOffsetRotation) * Quaternion.AngleAxis(30, handInfoCurrent.controller.transform.right) * handInfoCurrent.controller.transform.rotation) * Quaternion.Inverse(handInfoCurrent.handRigidbody.transform.rotation);
