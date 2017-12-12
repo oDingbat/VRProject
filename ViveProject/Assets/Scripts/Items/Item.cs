@@ -15,6 +15,7 @@ public abstract class Item : MonoBehaviour {
 	[Header("Pocketing Info")]
 	public GrabNode pocketGrabNode;
 	public Pocket pocketCurrent;
+	public Pocket.PocketSize pocketSize = Pocket.PocketSize.Small;
 
 	AudioSource audioSourceHit;
 	AudioSource audioSourceMove;

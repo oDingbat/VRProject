@@ -51,7 +51,6 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-     <Compile Include="Assets\Pocket.cs" />
      <Compile Include="Assets\PostProcessing\Runtime\Attributes\GetSetAttribute.cs" />
      <Compile Include="Assets\PostProcessing\Runtime\Attributes\MinAttribute.cs" />
      <Compile Include="Assets\PostProcessing\Runtime\Attributes\TrackballAttribute.cs" />
@@ -108,15 +107,16 @@
      <Compile Include="Assets\Scripts\ImageEffects\Glow\GlowComposite.cs" />
      <Compile Include="Assets\Scripts\ImageEffects\Glow\GlowController.cs" />
      <Compile Include="Assets\Scripts\ImageEffects\Glow\GlowObjectCmd.cs" />
-     <Compile Include="Assets\Scripts\Items\Attachment.cs" />
      <Compile Include="Assets\Scripts\Items\AttachmentNode.cs" />
-     <Compile Include="Assets\Scripts\Items\Consumable.cs" />
      <Compile Include="Assets\Scripts\Items\GrabNode.cs" />
+     <Compile Include="Assets\Scripts\Items\Inheritors\Attachment.cs" />
+     <Compile Include="Assets\Scripts\Items\Inheritors\Consumable.cs" />
+     <Compile Include="Assets\Scripts\Items\Inheritors\Misc.cs" />
+     <Compile Include="Assets\Scripts\Items\Inheritors\Weapon.cs" />
      <Compile Include="Assets\Scripts\Items\Item.cs" />
-     <Compile Include="Assets\Scripts\Items\Misc.cs" />
+     <Compile Include="Assets\Scripts\Items\Pocket.cs" />
      <Compile Include="Assets\Scripts\Items\Projectile.cs" />
      <Compile Include="Assets\Scripts\Items\Specific\HolographicSight.cs" />
-     <Compile Include="Assets\Scripts\Items\Weapon.cs" />
      <Compile Include="Assets\Scripts\PlatformController.cs" />
      <Compile Include="Assets\Scripts\Player\Player.cs" />
      <Compile Include="Assets\Scripts\Random\AutoRotate.cs" />

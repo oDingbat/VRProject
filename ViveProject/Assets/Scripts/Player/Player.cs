@@ -685,7 +685,7 @@ public class Player : MonoBehaviour {
 		}
 
 		// Check for pockets
-		Collider[] pockets = Physics.OverlapSphere(handInfoCurrent.handRigidbody.transform.position, 0.125f, pocketMask);
+		Collider[] pockets = Physics.OverlapSphere(handInfoCurrent.handRigidbody.transform.position, 0.15f, pocketMask);
 		if (pockets.Length > 0) {
 			Collider choosenPocket = pockets[0];
 
@@ -704,7 +704,7 @@ public class Player : MonoBehaviour {
 			// Asign Pocket Info
 			if (choosenPocket.GetComponent<Pocket>()) {
 				Pocket choosenPocketObject = choosenPocket.transform.GetComponent<Pocket>();
-				if (choosenPocketObject.pocketedItem == null) {
+				if (choosenPocketObject.pocketedItem == null && choosenPocketObject.pocketSize >= grabInfoCurrent.grabbedItem.pocketSize) {
 					choosenPocketObject.pocketedItem = grabInfoCurrent.grabbedItem;        // Set Item
 					choosenPocketObject.timePocketed = Time.timeSinceLevelLoad;
 					grabInfoCurrent.grabbedItem.pocketCurrent = choosenPocketObject;       // Set Pocket
@@ -845,7 +845,7 @@ public class Player : MonoBehaviour {
 
 		// Step 2: Move BodyCC to HeadCC (Horizontally Only)
 		GetGroundInformation();
-		Vector3 neckOffset = new Vector3(hmd.transform.forward.x + hmd.transform.up.x, 0, hmd.transform.forward.z + hmd.transform.up.z).normalized * -0.075f;        // The current neck offset for how far away the bodyCC should be from the center of the headCC
+		Vector3 neckOffset = new Vector3(hmd.transform.forward.x + hmd.transform.up.x, 0, hmd.transform.forward.z + hmd.transform.up.z).normalized * -0.05f;        // The current neck offset for how far away the bodyCC should be from the center of the headCC
 		Vector3 bodyToHeadDeltaXZ = ((headCC.transform.position + neckOffset) - bodyCC.transform.position);
 		bodyToHeadDeltaXZ.y = 0;
 		bodyCC.Move(GetSlopeMovement(bodyToHeadDeltaXZ));
