@@ -73,7 +73,8 @@ public class Player : MonoBehaviour {
 
 	[Space(10)][Header("Movement Variables")]
 	public Vector3 velocityCurrent;     // The current velocity of the player
-	public Vector3 velocityDesired;        // The desired velocity of the player
+	public Vector3 velocityDesired;     // The desired velocity of the player
+	public float stepHeight;            // The max height the player can step over
 	float moveSpeedCurrent;
 	public bool grounded = false;
 	Vector3 groundNormal;
@@ -848,7 +849,8 @@ public class Player : MonoBehaviour {
 		Vector3 neckOffset = new Vector3(hmd.transform.forward.x + hmd.transform.up.x, 0, hmd.transform.forward.z + hmd.transform.up.z).normalized * -0.05f;        // The current neck offset for how far away the bodyCC should be from the center of the headCC
 		Vector3 bodyToHeadDeltaXZ = ((headCC.transform.position + neckOffset) - bodyCC.transform.position);
 		bodyToHeadDeltaXZ.y = 0;
-		bodyCC.Move(GetSlopeMovement(bodyToHeadDeltaXZ));
+		CustomCharacterControllerMove(bodyCC, GetSlopeMovement(bodyToHeadDeltaXZ));
+		//bodyCC.Move(GetSlopeMovement(bodyToHeadDeltaXZ));
 
 		// Step 3: Move Rig according to BodyDelta (Vertically Only)
 		Vector3 bodyDeltaPosition = bodyCC.transform.position - bodyPositionBefore;
@@ -887,7 +889,8 @@ public class Player : MonoBehaviour {
 
 		// Step 2: Move BodyCC with velocityCurrent
 		GetGroundInformation();		// First, get ground information to know if we're on a slope/grounded/airborne
-		bodyCC.Move(GetSlopeMovement(velocityCurrent * Time.deltaTime));
+		//bodyCC.Move(GetSlopeMovement(velocityCurrent * Time.deltaTime));
+		CustomCharacterControllerMove(bodyCC, GetSlopeMovement(velocityCurrent * Time.deltaTime));
 
 		// Step 3: Move Rig according to BodyDelta
 		Vector3 rigToBodyDelta = bodyCC.transform.position - bodyPositionBefore;
@@ -932,6 +935,55 @@ public class Player : MonoBehaviour {
 		}
 	}
 
+	void CustomCharacterControllerMove(CharacterController cc, Vector3 deltaMovement) {
+		// The purpose of this function is to move a characterController similarly to the CharacterController.Move function
+		// This difference here is that this function uses a better stepping calculation
+
+		// Step 1: Test capsule collider to see if cc will hit anything, if not > step 4
+		RaycastHit hit;
+		if (isClimbing == false && deltaMovement.magnitude > 0.001f && Physics.CapsuleCast(cc.transform.position + new Vector3(0, (-cc.height / 2f) + cc.radius + (cc.skinWidth * 2), 0), cc.transform.position + new Vector3(0, (cc.height / 2f) - cc.radius, 0), cc.radius, deltaMovement.normalized, out hit, deltaMovement.magnitude + cc.skinWidth, bodyCCLayerMask)) {
+			// Step 2: check hit.normal. If hit normal is greater than slopeAnlge, then continue, if not > step 4
+			RaycastHit hitRay;
+			Vector3 hitOffsetPoint = hit.point + (hit.normal * -0.025f);
+			Vector3 rayOrigin = cc.transform.position + new Vector3(0, (-cc.height / 2) + 0.0125f, 0);
+			if (Physics.Raycast(rayOrigin, (hitOffsetPoint - rayOrigin).normalized, out hitRay, Vector3.Distance(hitOffsetPoint, rayOrigin) + 0.015f, bodyCCLayerMask) && Vector3.Angle(Vector3.up, hitRay.normal) >= (90 - cc.slopeLimit)) {
+				// Step 3: Test capsule collider going in same direction increasing starting height every time until we do not hit anything.
+				// If we don't hit anything eventually, then step that high vertically. If we always hit something, skip to step 4
+				bool canStep = false;
+				float stepOffset = 0;
+
+				float incrementHeight = 0.0125f;
+				int increments = (int)Mathf.Floor(stepHeight / incrementHeight);
+
+				for (int i = 1; i <= increments; i++) {
+					Vector3 currentIncrementOffset = new Vector3(0, incrementHeight * i);		
+					if (!Physics.CapsuleCast(cc.transform.position + new Vector3(0, (-cc.height / 2f) + cc.radius + (cc.skinWidth * 2), 0) + currentIncrementOffset, cc.transform.position + new Vector3(0, (cc.height / 2f) - cc.radius, 0) + currentIncrementOffset, cc.radius, deltaMovement.normalized, out hit, deltaMovement.magnitude + cc.skinWidth, bodyCCLayerMask)) {
+						canStep = true;
+						stepOffset = i * incrementHeight;
+						break;
+					}
+				}
+
+				if (canStep) {
+					// Step 4: Check for ceiling
+					RaycastHit ceilingHit;
+					if (Physics.OverlapCapsule(cc.transform.position + new Vector3(0, (-cc.height / 2f) + cc.radius + cc.skinWidth, 0), cc.transform.position + new Vector3(0, ((cc.height / 2f) - cc.radius) + cc.skinWidth + stepHeight, 0), cc.radius, bodyCCLayerMask).Length == 0) {
+						cc.Move(new Vector3(0, stepOffset, 0));
+						verticalPusher.transform.position -= new Vector3(0, stepOffset, 0);
+					}
+				} else {
+					
+				}
+			} else {
+				Debug.LogError("Fail secondary raycast");
+			}
+		}
+
+		// Step 5: move cc with deltaMovement
+		cc.Move(deltaMovement);
+
+	}
+
 	void RealignRig() {
 		// Realigns the rig to put the hmd in the same position as the headCC by moving the rig (which in turn, moves the hmd into position)
 		Vector3 hmdHeadDifference = head.transform.position - hmd.transform.position;
@@ -947,10 +999,10 @@ public class Player : MonoBehaviour {
 
 		Vector3 sphereCastOrigin = bodyCC.transform.position + new Vector3(0, (-bodyCC.height / 2) + bodyCC.radius, 0);
 		Vector3 sphereCastDirection = Vector3.down;
-		float sphereCastRadius = bodyCC.radius - (bodyCC.skinWidth / 8);
+		float sphereCastRadius = bodyCC.radius;
 		float sphereCastLength = 0.025f + (bodyCC.skinWidth * 2);
 
-		if (isClimbing == false && Physics.SphereCast(sphereCastOrigin, sphereCastRadius, sphereCastDirection, out hit, sphereCastLength, bodyCCLayerMask)) {
+		if (isClimbing == false && Physics.SphereCast(sphereCastOrigin, sphereCastRadius, sphereCastDirection, out hit, sphereCastLength, bodyCCLayerMask) && hit.point.y < bodyCC.transform.position.y) {
 			if (grounded == false) {
 				float heightDifference = GetPlayerRealLifeHeight() - bodyCC.height;
 				verticalPusher.transform.position += new Vector3(0, -heightDifference, 0);
@@ -1092,7 +1144,7 @@ public class Player : MonoBehaviour {
 	void UpdateHandPhysics(string side, HandInformation handInfoCurrent, GrabInformation grabInfoCurrent) {
 		Vector3 handOffsetDefault = Quaternion.Euler(handInfoCurrent.handOffsetRotation) * handInfoCurrent.controller.transform.rotation * new Vector3(handRigidbodyPositionOffset.x * (side == "Left" ? 1 : -1), handRigidbodyPositionOffset.y, handRigidbodyPositionOffset.z);
 		Vector3 handOffsetKick = handInfoCurrent.handOffsetPosition;
-		//handInfoCurrent.handRigidbody.velocity = (((handInfoCurrent.controller.transform.position + handOffsetDefault + handOffsetKick) - handInfoCurrent.handGameObject.transform.position) + verticalPusher.transform.localPosition) / Time.fixedDeltaTime;
+		handInfoCurrent.handRigidbody.velocity = (((handInfoCurrent.controller.transform.position + handOffsetDefault + handOffsetKick) - handInfoCurrent.handGameObject.transform.position) + verticalPusher.transform.localPosition) / Time.fixedDeltaTime;
 		handInfoCurrent.handRigidbody.velocity = (((handInfoCurrent.controller.transform.position + handOffsetDefault + handOffsetKick) - handInfoCurrent.handGameObject.transform.position)) / Time.fixedDeltaTime;
 
 
@@ -1124,7 +1176,7 @@ public class Player : MonoBehaviour {
 			if (grabInfoCurrent.grabbedRigidbody.gameObject.layer == LayerMask.NameToLayer("Item")) {
 				Vector3 grabOffsetCurrent = (handInfoCurrent.handRigidbody.transform.rotation * grabInfoCurrent.grabOffset);
 
-				if (Vector3.Distance(grabInfoCurrent.grabbedRigidbody.transform.position, handInfoCurrent.handRigidbody.transform.position + grabOffsetCurrent) > 1f) {
+				if (Vector3.Distance(grabInfoCurrent.grabbedRigidbody.transform.position, handInfoCurrent.handRigidbody.transform.position + grabOffsetCurrent) > 0.5f) {
 					Release(hand, grabInfoCurrent, grabInfoOpposite, handInfoCurrent, handInfoOpposite);
 				} else {
 					  grabInfoCurrent.grabbedRigidbody.velocity = Vector3.Lerp(grabInfoCurrent.grabbedRigidbody.velocity, Vector3.ClampMagnitude(((handInfoCurrent.handRigidbody.position + grabOffsetCurrent) - grabInfoCurrent.grabbedRigidbody.transform.position) / Time.fixedDeltaTime, (grabInfoCurrent.grabbedRigidbody.GetComponent<HingeJoint>()) ? 1 : 500) * grabInfoCurrent.itemVelocityPercentage, Mathf.Clamp01(50 * Time.deltaTime));

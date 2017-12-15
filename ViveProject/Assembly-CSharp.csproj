@@ -118,6 +118,8 @@
      <Compile Include="Assets\Scripts\Items\Projectile.cs" />
      <Compile Include="Assets\Scripts\Items\Specific\HolographicSight.cs" />
      <Compile Include="Assets\Scripts\PlatformController.cs" />
+     <Compile Include="Assets\Scripts\Player\AlanThing.cs" />
+     <Compile Include="Assets\Scripts\Player\GridTile.cs" />
      <Compile Include="Assets\Scripts\Player\Player.cs" />
      <Compile Include="Assets\Scripts\Random\AutoRotate.cs" />
      <Compile Include="Assets\Scripts\UI\AmmoTooltip.cs" />
