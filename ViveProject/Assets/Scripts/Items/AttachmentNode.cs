@@ -19,7 +19,6 @@ public class AttachmentNode : MonoBehaviour {
 
 
 	void OnDrawGizmosSelected() {
-		GrabNode colNode = GetComponent<GrabNode>();
 		if (attachmentType == AttachmentType.Square) {
 			if (attachmentGender == AttachmentGender.Male) {
 				Gizmos.color = Color.red;

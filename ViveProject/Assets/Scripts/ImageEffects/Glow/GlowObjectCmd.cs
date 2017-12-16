@@ -19,7 +19,11 @@ public class GlowObjectCmd : MonoBehaviour {
 	public Color _targetColor;
 
 	void Start() {
-		Renderers = GetComponentsInChildren<Renderer>();
+		if (transform.Find("(Model)")) {
+			Renderers = transform.Find("(Model)").GetComponentsInChildren<Renderer>();
+		} else {
+			Renderers = GetComponentsInChildren<Renderer>();
+		}
 		GlowController.RegisterObject(this);
 	}
 

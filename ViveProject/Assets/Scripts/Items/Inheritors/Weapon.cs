@@ -64,7 +64,7 @@ public class Weapon : Item {
 	// Events
 	public event Action eventAdjustAmmo;
 
-	void Update() {
+	protected override void OnItemUpdate () {
 		if (triggerHeld == false) {
 			if (chargingEnabled == true) {
 				chargeCurrent = Mathf.Clamp01(chargeCurrent - (chargeDecrement * Time.deltaTime));

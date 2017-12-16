@@ -81,7 +81,6 @@ public class Player : MonoBehaviour {
 	float groundedTime;                             // Time the player has been grounded foor
 	float timeLastJumped = 0;
 	Vector3 platformMovementsAppliedLastFrame = Vector3.zero;
-	bool justStepped;
 	bool padPressed;
 
 	[Space(10)][Header("Positional Variables")]
@@ -102,7 +101,9 @@ public class Player : MonoBehaviour {
 		public Vector3 grabCCOffset;                // If grabbing a climbable object, this variable stores the offset between the hand and the character controller, to determine where to move the player to when climbing
 		public Vector3 grabPoint;					// (For dynamic-grabNode or non-grabNode items) records the exact point at which the item was grabbed
 		public float itemVelocityPercentage;        // When items are first picked up their IVP = 0; over time grabbed approaches 1 linearly; this value determines the magnitude of the velocity (and angularVelocity) of the item
-		public string side;							// Which side hand is this? "Left" or "Right"
+		public string side;                         // Which side hand is this? "Left" or "Right"
+		public Pocket pocketCandidateLastFrame;     // The pocket candidate found last frame (null if there was none found)
+		public Item grabbableItemLastFrame;
 
 		public GrabInformation() {
 			climbableGrabbed = null;
@@ -301,21 +302,30 @@ public class Player : MonoBehaviour {
 						}
 
 						if (hitGrabNode == grabInfoOpposite.grabNode) {
+							grabInfoCurrent.grabbableItemLastFrame = null;
 							return;
 						}
 					} else {
 						if (item == grabInfoOpposite.grabbedItem) {
+							grabInfoCurrent.grabbableItemLastFrame = null;
 							return;
 						}
 					}
 
 					if (item != null && item.GetComponent<GlowObjectCmd>()) {
 						item.GetComponent<GlowObjectCmd>().handNear = true;
+
+						if (grabInfoCurrent.grabbableItemLastFrame != item) {
+							StartCoroutine(TriggerHapticFeedback(handInfoCurrent.controllerDevice, 1000, 0.05f));
+						}
+
+						grabInfoCurrent.grabbableItemLastFrame = item;
 					}
 					return;
 				}
 			}
 		}
+		grabInfoCurrent.grabbableItemLastFrame = null;
 	}
 
 	void Grab(string side, GrabInformation grabInfoCurrent, GrabInformation grabInfoOpposite, HandInformation handInfoCurrent, HandInformation handInfoOpposite) {
@@ -370,13 +380,14 @@ public class Player : MonoBehaviour {
 					grabInfoCurrent.grabNode = chosenIAN.node;
 					grabInfoCurrent.grabbedRigidbody = chosenIAN.item.transform.GetComponent<Rigidbody>();
 
+					if (grabInfoCurrent.grabbedItem.pocketCurrent != null) {
+						grabInfoCurrent.grabbedItem.pocketCurrent.ReleaseItem();
+						grabInfoCurrent.grabbedItem.pocketCurrent = null;
+					}
+
 					grabInfoCurrent.grabbedItem.timeLastGrabbed = Time.timeSinceLevelLoad;      // TODO: move?
 					grabInfoCurrent.grabbedRigidbody.useGravity = false;
 
-					if (grabInfoCurrent.grabbedItem.pocketCurrent != null) {
-						grabInfoCurrent.grabbedItem.pocketCurrent.pocketedItem = null;
-						grabInfoCurrent.grabbedItem.pocketCurrent = null;
-					}
 
 					if (grabInfoCurrent.grabNode) {
 						if (grabInfoCurrent.grabNode.grabType == GrabNode.GrabType.FixedPositionRotation) {
@@ -428,7 +439,7 @@ public class Player : MonoBehaviour {
 					grabInfoCurrent.grabRotation = hitClimb.transform.rotation;
 					grabInfoCurrent.grabCCOffset = handInfoCurrent.controller.transform.position - bodyCC.transform.position;
 					grabInfoCurrent.climbableGrabbed = hitClimb.transform;
-					StartCoroutine(TriggerHapticFeedback(handInfoCurrent.controllerDevice, 0.1f));
+					StartCoroutine(TriggerHapticFeedback(handInfoCurrent.controllerDevice, 3999, 0.1f));
 					return;
 				}
 			}
@@ -445,7 +456,7 @@ public class Player : MonoBehaviour {
 							grabInfoCurrent.grabRotation = environmentHit.transform.rotation;
 							grabInfoCurrent.grabCCOffset = handInfoCurrent.controller.transform.position - bodyCC.transform.position;
 							grabInfoCurrent.climbableGrabbed = environmentHit.transform;
-							StartCoroutine(TriggerHapticFeedback(handInfoCurrent.controllerDevice, 0.1f));
+							StartCoroutine(TriggerHapticFeedback(handInfoCurrent.controllerDevice, 3999, 0.1f));
 							return;
 						}
 					}
@@ -609,10 +620,10 @@ public class Player : MonoBehaviour {
 
 				// Step 1: Trigger haptic feedback
 				if (grabInfoLeft.grabbedRigidbody == grabInfoRight.grabbedRigidbody) {
-					StartCoroutine(TriggerHapticFeedback(handInfoLeft.controllerDevice, 0.1f));
-					StartCoroutine(TriggerHapticFeedback(handInfoRight.controllerDevice, 0.1f));
+					StartCoroutine(TriggerHapticFeedback(handInfoLeft.controllerDevice, 3999, 0.1f));
+					StartCoroutine(TriggerHapticFeedback(handInfoRight.controllerDevice, 3999, 0.1f));
 				} else {
-					StartCoroutine(TriggerHapticFeedback((hand == "Left" ? handInfoLeft.controllerDevice : handInfoRight.controllerDevice), 0.1f));
+					StartCoroutine(TriggerHapticFeedback((hand == "Left" ? handInfoLeft.controllerDevice : handInfoRight.controllerDevice), 3999, 0.1f));
 				}
 
 				// Step 2: Apply velocity and angular velocity to weapon
@@ -679,6 +690,8 @@ public class Player : MonoBehaviour {
 	void ThrowItem(HandInformation handInfoCurrent, GrabInformation grabInfoCurrent, Vector3 velocity) {
 		grabInfoCurrent.grabbedRigidbody.velocity = Vector3.ClampMagnitude(velocity.magnitude > 5 ? (velocity * 2f) : velocity, 100);
 		grabInfoCurrent.grabbedRigidbody.useGravity = true;
+		grabInfoCurrent.grabbableItemLastFrame = grabInfoCurrent.grabbedItem;
+
 		if (grabInfoCurrent.grabbedRigidbody.transform.GetComponent<Item>() != null) {
 			if (grabInfoCurrent.grabbedRigidbody.GetComponent<Item>() is Weapon) {
 				(grabInfoCurrent.grabbedRigidbody.transform.GetComponent<Item>() as Weapon).triggerHeld = false;
@@ -686,39 +699,51 @@ public class Player : MonoBehaviour {
 		}
 
 		// Check for pockets
-		Collider[] pockets = Physics.OverlapSphere(handInfoCurrent.handRigidbody.transform.position, 0.15f, pocketMask);
+		Collider[] pockets = Physics.OverlapSphere(handInfoCurrent.handRigidbody.transform.position, 0.2f, pocketMask);
 		if (pockets.Length > 0) {
-			Collider choosenPocket = pockets[0];
+			List<Pocket> availablePockets = new List<Pocket>();
 
-			// Find closest Pocket
-			if (pockets.Length > 1) {
-				float closestPocketDistance = Vector3.Distance(choosenPocket.transform.position, handInfoCurrent.handRigidbody.transform.position);
-				for (int i = 1; i < pockets.Length; i++) {
-					float thisPocketDistance = Vector3.Distance(pockets[i].transform.position, handInfoCurrent.handRigidbody.transform.position);
-					if (thisPocketDistance < closestPocketDistance) {
-						closestPocketDistance = thisPocketDistance;
-						choosenPocket = pockets[i];
+			// Find pockets that are currently available and add them to availablePockets list
+			for (int i = 0; i < pockets.Length; i++) {
+				if (pockets[i].GetComponent<Pocket>()) {
+					Pocket currentPocketObject = pockets[i].GetComponent<Pocket>();
+					if (currentPocketObject.GetAvailability() == true && currentPocketObject.pocketSize == grabInfoCurrent.grabbedItem.pocketSize && Vector3.Angle(grabInfoCurrent.grabbedRigidbody.transform.forward, currentPocketObject.transform.forward) <= currentPocketObject.angleRange) {
+						availablePockets.Add(currentPocketObject);
 					}
 				}
 			}
 
-			// Asign Pocket Info
-			if (choosenPocket.GetComponent<Pocket>()) {
-				Pocket choosenPocketObject = choosenPocket.transform.GetComponent<Pocket>();
-				if (choosenPocketObject.pocketedItem == null && choosenPocketObject.pocketSize >= grabInfoCurrent.grabbedItem.pocketSize) {
-					choosenPocketObject.pocketedItem = grabInfoCurrent.grabbedItem;        // Set Item
-					choosenPocketObject.timePocketed = Time.timeSinceLevelLoad;
-					grabInfoCurrent.grabbedItem.pocketCurrent = choosenPocketObject;       // Set Pocket
+			if (availablePockets.Count > 0) {
+				// Find closest pocket
+				Pocket chosenPocket = availablePockets[0];
+				float closestPocketDistance = Vector3.Distance(handInfoCurrent.handRigidbody.transform.position, chosenPocket.transform.position);
+				for (int j = 1; j < availablePockets.Count; j++) {
+					if (Vector3.Distance(handInfoCurrent.handRigidbody.transform.position, availablePockets[j].transform.position) < closestPocketDistance) {
+						chosenPocket = availablePockets[j];
+					}
 				}
+
+				// Asign Pocket Info
+				chosenPocket.PocketItem(grabInfoCurrent.grabbedItem);
 			}
 		}
 
 	}
 
-	IEnumerator TriggerHapticFeedback(SteamVR_Controller.Device device, float duration) {
+	IEnumerator TriggerHapticFeedback(SteamVR_Controller.Device device, ushort strength, float duration) {
 		for (float i = 0; i <= duration; i += 0.01f) {
-			device.TriggerHapticPulse(3999);
+			device.TriggerHapticPulse(strength);
 			yield return new WaitForSeconds(0.01f);
+		}
+	}
+
+	IEnumerator TriggerHapticFeedback(SteamVR_Controller.Device device, ushort strength, float duration, int ticks) {
+		for (int t = 0; t < Mathf.Clamp(ticks, 1, 999); t++) {
+			for (float i = 0; i <= duration; i += 0.01f) {
+				device.TriggerHapticPulse(strength);
+				yield return new WaitForSeconds(0.01f);
+			}
+			yield return new WaitForSeconds(0.025f);
 		}
 	}
 
@@ -966,7 +991,6 @@ public class Player : MonoBehaviour {
 
 				if (canStep) {
 					// Step 4: Check for ceiling
-					RaycastHit ceilingHit;
 					if (Physics.OverlapCapsule(cc.transform.position + new Vector3(0, (-cc.height / 2f) + cc.radius + cc.skinWidth, 0), cc.transform.position + new Vector3(0, ((cc.height / 2f) - cc.radius) + cc.skinWidth + stepHeight, 0), cc.radius, bodyCCLayerMask).Length == 0) {
 						cc.Move(new Vector3(0, stepOffset, 0));
 						verticalPusher.transform.position -= new Vector3(0, stepOffset, 0);
@@ -1172,33 +1196,75 @@ public class Player : MonoBehaviour {
 	}
 
 	void UpdateItemPhysics(string hand, GrabInformation grabInfoCurrent, GrabInformation grabInfoOpposite, HandInformation handInfoCurrent, HandInformation handInfoOpposite) {
-		if (justStepped == false) {
-			if (grabInfoCurrent.grabbedRigidbody.gameObject.layer == LayerMask.NameToLayer("Item")) {
-				Vector3 grabOffsetCurrent = (handInfoCurrent.handRigidbody.transform.rotation * grabInfoCurrent.grabOffset);
+		if (grabInfoCurrent.grabbedRigidbody.gameObject.layer == LayerMask.NameToLayer("Item")) {
+			Vector3 grabOffsetCurrent = (handInfoCurrent.handRigidbody.transform.rotation * grabInfoCurrent.grabOffset);
 
-				if (Vector3.Distance(grabInfoCurrent.grabbedRigidbody.transform.position, handInfoCurrent.handRigidbody.transform.position + grabOffsetCurrent) > 0.5f) {
-					Release(hand, grabInfoCurrent, grabInfoOpposite, handInfoCurrent, handInfoOpposite);
-				} else {
-					  grabInfoCurrent.grabbedRigidbody.velocity = Vector3.Lerp(grabInfoCurrent.grabbedRigidbody.velocity, Vector3.ClampMagnitude(((handInfoCurrent.handRigidbody.position + grabOffsetCurrent) - grabInfoCurrent.grabbedRigidbody.transform.position) / Time.fixedDeltaTime, (grabInfoCurrent.grabbedRigidbody.GetComponent<HingeJoint>()) ? 1 : 500) * grabInfoCurrent.itemVelocityPercentage, Mathf.Clamp01(50 * Time.deltaTime));
-					//grabInfoCurrent.grabbedRigidbody.velocity = Vector3.Lerp(grabInfoCurrent.grabbedRigidbody.velocity, Vector3.ClampMagnitude(((handInfoCurrent.handRigidbody.transform.position + (dualWieldDirectionChangeRotation * handDominant.transform.rotation * ((grabDualWieldDominantHand == "Left") ? grabInfoLeft.grabOffset : grabInfoRight.grabOffset))) - grabbedItemDominant.transform.position) / Time.fixedDeltaTime, (grabbedItemDominant.GetComponent<HingeJoint>()) ? 1 : 100) * Mathf.Lerp(grabInfoLeft.itemVelocityPercentage, grabInfoRight.itemVelocityPercentage, 0.5f), Mathf.Clamp01(50 * Time.deltaTime));
+			UpdateItemPocketingModel(handInfoCurrent, grabInfoCurrent);
 
+			if (Vector3.Distance(grabInfoCurrent.grabbedRigidbody.transform.position, handInfoCurrent.handRigidbody.transform.position + grabOffsetCurrent) > 0.5f) {
+				Release(hand, grabInfoCurrent, grabInfoOpposite, handInfoCurrent, handInfoOpposite);
+			} else {
+				  grabInfoCurrent.grabbedRigidbody.velocity = Vector3.Lerp(grabInfoCurrent.grabbedRigidbody.velocity, Vector3.ClampMagnitude(((handInfoCurrent.handRigidbody.position + grabOffsetCurrent) - grabInfoCurrent.grabbedRigidbody.transform.position) / Time.fixedDeltaTime, (grabInfoCurrent.grabbedRigidbody.GetComponent<HingeJoint>()) ? 1 : 500) * grabInfoCurrent.itemVelocityPercentage, Mathf.Clamp01(50 * Time.deltaTime));
+				//grabInfoCurrent.grabbedRigidbody.velocity = Vector3.Lerp(grabInfoCurrent.grabbedRigidbody.velocity, Vector3.ClampMagnitude(((handInfoCurrent.handRigidbody.transform.position + (dualWieldDirectionChangeRotation * handDominant.transform.rotation * ((grabDualWieldDominantHand == "Left") ? grabInfoLeft.grabOffset : grabInfoRight.grabOffset))) - grabbedItemDominant.transform.position) / Time.fixedDeltaTime, (grabbedItemDominant.GetComponent<HingeJoint>()) ? 1 : 100) * Mathf.Lerp(grabInfoLeft.itemVelocityPercentage, grabInfoRight.itemVelocityPercentage, 0.5f), Mathf.Clamp01(50 * Time.deltaTime));
 
-					if (!grabInfoCurrent.grabbedRigidbody.GetComponent<HingeJoint>()) {
-						Quaternion rotationDeltaItem = (handInfoCurrent.handRigidbody.transform.rotation * grabInfoCurrent.grabRotation) * Quaternion.Inverse(grabInfoCurrent.grabbedRigidbody.transform.rotation);
-						float angleItem;
-						Vector3 axisItem;
-						rotationDeltaItem.ToAngleAxis(out angleItem, out axisItem);
-						if (angleItem > 180) {
-							angleItem -= 360;
-						}
+				if (!grabInfoCurrent.grabbedRigidbody.GetComponent<HingeJoint>()) {
+					Quaternion rotationDeltaItem = (handInfoCurrent.handRigidbody.transform.rotation * grabInfoCurrent.grabRotation) * Quaternion.Inverse(grabInfoCurrent.grabbedRigidbody.transform.rotation);
+					float angleItem;
+					Vector3 axisItem;
+					rotationDeltaItem.ToAngleAxis(out angleItem, out axisItem);
+					if (angleItem > 180) {
+						angleItem -= 360;
+					}
 
-						if (angleItem != float.NaN) {
-							grabInfoCurrent.grabbedRigidbody.maxAngularVelocity = Mathf.Infinity;
-							grabInfoCurrent.grabbedRigidbody.angularVelocity = Vector3.Lerp(grabInfoCurrent.grabbedRigidbody.angularVelocity, (angleItem * axisItem) * grabInfoCurrent.itemVelocityPercentage * 0.95f, Mathf.Clamp01(50 *  Time.deltaTime));
-						}
+					if (angleItem != float.NaN) {
+						grabInfoCurrent.grabbedRigidbody.maxAngularVelocity = Mathf.Infinity;
+						grabInfoCurrent.grabbedRigidbody.angularVelocity = Vector3.Lerp(grabInfoCurrent.grabbedRigidbody.angularVelocity, (angleItem * axisItem) * grabInfoCurrent.itemVelocityPercentage * 0.95f, Mathf.Clamp01(50 *  Time.deltaTime));
 					}
 				}
 			}
+		}
+	}
+
+	void UpdateItemPocketingModel(HandInformation handInfoCurrent, GrabInformation grabInfoCurrent) {
+		Collider[] pockets = Physics.OverlapSphere(handInfoCurrent.handRigidbody.transform.position, 0.2f, pocketMask);
+		if (pockets.Length > 0) {
+			List<Pocket> availablePockets = new List<Pocket>();
+
+			// Find pockets that are currently available and add them to availablePockets list
+			for (int i = 0; i < pockets.Length; i++) {
+				if (pockets[i].GetComponent<Pocket>()) {
+					Pocket currentPocketObject = pockets[i].GetComponent<Pocket>();
+					if (currentPocketObject.GetAvailability() == true && currentPocketObject.pocketSize == grabInfoCurrent.grabbedItem.pocketSize && Vector3.Angle(grabInfoCurrent.grabbedRigidbody.transform.forward, currentPocketObject.transform.forward) <= currentPocketObject.angleRange) {
+						availablePockets.Add(currentPocketObject);
+					}
+				}
+			}
+
+			if (availablePockets.Count > 0) {
+				// Find closest pocket
+				Pocket chosenPocket = availablePockets[0];
+				float closestPocketDistance = Vector3.Distance(handInfoCurrent.handRigidbody.transform.position, chosenPocket.transform.position);
+				for (int j = 1; j < availablePockets.Count; j++) {
+					if (Vector3.Distance(handInfoCurrent.handRigidbody.transform.position, availablePockets[j].transform.position) < closestPocketDistance) {
+						chosenPocket = availablePockets[j];
+					}
+				}
+
+				if (grabInfoCurrent.pocketCandidateLastFrame != chosenPocket) {
+					StartCoroutine(TriggerHapticFeedback(handInfoCurrent.controllerDevice, 1000, 0.05f, 2));
+				}
+
+				grabInfoCurrent.pocketCandidateLastFrame = chosenPocket;
+				grabInfoCurrent.pocketCandidateLastFrame = chosenPocket;
+
+				// Set item's pocketCandidate information
+				grabInfoCurrent.grabbedItem.pocketCandidate = chosenPocket;
+				grabInfoCurrent.grabbedItem.pocketCandidateTime = Time.timeSinceLevelLoad;
+			} else {
+				grabInfoCurrent.pocketCandidateLastFrame = null;
+			}
+		} else {
+			grabInfoCurrent.pocketCandidateLastFrame = null;
 		}
 	}
 
