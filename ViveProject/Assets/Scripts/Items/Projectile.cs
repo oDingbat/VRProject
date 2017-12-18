@@ -34,7 +34,7 @@ public class Projectile : MonoBehaviour {
 	void Update () {
 		if (firstFrameLoaded == true) {
 			if (broken == false) {
-				AttemptMove();
+				UpdateProjectileMovement();
 			}
 		} else {
 			transform.position -= transform.forward * 0.01f;
@@ -42,7 +42,7 @@ public class Projectile : MonoBehaviour {
 		}
 	}
 
-	void AttemptMove () {
+	public void UpdateProjectileMovement () {
 		RaycastHit hit;
 		if (Physics.Raycast(transform.position, velocity.normalized, out hit, velocity.magnitude * Time.deltaTime, collisionMask)) {
 			if (hit.transform) {
