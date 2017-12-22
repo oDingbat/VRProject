@@ -156,6 +156,7 @@
      <None Include="Assets\VolumetricLighting-master\VolumetricLighting-master\Assets\VolumetricFog\Shaders\BlurShadowmap.shader" />
      <None Include="Assets\VolumetricLighting-master\VolumetricLighting-master\Assets\VolumetricFog\Shaders\InjectLightingAndDensity.compute" />
      <None Include="Assets\Shaders\Magnification.shader" />
+     <None Include="Assets\Shaders\Normal-Diffuse-Worldspace.shader" />
      <None Include="Assets\PostProcessing\Resources\Bluenoise64\LICENSE.txt" />
      <None Include="Assets\PostProcessing\Resources\Shaders\BuiltinDebugViews.shader" />
      <None Include="Assets\VertexPaint-master\Examples\SplatMapping\Shaders\SplatBlend_5Layer.shader" />
@@ -165,6 +166,7 @@
      <None Include="Assets\PostProcessing\Editor Resources\UI\Trackball.shader" />
      <None Include="Assets\VertexPaint-master\Examples\SplatMapping\Shaders\SplatBlendSpecular_4Layer.shader" />
      <None Include="Assets\VolumetricLighting-master\VolumetricLighting-master\Assets\TubeLight\Shaders\TubeLight.shader" />
+     <None Include="Assets\Shaders\WorldSpaceShader.shader" />
      <None Include="Assets\VertexPaint-master\Examples\SplatMapping\Shaders\SplatBlend_2Layer.shader" />
      <None Include="Assets\Shaders\Blur.shader" />
      <None Include="Assets\PostProcessing\Resources\Shaders\Bloom.cginc" />
