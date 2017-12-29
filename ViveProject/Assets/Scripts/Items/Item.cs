@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 [System.Serializable]
-[RequireComponent (typeof(GlowObjectCmd)), RequireComponent(typeof(Rigidbody))]
+[RequireComponent(typeof(Rigidbody))]
 public abstract class Item : MonoBehaviour {
 
 	public Rigidbody			itemRigidbody;

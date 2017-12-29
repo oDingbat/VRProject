@@ -42,13 +42,13 @@ MonoBehaviour:
   ambientOcclusion:
     m_Enabled: 1
     m_Settings:
-      intensity: 0
-      radius: 0.1
-      sampleCount: 10
+      intensity: 0.3
+      radius: 0.25
+      sampleCount: 16
       downsampling: 0
       forceForwardCompatibility: 0
       ambientOnly: 0
-      highPrecision: 0
+      highPrecision: 1
   screenSpaceReflection:
     m_Enabled: 1
     m_Settings:
@@ -85,22 +85,22 @@ MonoBehaviour:
   eyeAdaptation:
     m_Enabled: 1
     m_Settings:
-      lowPercent: 11.543272
-      highPercent: 27.80668
+      lowPercent: 13.767296
+      highPercent: 36.70278
       minLuminance: -32
       maxLuminance: 16
       keyValue: 0.12
       dynamicKeyValue: 1
       adaptationType: 0
-      speedUp: 4
-      speedDown: 2
-      logMin: -8
-      logMax: 8
+      speedUp: 1
+      speedDown: 0.5
+      logMin: -5
+      logMax: 5
   bloom:
     m_Enabled: 1
     m_Settings:
       bloom:
-        intensity: 0.125
+        intensity: 0.1
         threshold: 1
         softKnee: 0.1
         radius: 1.5

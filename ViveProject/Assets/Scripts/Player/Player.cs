@@ -688,7 +688,6 @@ public class Player : MonoBehaviour {
 	}
 
 	void ThrowItem(HandInformation handInfoCurrent, GrabInformation grabInfoCurrent, Vector3 velocity) {
-		grabInfoCurrent.grabbedRigidbody.velocity = Vector3.ClampMagnitude(velocity.magnitude > 5 ? (velocity * 2f) : velocity, 100);
 		grabInfoCurrent.grabbedRigidbody.useGravity = true;
 		grabInfoCurrent.grabbableItemLastFrame = grabInfoCurrent.grabbedItem;
 
@@ -787,7 +786,7 @@ public class Player : MonoBehaviour {
 
 			combinedClimbPositions = combinedClimbPositions / climbCount;
 
-			velocityCurrent = Vector3.Lerp(velocityCurrent, (combinedClimbPositions - bodyCC.transform.position) / Time.deltaTime, 25 * Time.deltaTime);
+			velocityCurrent = Vector3.Lerp(velocityCurrent, (combinedClimbPositions - bodyCC.transform.position) / Time.deltaTime, Mathf.Clamp01(50 * Time.deltaTime));
 
 			grabInfoLeft.grabRotationLastFrame = climbRotationLeft;
 			grabInfoRight.grabRotationLastFrame = climbRotationRight;

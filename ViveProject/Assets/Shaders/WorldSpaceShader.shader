@@ -41,14 +41,14 @@
 			float2 UV;
 			fixed4 c;
 
-			if (abs(IN.worldNormal.x) > 0.5) {
-				UV = IN.worldPos.zy * 0.5; // side
+			if (abs(IN.worldNormal.x) > 0.707) {
+				UV = IN.worldPos.zy; // side
 				c = tex2D(_MainTex, UV * _Scale); // use WALLSIDE texture
-			} else if (abs(IN.worldNormal.z) > 0.5) {
-				UV = IN.worldPos.xy * 0.5; // front
+			} else if (abs(IN.worldNormal.z) > 0.707) {
+				UV = IN.worldPos.xy; // front
 				c = tex2D(_MainTex, UV * _Scale); // use WALL texture
 			} else {
-				UV = IN.worldPos.xz * 0.5; // top
+				UV = IN.worldPos.xz; // top
 				c = tex2D(_MainTex, UV * _Scale); // use FLR texture
 			}
 
