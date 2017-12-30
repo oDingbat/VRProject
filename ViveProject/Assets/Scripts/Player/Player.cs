@@ -472,6 +472,9 @@ public class Player : MonoBehaviour {
 		if (grabInfoCurrent.grabNode == true) {
 			closestColliderPoint = grabInfoCurrent.grabNode.transform.GetComponent<Collider>().ClosestPoint(handInfoCurrent.handRigidbody.transform.position);
 		} else {
+			if (grabInfoCurrent.grabbedItem.transform.GetComponent<Collider>() == null) {
+				Debug.LogError("Error: missing collider on grabbed Item. Either give the item a single collider, or give it's subColliders grabNodes");
+			}
 			closestColliderPoint = grabInfoCurrent.grabbedItem.transform.GetComponent<Collider>().ClosestPoint(handInfoCurrent.handRigidbody.transform.position);
 		}
 

@@ -7,7 +7,7 @@ public class Pocket : MonoBehaviour {
 	public Item pocketedItem;
 	public float timePocketed;
 	public PocketSize pocketSize = PocketSize.Small;
-	public enum PocketSize { Small, Medium, Large }
+	public enum PocketSize { None, Small, Medium, Large }
 
 	public Pocket linkedPocket;
 	public float angleRange;

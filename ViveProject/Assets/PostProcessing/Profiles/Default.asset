@@ -42,7 +42,7 @@ MonoBehaviour:
   ambientOcclusion:
     m_Enabled: 1
     m_Settings:
-      intensity: 0.3
+      intensity: 0.35
       radius: 0.25
       sampleCount: 16
       downsampling: 0
@@ -79,9 +79,9 @@ MonoBehaviour:
   motionBlur:
     m_Enabled: 0
     m_Settings:
-      shutterAngle: 270
-      sampleCount: 10
-      frameBlending: 0
+      shutterAngle: 106
+      sampleCount: 27
+      frameBlending: 0.04
   eyeAdaptation:
     m_Enabled: 1
     m_Settings:
