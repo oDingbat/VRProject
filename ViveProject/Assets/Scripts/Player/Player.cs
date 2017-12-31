@@ -691,6 +691,7 @@ public class Player : MonoBehaviour {
 	}
 
 	void ThrowItem(HandInformation handInfoCurrent, GrabInformation grabInfoCurrent, Vector3 velocity) {
+		grabInfoCurrent.grabbedRigidbody.velocity += velocityCurrent;
 		grabInfoCurrent.grabbedRigidbody.useGravity = true;
 		grabInfoCurrent.grabbableItemLastFrame = grabInfoCurrent.grabbedItem;
 
