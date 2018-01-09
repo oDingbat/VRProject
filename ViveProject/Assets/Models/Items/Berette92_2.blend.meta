@@ -6,10 +6,30 @@ ModelImporter:
   serializedVersion: 21
   fileIDToRecycleName:
     100000: //RootNode
+    100002: Frame
+    100004: Hammer
+    100006: Magazine
+    100008: Slide
     400000: //RootNode
+    400002: Frame
+    400004: Hammer
+    400006: Magazine
+    400008: Slide
     2300000: //RootNode
+    2300002: Frame
+    2300004: Hammer
+    2300006: Magazine
+    2300008: Slide
     3300000: //RootNode
+    3300002: Frame
+    3300004: Hammer
+    3300006: Magazine
+    3300008: Slide
     4300000: Cube
+    4300002: Hammer
+    4300004: Magazine
+    4300006: Slide
+    4300008: Frame
     7400000: Default Take
     9500000: //RootNode
   materials:

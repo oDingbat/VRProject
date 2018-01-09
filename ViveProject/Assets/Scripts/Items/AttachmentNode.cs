@@ -4,10 +4,6 @@ using UnityEngine;
 
 public class AttachmentNode : MonoBehaviour {
 
-	[Space(10)][Header("Settings")]
-	public Vector3 rotation;
-	public Vector3 offset;
-
 	[Space(10)][Header("Enums")]
 	public AttachmentType attachmentType;
 	public enum AttachmentType { Square, Circle, Triangle, Hexagon }
@@ -15,23 +11,23 @@ public class AttachmentNode : MonoBehaviour {
 	public enum AttachmentGender { Male, Female }
 
 	[Space(10)][Header("Variables")]
-	public bool attached;
-
+	public bool isAttached;
+	public AttachmentNode connectedNode;
 
 	void OnDrawGizmosSelected() {
 		if (attachmentType == AttachmentType.Square) {
 			if (attachmentGender == AttachmentGender.Male) {
 				Gizmos.color = Color.red;
-				Debug.DrawLine(transform.position + (transform.forward * 0.01f), transform.position + (transform.forward * 0.035f), Color.red);
+				Debug.DrawLine(transform.position, transform.position + (transform.forward * 0.01f), Color.red);
 				Gizmos.matrix = Matrix4x4.TRS(transform.position, transform.rotation, transform.localScale);
-				Gizmos.DrawWireCube(Vector3.zero + new Vector3(0, 0, 0.01f), new Vector3(0.02f, 0.02f, 0.00f));
-				Gizmos.DrawWireCube(Vector3.zero + new Vector3(0, 0, 0.01f), new Vector3(0.01f, 0.01f, 0.00f));
+				Gizmos.DrawWireCube(Vector3.zero, new Vector3(0.02f, 0.02f, 0.00f));
+				Gizmos.DrawWireCube(Vector3.zero, new Vector3(0.01f, 0.01f, 0.00f));
 			} else {
 				Gizmos.color = Color.cyan;
-				Debug.DrawLine(transform.position + (transform.forward * 0.015f), transform.position + (transform.forward * -0.01f), Color.cyan);
+				Debug.DrawLine(transform.position, transform.position + (transform.forward * 0.01f), Color.cyan);
 				Gizmos.matrix = Matrix4x4.TRS(transform.position, transform.rotation, transform.localScale);
-				Gizmos.DrawWireCube(Vector3.zero - new Vector3(0, 0, 0.01f), new Vector3(0.02f, 0.02f, 0.00f));
-				Gizmos.DrawWireCube(Vector3.zero - new Vector3(0, 0, 0.01f), new Vector3(0.01f, 0.01f, 0.00f));
+				Gizmos.DrawWireCube(Vector3.zero, new Vector3(0.02f, 0.02f, 0.00f));
+				Gizmos.DrawWireCube(Vector3.zero, new Vector3(0.01f, 0.01f, 0.00f));
 			}
 		} else if (attachmentType == AttachmentType.Circle) {
 			Color currentColor = Color.white;
@@ -57,7 +53,7 @@ public class AttachmentNode : MonoBehaviour {
 			}
 		} else if (attachmentType == AttachmentType.Triangle) {
 			Gizmos.color = Color.yellow;
-			Gizmos.DrawWireSphere(transform.position + transform.parent.rotation * offset, 0.05f);
+			Gizmos.DrawWireSphere(transform.position, 0.05f);
 		}
 	}
 

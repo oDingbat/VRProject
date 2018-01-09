@@ -3,21 +3,22 @@ using System.Collections.Generic;
 using UnityEngine;
 
 [System.Serializable]
-[RequireComponent(typeof(Rigidbody))]
 public abstract class Item : MonoBehaviour {
 
 	public Rigidbody			itemRigidbody;
+	public RigidbodyCopy		rigidbodyCopy;
 
 	[Header("Information")]
 	public string				itemName;
 	public float				timeLastGrabbed;
+	public bool					nonDualWieldable;
 
 	[Header("Pocketing Info")]
 	public GrabNode				pocketGrabNode;
 	public Pocket				pocketCurrent;
 	public Pocket.PocketSize	pocketSize = Pocket.PocketSize.Small;
 	public Transform			pocketingModel;
-	public Pocket				pocketCandidate;
+	public Transform			pocketCandidate;
 	public float				pocketCandidateTime;
 	public Material				pocketingModelMaterialPrivate;
 	public Quaternion			pocketingModelRotationOffset;
@@ -29,15 +30,19 @@ public abstract class Item : MonoBehaviour {
 
 	void Start () {
 		itemRigidbody = GetComponent<Rigidbody>();
+		rigidbodyCopy = new RigidbodyCopy(itemRigidbody);
 		if (transform.Find("(PocketingModel)")) {
 			pocketingModel = transform.Find("(PocketingModel)");
 
 			if (pocketingModel) {
-				foreach (Transform model in pocketingModel) {
-					if (pocketingModelMaterialPrivate == null) {
-						pocketingModelMaterialPrivate = new Material(model.GetComponent<Renderer>().material);
+				Transform[] modelChildren = pocketingModel.gameObject.GetComponentsInChildren<Transform>();
+				foreach (Transform model in modelChildren) {
+					if (model.GetComponent<Renderer>() != null) {
+						if (pocketingModelMaterialPrivate == null) {
+							pocketingModelMaterialPrivate = new Material(model.GetComponent<Renderer>().material);
+						}
+						model.GetComponent<Renderer>().material = pocketingModelMaterialPrivate;
 					}
-					model.GetComponent<Renderer>().material = pocketingModelMaterialPrivate;
 				}
 			}
 		} else {
@@ -63,27 +68,18 @@ public abstract class Item : MonoBehaviour {
 	}
 
 	void UpdatePocketingModel () {
-		if (pocketingModel) {
-			if (pocketCandidate) {
+		if (pocketingModel) {		// Does this item currently have a pocketingModel?
+			if (pocketCandidate) {	// Does this item currently have a candidate for a pocketing position
 				// Set Pocketing Model Color
 				if (Time.timeSinceLevelLoad - pocketCandidateTime < 0.1f) {
 					pocketingModelMaterialPrivate.color = Color.Lerp(pocketingModelMaterialPrivate.color, new Color(pocketingModelMaterialPrivate.color.r, pocketingModelMaterialPrivate.color.g, pocketingModelMaterialPrivate.color.b, 0.2f), Mathf.Clamp01(Time.deltaTime * 25));
 				} else {
 					pocketingModelMaterialPrivate.color = Color.Lerp(pocketingModelMaterialPrivate.color, new Color(pocketingModelMaterialPrivate.color.r, pocketingModelMaterialPrivate.color.g, pocketingModelMaterialPrivate.color.b, 0.0f), Mathf.Clamp01(Time.deltaTime * 25));
 				}
-
-				// Set Pocketing Model Position & Rotation
-				if (pocketingModelMaterialPrivate.color.a > 0) {
-					if (pocketGrabNode) {
-						pocketingModel.transform.position = pocketCandidate.transform.position - (pocketingModel.transform.rotation * pocketGrabNode.transform.localPosition);
-						pocketingModel.transform.rotation = pocketCandidate.transform.rotation;
-					} else {
-						pocketingModel.transform.position = pocketCandidate.transform.position;
-						pocketingModel.transform.rotation = pocketCandidate.transform.rotation;
-					}
-				}
 			} else {
-				pocketingModelMaterialPrivate.color = Color.Lerp(pocketingModelMaterialPrivate.color, new Color(pocketingModelMaterialPrivate.color.r, pocketingModelMaterialPrivate.color.g, pocketingModelMaterialPrivate.color.b, 0.0f), Mathf.Clamp01(Time.deltaTime * 25));
+				if (pocketingModelMaterialPrivate) {
+					pocketingModelMaterialPrivate.color = Color.Lerp(pocketingModelMaterialPrivate.color, new Color(pocketingModelMaterialPrivate.color.r, pocketingModelMaterialPrivate.color.g, pocketingModelMaterialPrivate.color.b, 0.0f), Mathf.Clamp01(Time.deltaTime * 25));
+				}
 			}
 		}
 	}

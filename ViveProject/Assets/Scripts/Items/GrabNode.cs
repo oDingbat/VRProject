@@ -11,8 +11,10 @@ public class GrabNode : MonoBehaviour {
 	public int				dominance;
 
 	[Space(10)][Header("Enums")]
-	public GrabType			grabType;
+	public GrabType			grabType = GrabType.Dynamic;
 	public enum				GrabType { FixedPositionRotation, FixedPosition, Dynamic, Referral, PocketOnly }
+	public TriggerType		triggerType;
+	public enum				TriggerType { None, Fire }
 	public InteractionType	interactionType;
 	public enum				InteractionType { None, Trigger }
 
