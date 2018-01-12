@@ -14,6 +14,17 @@ public class RigidbodyCopy {
 	public CollisionDetectionMode	collisionDetectionMode;
 	public RigidbodyConstraints		constraints;
 
+	public static void SetRigidbodyValues (Rigidbody rigidbody, RigidbodyCopy rigidbodyCopy) {
+		rigidbody.mass = rigidbodyCopy.mass;
+		rigidbody.drag = rigidbodyCopy.drag;
+		rigidbody.angularDrag = rigidbodyCopy.angularDrag;
+		rigidbody.useGravity = rigidbodyCopy.useGravity;
+		rigidbody.isKinematic = rigidbodyCopy.isKinematic;
+		rigidbody.interpolation = rigidbodyCopy.interpolation;
+		rigidbody.collisionDetectionMode = rigidbodyCopy.collisionDetectionMode;
+		rigidbody.constraints = rigidbodyCopy.constraints;
+	}
+
 	public RigidbodyCopy (Rigidbody copiedRigidbody) {
 		mass = copiedRigidbody.mass;
 		drag = copiedRigidbody.drag;

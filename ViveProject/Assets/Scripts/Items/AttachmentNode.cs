@@ -6,7 +6,7 @@ public class AttachmentNode : MonoBehaviour {
 
 	[Space(10)][Header("Enums")]
 	public AttachmentType attachmentType;
-	public enum AttachmentType { Square, Circle, Triangle, Hexagon }
+	public enum AttachmentType { Barrel, Square, Circle, Triangle }
 	public AttachmentGender attachmentGender;
 	public enum AttachmentGender { Male, Female }
 
@@ -15,45 +15,55 @@ public class AttachmentNode : MonoBehaviour {
 	public AttachmentNode connectedNode;
 
 	void OnDrawGizmosSelected() {
-		if (attachmentType == AttachmentType.Square) {
-			if (attachmentGender == AttachmentGender.Male) {
-				Gizmos.color = Color.red;
-				Debug.DrawLine(transform.position, transform.position + (transform.forward * 0.01f), Color.red);
-				Gizmos.matrix = Matrix4x4.TRS(transform.position, transform.rotation, transform.localScale);
-				Gizmos.DrawWireCube(Vector3.zero, new Vector3(0.02f, 0.02f, 0.00f));
-				Gizmos.DrawWireCube(Vector3.zero, new Vector3(0.01f, 0.01f, 0.00f));
-			} else {
-				Gizmos.color = Color.cyan;
-				Debug.DrawLine(transform.position, transform.position + (transform.forward * 0.01f), Color.cyan);
-				Gizmos.matrix = Matrix4x4.TRS(transform.position, transform.rotation, transform.localScale);
-				Gizmos.DrawWireCube(Vector3.zero, new Vector3(0.02f, 0.02f, 0.00f));
-				Gizmos.DrawWireCube(Vector3.zero, new Vector3(0.01f, 0.01f, 0.00f));
-			}
-		} else if (attachmentType == AttachmentType.Circle) {
-			Color currentColor = Color.white;
-			Vector3 basePos = Vector3.zero;
+		// The purpose of this method is to show a visual representation of the attachmentNode's values in the editor
 
-			if (attachmentGender == AttachmentGender.Male) {
-				currentColor = Color.red;
-				basePos = transform.position + transform.forward * 0.01f;
-				Debug.DrawLine(transform.position + (transform.forward * 0.01f), transform.position + (transform.forward * 0.035f), Color.red);
-			} else {
-				currentColor = Color.cyan;
-				basePos = transform.position - transform.forward * 0.01f;
-				Debug.DrawLine(transform.position + (transform.forward * 0.015f), transform.position + (transform.forward * -0.01f), Color.cyan);
+		Color baseColor = Color.white;
+
+		// Set Male/Female specific values
+		if (attachmentGender == AttachmentGender.Male) {
+			baseColor = Color.red;
+			Debug.DrawLine(transform.position, transform.position + (transform.forward * 0.01f), baseColor);
+		} else {
+			baseColor = Color.cyan;
+			Debug.DrawLine(transform.position, transform.position + (transform.forward * -0.01f), baseColor);
+		}
+
+		// Set attachment specific values
+		switch (attachmentType) {
+			case AttachmentType.Barrel: {
+				Create2DPolygon(transform.position, 6, baseColor);
+			} break; 
+			case AttachmentType.Square: {
+				Create2DPolygon(transform.position, 4, baseColor, 45);
+			} break;
+			case AttachmentType.Circle: {
+				Create2DPolygon(transform.position, 16, baseColor);
+			} break;
+			case AttachmentType.Triangle: {
+				Create2DPolygon(transform.position, 3, baseColor);
+			} break;
+		}
+	}
+
+	void Create2DPolygon (Vector3 basePosition, int sides, Color baseColor) {
+		float degreeIncrement = 360 / (float)sides;
+		for (int j = 0; j < 2; j++) {
+			for (float a = 0; a < sides; a++) {
+				Quaternion rot1 = Quaternion.AngleAxis((degreeIncrement * a), transform.forward);
+				Quaternion rot2 = Quaternion.AngleAxis((degreeIncrement * (a + 1)), transform.forward);
+				Debug.DrawLine(basePosition + (rot1 * transform.up) * (j == 0 ? 0.01f : 0.005f), basePosition + (rot2 * transform.up) * (j == 0 ? 0.01f : 0.005f), baseColor);
 			}
-			float circleVerts = 16;
-			float degreeIncrement = 360 / circleVerts;
-			for (int j = 0; j < 2; j++) {
-				for (float a = 0; a < circleVerts; a++) {
-					Quaternion rot1 = Quaternion.AngleAxis((degreeIncrement * a), transform.forward);
-					Quaternion rot2 = Quaternion.AngleAxis((degreeIncrement * (a + 1)), transform.forward);
-					Debug.DrawLine(basePos + (rot1 * transform.up) * (j == 0 ? 0.01f : 0.005f), basePos + (rot2 * transform.up) * (j == 0 ? 0.01f : 0.005f), currentColor);
-				}
+		}
+	}
+
+	void Create2DPolygon(Vector3 basePosition, int sides, Color baseColor, float rotationOffset) {
+		float degreeIncrement = 360 / (float)sides;
+		for (int j = 0; j < 2; j++) {
+			for (float a = 0; a < sides; a++) {
+				Quaternion rot1 = Quaternion.AngleAxis((degreeIncrement * a) + rotationOffset, transform.forward);
+				Quaternion rot2 = Quaternion.AngleAxis((degreeIncrement * (a + 1)) + rotationOffset, transform.forward);
+				Debug.DrawLine(basePosition + (rot1 * transform.up) * (j == 0 ? 0.01f : 0.005f), basePosition + (rot2 * transform.up) * (j == 0 ? 0.01f : 0.005f), baseColor);
 			}
-		} else if (attachmentType == AttachmentType.Triangle) {
-			Gizmos.color = Color.yellow;
-			Gizmos.DrawWireSphere(transform.position, 0.05f);
 		}
 	}
 

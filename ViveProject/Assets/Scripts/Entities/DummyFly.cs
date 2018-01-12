@@ -13,7 +13,6 @@ public class DummyFly : MonoBehaviour {
 	public LayerMask visionMask;
 
 	float speed = 4f;
-	bool isAirbourne;
 
 	public Material matDead;
 	public Material matIdle;
@@ -53,11 +52,11 @@ public class DummyFly : MonoBehaviour {
 	}
 
 	void OnCollisionStay (Collision col) {
-		isAirbourne = false;
+		
 	}
 
 	void OnCollisionExit (Collision col) {
-		isAirbourne = true;
+		
 	}
 
 	void Die () {

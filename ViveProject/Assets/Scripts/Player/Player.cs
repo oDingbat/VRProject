@@ -177,7 +177,6 @@ public class Player : MonoBehaviour {
 		audioManager = GameObject.Find("AudioManager").GetComponent<AudioManager>();
 		entity = GetComponent<Entity>();
 		headlight = hmd.transform.parent.Find("Headlight").gameObject;
-		Debug.Log("Vitals");
 
 		// Subscribe Events
 		entity.eventTakeDamage += TakeDamage;
@@ -201,8 +200,6 @@ public class Player : MonoBehaviour {
 		if (grounded == true && Vector3.Distance(new Vector3(bodyCC.transform.position.x, 0, bodyCC.transform.position.z), positionLastFootstepPlayed) > 2f) {
 			PlayFootstepSound();
 		}
-
-		GetGrabWorldPosition(itemGrabInfoRight);
 
 		handInfoLeft.controllerPosLastFrame = handInfoLeft.controller.transform.position;
 		handInfoRight.controllerPosLastFrame = handInfoRight.controller.transform.position;
@@ -234,8 +231,6 @@ public class Player : MonoBehaviour {
 				flashlight.SetActive(!flashlight.activeSelf);
 			}
 		}
-
-		CheckItemGrab(itemGrabInfoCurrent, itemGrabInfoOpposite, handInfoCurrent);
 
 		// Grip Down and Held functionality
 		if (handInfoCurrent.controllerDevice.GetPress(Valve.VR.EVRButtonId.k_EButton_Grip)) {    // Grip Being Held
@@ -300,67 +295,74 @@ public class Player : MonoBehaviour {
 	}
 
 	AttachmentNodePair GetAttachmentConnection (ItemGrabInformation itemGrabInfoCurrent, HandInformation handInfoCurrent) {
-		// This method
-		AttachmentNodePair chosenANP = new AttachmentNodePair();
+		// This method Checks whether an item 'itemGrabInfoCurrent' can currently be attached to any other items
+		// It will then return an ATtachmentNodePair object with the attachmentNode of the held item and the attachmentNode of a item it will attach to
 
-		if (itemGrabInfoCurrent.grabbedItem is Attachment) {        // If this Item is an attachment
-			Transform attachmentNodesContainer = itemGrabInfoCurrent.grabbedItem.transform.Find("(AttachmentNodes)");
-			if (attachmentNodesContainer != null) {
-				List<AttachmentNodePair> possibleAttachmentNodePairs = new List<AttachmentNodePair>();
-				
-				// Find all possible matching attachmentNodes
-				foreach (Transform itemAttNodeTransform in attachmentNodesContainer) {      // For each attachmentNode this item has, test to see if it can connect with any attachmentNodes on other items
-					AttachmentNode itemAttNodeObject = itemAttNodeTransform.GetComponent<AttachmentNode>();
-					if (itemAttNodeObject.isAttached == false) {		// Make sure this node isn't already attached to something
-						Collider[] hitAttNodes = Physics.OverlapSphere(itemAttNodeTransform.transform.position, 0.1f, attachmentNodeMask);
+		AttachmentNodePair chosenANP = null;
 
-						foreach (Collider hitAttNodeCurrent in hitAttNodes) {
-							if (hitAttNodeCurrent.transform.parent.parent != transform) {        // Make sure the hit attachmentNode is not a child of this item
-								AttachmentNode hitAttNodeObject = hitAttNodeCurrent.GetComponent<AttachmentNode>();
-								if (hitAttNodeObject.attachmentType == itemAttNodeObject.attachmentType && hitAttNodeObject.attachmentGender != itemAttNodeObject.attachmentGender) {
-									possibleAttachmentNodePairs.Add(new AttachmentNodePair(itemAttNodeObject, hitAttNodeObject));
-								}
+		Transform attachmentNodesContainer = itemGrabInfoCurrent.grabbedItem.transform.Find("(AttachmentNodes)");   // The attachmentNode container on this item which contains all attachmentNodes this item has
+		if (itemGrabInfoCurrent.grabbedItem is Attachment && attachmentNodesContainer != null) {        // 1: Is this item an attachment? 2: Does this item contain attachmentNodes
+			List<AttachmentNodePair> possibleAttachmentNodePairs = new List<AttachmentNodePair>();		// List containing all possible pairs of attachmentNodes
+
+			// Find all possible matching attachmentNodes
+			foreach (Transform heldNodeTransform in attachmentNodesContainer) {      // For each attachmentNode this item has, test to see if it can connect with any attachmentNodes on other items
+				AttachmentNode heldNode = heldNodeTransform.GetComponent<AttachmentNode>();
+				if (heldNode.isAttached == false && heldNode.attachmentGender == AttachmentNode.AttachmentGender.Male) {        // Make sure this node isn't already attached to something and only check the male attachmentNodes
+					Collider[] hitNodes = Physics.OverlapSphere(heldNode.transform.position, 0.1f, attachmentNodeMask);
+
+					foreach (Collider hitNodeCollider in hitNodes) {
+						if (hitNodeCollider.transform.parent.parent != itemGrabInfoCurrent.grabbedItem.transform) {        // Make sure the hit attachmentNode is not a child of this item
+							AttachmentNode hitNode = hitNodeCollider.GetComponent<AttachmentNode>();
+							if (hitNode != null && hitNode.isAttached == false && hitNode.attachmentType == heldNode.attachmentType && hitNode.attachmentGender != heldNode.attachmentGender) {
+								possibleAttachmentNodePairs.Add(new AttachmentNodePair(heldNode, hitNode));
 							}
 						}
 					}
 				}
-				
-				// Find closest pair of attachmentNodes
-				if (possibleAttachmentNodePairs.Count > 0) {
-					float shortestDistance = Vector3.Distance(possibleAttachmentNodePairs[0].nodeAttachmentItem.transform.position, possibleAttachmentNodePairs[0].nodeAttachedToItem.transform.position);
-					chosenANP = possibleAttachmentNodePairs[0];
-					for (int i = 1; i < possibleAttachmentNodePairs.Count; i++) {
-						float thisDistance = Vector3.Distance(possibleAttachmentNodePairs[i].nodeAttachmentItem.transform.position, possibleAttachmentNodePairs[i].nodeAttachedToItem.transform.position);
-						if (thisDistance < shortestDistance) {
-							shortestDistance = thisDistance;
-							chosenANP = possibleAttachmentNodePairs[i];
-						}
-					}
+			}
 
-					if (chosenANP != null) {
-						Debug.Log("Attachment Successful!");
+			// Find closest pair of attachmentNodes
+			if (possibleAttachmentNodePairs.Count > 0) {
+				float shortestDistance = Vector3.Distance(possibleAttachmentNodePairs[0].nodeChild.transform.position, possibleAttachmentNodePairs[0].nodeParent.transform.position);
+				chosenANP = possibleAttachmentNodePairs[0];
+
+				// Cycle through all possibleAttachmentNodePairs to find the closest attachmentNodePair
+				for (int i = 1; i < possibleAttachmentNodePairs.Count; i++) {
+					float thisDistance = Vector3.Distance(possibleAttachmentNodePairs[i].nodeChild.transform.position, possibleAttachmentNodePairs[i].nodeParent.transform.position);
+					if (thisDistance < shortestDistance) {
+						shortestDistance = thisDistance;
+						chosenANP = possibleAttachmentNodePairs[i];
 					}
 				}
-
 			}
 		}
 		return chosenANP;
 	}
 
 	void InitiateAttachment (AttachmentNodePair attachmentNodePair, ItemGrabInformation itemGrabInfoCurrent) {
-		attachmentNodePair.nodeAttachmentItem.isAttached = true;
-		attachmentNodePair.nodeAttachmentItem.connectedNode = attachmentNodePair.nodeAttachedToItem;
-		attachmentNodePair.nodeAttachedToItem.connectedNode = attachmentNodePair.nodeAttachmentItem;
+		// This method initiates an attachment between to attachmentNodes contained in 'attachmentNodePair'
+		if (attachmentNodePair != null) {
+			// Set attachmentNode variables
+			attachmentNodePair.nodeChild.isAttached = true;
+			attachmentNodePair.nodeParent.isAttached = true;
+			attachmentNodePair.nodeChild.connectedNode = attachmentNodePair.nodeParent;
+			attachmentNodePair.nodeParent.connectedNode = attachmentNodePair.nodeChild;
 
-		itemGrabInfoCurrent.grabbedItem.transform.parent = attachmentNodePair.nodeAttachedToItem.transform.parent.parent.Find("(Attachments)");
-		itemGrabInfoCurrent.grabbedItem.transform.rotation = attachmentNodePair.nodeAttachedToItem.transform.rotation * attachmentNodePair.nodeAttachmentItem.transform.localRotation;
-		itemGrabInfoCurrent.grabbedItem.transform.position = attachmentNodePair.nodeAttachedToItem.transform.position + (itemGrabInfoCurrent.grabbedItem.transform.rotation * -attachmentNodePair.nodeAttachmentItem.transform.localPosition);
+			itemGrabInfoCurrent.grabbedItem.transform.parent = attachmentNodePair.nodeParent.transform.parent.parent.Find("(Attachments)");
 
-		itemGrabInfoCurrent.grabbedItem.rigidbodyCopy = new RigidbodyCopy(itemGrabInfoCurrent.grabbedRigidbody);
-		Destroy(itemGrabInfoCurrent.grabbedRigidbody);
+			Quaternion nodeChildInvertedRotation = Quaternion.AngleAxis(180, attachmentNodePair.nodeParent.transform.right) * attachmentNodePair.nodeParent.transform.rotation;
+			Quaternion rotationDelta = Quaternion.Inverse(itemGrabInfoCurrent.grabbedItem.transform.rotation) * nodeChildInvertedRotation;
+
+			itemGrabInfoCurrent.grabbedItem.transform.rotation *= rotationDelta * Quaternion.Inverse(attachmentNodePair.nodeChild.transform.localRotation);
+			itemGrabInfoCurrent.grabbedItem.transform.position = attachmentNodePair.nodeParent.transform.position + (itemGrabInfoCurrent.grabbedItem.transform.rotation * -attachmentNodePair.nodeChild.transform.localPosition);
+
+			itemGrabInfoCurrent.grabbedItem.rigidbodyCopy = new RigidbodyCopy(itemGrabInfoCurrent.grabbedRigidbody);
+			Destroy(itemGrabInfoCurrent.grabbedRigidbody);
+		}
 	}
 
 	void DetachAttachment (ItemGrabInformation itemGrabInfoCurrent, HandInformation handInfoCurrent) {
+		// This method is used to fully detach any parent items this item is attached to. It does not detach items that are children of it, it only detaches itself from it's parent
 		Transform attachmentNodesContainer = itemGrabInfoCurrent.grabbedItem.transform.Find("(AttachmentNodes)");
 		if (attachmentNodesContainer) {
 			foreach (Transform itemAttNodeTransform in attachmentNodesContainer) {
@@ -368,27 +370,22 @@ public class Player : MonoBehaviour {
 				if (hitAttNodeObject && hitAttNodeObject.attachmentGender == AttachmentNode.AttachmentGender.Male && hitAttNodeObject.isAttached == true) {
 					// Detach node
 					hitAttNodeObject.isAttached = false;
+					hitAttNodeObject.connectedNode.isAttached = false;
 					hitAttNodeObject.connectedNode.connectedNode = null;		// Clear this node's connectedNode's connectedNode (yikes)
 					hitAttNodeObject.connectedNode = null;                      // Clear this node's connectedNode
 				}
 			}
 
 			// Unparent attachment
-			itemGrabInfoCurrent.grabbedItem.transform.parent = itemGrabInfoCurrent.grabbedItem.transform.parent.parent.parent;
+			Transform ItemManager = GameObject.Find("ItemManager").transform;
+			itemGrabInfoCurrent.grabbedItem.transform.parent = ItemManager;
 
 			// Reapply rigidbody
 			itemGrabInfoCurrent.grabbedItem.gameObject.AddComponent<Rigidbody>();
 			Rigidbody newRigidbody = itemGrabInfoCurrent.grabbedItem.gameObject.GetComponent<Rigidbody>();
 
-			// Set rigidbody values
-			newRigidbody.mass = itemGrabInfoCurrent.grabbedItem.rigidbodyCopy.mass;
-			newRigidbody.drag = itemGrabInfoCurrent.grabbedItem.rigidbodyCopy.drag;
-			newRigidbody.angularDrag = itemGrabInfoCurrent.grabbedItem.rigidbodyCopy.angularDrag;
-			newRigidbody.useGravity = itemGrabInfoCurrent.grabbedItem.rigidbodyCopy.useGravity;
-			newRigidbody.isKinematic = itemGrabInfoCurrent.grabbedItem.rigidbodyCopy.isKinematic;
-			newRigidbody.interpolation = itemGrabInfoCurrent.grabbedItem.rigidbodyCopy.interpolation;
-			newRigidbody.collisionDetectionMode = itemGrabInfoCurrent.grabbedItem.rigidbodyCopy.collisionDetectionMode;
-			newRigidbody.constraints = itemGrabInfoCurrent.grabbedItem.rigidbodyCopy.constraints;
+			// Copy RigidbodyCopy's values over to the newly created rigidbody
+			RigidbodyCopy.SetRigidbodyValues(newRigidbody, itemGrabInfoCurrent.grabbedItem.rigidbodyCopy);
 
 			itemGrabInfoCurrent.grabbedItem.itemRigidbody = newRigidbody;
 
@@ -413,12 +410,12 @@ public class Player : MonoBehaviour {
 	}
 
 	public class AttachmentNodePair {
-		public AttachmentNode nodeAttachmentItem;
-		public AttachmentNode nodeAttachedToItem;
+		public AttachmentNode nodeChild;
+		public AttachmentNode nodeParent;
 
-		public AttachmentNodePair (AttachmentNode _nodeAttachmentItem, AttachmentNode _nodeAttachedToItem) {
-			nodeAttachmentItem = _nodeAttachmentItem;
-			nodeAttachedToItem = _nodeAttachedToItem;
+		public AttachmentNodePair (AttachmentNode _nodeChild, AttachmentNode _nodeParent) {
+			nodeChild = _nodeChild;
+			nodeParent = _nodeParent;
 		}
 
 		public AttachmentNodePair () {
@@ -431,64 +428,6 @@ public class Player : MonoBehaviour {
 		rigOffset.y = 0;
 		rig.transform.position = new Vector3(hmd.transform.position.x, rig.transform.position.y, hmd.transform.position.z) + (rot * rigOffset);
 		rig.transform.rotation = rig.transform.rotation * rot;
-	}
-
-	void CheckItemGrab (ItemGrabInformation itemGrabInfoCurrent, ItemGrabInformation itemGrabInfoOpposite, HandInformation handInfoCurrent) {
-	// This method checks to see if the hand can grab an item. If it can, it will glow
-		Vector3 originPosition = handInfoCurrent.controller.transform.position + (handInfoCurrent.controller.transform.rotation * new Vector3(handRigidbodyPositionOffset.x, handRigidbodyPositionOffset.y, handRigidbodyPositionOffset.z));
-		Collider[] itemColliders = Physics.OverlapSphere(originPosition, 0.2f, itemGrabLayerMask);
-		foreach (Collider hitItem in itemColliders) {
-			if (hitItem.transform.gameObject.layer == LayerMask.NameToLayer("Item") || hitItem.transform.gameObject.layer == LayerMask.NameToLayer("Heavy Item")) {
-				Item item = null;
-
-				if (hitItem.transform.GetComponent<Item>()) {
-					item = hitItem.transform.GetComponent<Item>();
-				} else if (hitItem.transform.parent.GetComponent<Item>()) {
-					item = hitItem.transform.parent.GetComponent<Item>();
-				} else if (hitItem.transform.parent.parent.GetComponent<Item>()) {
-					item = hitItem.transform.parent.parent.GetComponent<Item>();
-				}
-
-
-				// Set correct rigidbody
-				Rigidbody itemRigidbody = null;
-				if (item.transform.GetComponent<Rigidbody>() == null) {
-					if (item.transform.parent.name == "(Attachments)") {
-						itemRigidbody = item.transform.parent.parent.GetComponent<Rigidbody>();
-					}
-				} else {
-					itemRigidbody = item.transform.GetComponent<Rigidbody>();
-				}
-
-				GrabNode hitGrabNode = hitItem.GetComponent<GrabNode>();
-				if (hitGrabNode) {
-					if (hitGrabNode.referralNode != null) {
-						hitGrabNode = hitGrabNode.referralNode;
-					}
-
-					if (hitGrabNode == itemGrabInfoOpposite.grabNode) {
-						itemGrabInfoCurrent.grabbableItemLastFrame = null;
-						return;
-					}
-				} else {
-					if (item == itemGrabInfoOpposite.grabbedItem) {
-						itemGrabInfoCurrent.grabbableItemLastFrame = null;
-						return;
-					}
-				}
-
-				if (item != null) {
-
-					if (itemGrabInfoCurrent.grabbableItemLastFrame != itemRigidbody.transform) {
-						StartCoroutine(TriggerHapticFeedback(handInfoCurrent.controllerDevice, 1000, 0.05f));
-					}
-
-					itemGrabInfoCurrent.grabbableItemLastFrame = itemRigidbody.transform;
-				}
-				return;
-			}
-		}
-		itemGrabInfoCurrent.grabbableItemLastFrame = null;
 	}
 
 	void Grab(string side, ItemGrabInformation itemGrabInfoCurrent, ItemGrabInformation itemGrabInfoOpposite, EnvironmentGrabInformation envGrabInfoCurrent, EnvironmentGrabInformation envGrabInfoOpposite, HandInformation handInfoCurrent, HandInformation handInfoOpposite) {
@@ -560,9 +499,29 @@ public class Player : MonoBehaviour {
 
 					// Set correct rigidbody
 					if (itemGrabInfoCurrent.grabbedItem.transform.GetComponent<Rigidbody>() == null) {
+
+						// If this item is an attachment
 						if (itemGrabInfoCurrent.grabbedItem.transform.parent.name == "(Attachments)") {
-							itemGrabInfoCurrent.grabbedRigidbody = itemGrabInfoCurrent.grabbedItem.transform.parent.parent.GetComponent<Rigidbody>();
+							Transform grabbedItemParentItem = itemGrabInfoCurrent.grabbedItem.transform.parent.parent;
+							while (true) {
+								// if this new grabbedItemParentItem has a rigidbody, end the loop
+								Rigidbody rigidbodySearch = grabbedItemParentItem.GetComponent<Rigidbody>();
+								if (rigidbodySearch != null) {
+									itemGrabInfoCurrent.grabbedRigidbody = rigidbodySearch;
+									break;
+								}
+
+								// If theres no item we fucked
+								if (grabbedItemParentItem == null) {
+									Debug.LogWarning("Aye, where thee fuk is thee item?");
+									break;
+								}
+
+								grabbedItemParentItem = grabbedItemParentItem.parent.parent;
+							}
 						}
+
+						Debug.Log(itemGrabInfoCurrent.grabbedRigidbody);
 					} else {
 						itemGrabInfoCurrent.grabbedRigidbody = chosenIAN.item.transform.GetComponent<Rigidbody>();
 					}
@@ -686,7 +645,7 @@ public class Player : MonoBehaviour {
 			closestColliderPoint = itemGrabInfoCurrent.grabNode.transform.GetComponent<Collider>().ClosestPoint(handInfoCurrent.handRigidbody.transform.position);
 		} else {
 			if (itemGrabInfoCurrent.grabbedItem.transform.GetComponent<Collider>() == null) {
-				Debug.LogError("Error: missing collider on grabbed Item. Either give the item a single collider, or give it's subColliders grabNodes");
+
 			}
 			closestColliderPoint = itemGrabInfoCurrent.grabbedItem.transform.GetComponent<Collider>().ClosestPoint(handInfoCurrent.handRigidbody.transform.position);
 		}
@@ -740,8 +699,8 @@ public class Player : MonoBehaviour {
 			itemGrabInfoCurrent.itemVelocityPercentage = 0.25f;
 			itemGrabInfoOpposite.itemVelocityPercentage = 0.25f;
 			if (itemGrabInfoOpposite.grabbedRigidbody != itemGrabInfoCurrent.grabbedRigidbody) {
-				AttachmentNodePair attachmentNodePairInfo = GetAttachmentConnection(itemGrabInfoCurrent, handInfoCurrent);
-				if (attachmentNodePairInfo.nodeAttachedToItem == null) {        // If the attachment item doesn't currently have a possible attachment
+				AttachmentNodePair attachmentNodePairInfo = GetAttachmentConnection(itemGrabInfoCurrent, handInfoCurrent);		// Get possible attachmentNodePair for current item (null if no pairs are available)
+				if (attachmentNodePairInfo == null) {        // If there are no possible AttachmentNodePairs for this item
 					ThrowItem(handInfoCurrent, itemGrabInfoCurrent, (handInfoCurrent.controller.transform.position - handInfoCurrent.handPosLastFrame) / Time.deltaTime);
 				} else {
 					InitiateAttachment(attachmentNodePairInfo, itemGrabInfoCurrent);
@@ -808,7 +767,7 @@ public class Player : MonoBehaviour {
 			Weapon currentWeapon = itemGrabInfoCurrent.grabbedItem as Weapon;
 			currentWeapon.triggerHeld = true;
 			currentWeapon.timeLastTriggered = Time.timeSinceLevelLoad;
-			if (itemGrabInfoCurrent.grabNode.interactionType == GrabNode.InteractionType.Trigger) {
+			if (itemGrabInfoCurrent.grabNode.triggerType == GrabNode.TriggerType.Fire) {
 				if (currentWeapon.automatic == true) {
 					AttemptToFireWeapon(side, itemGrabInfoCurrent.grabbedItem, handInfoCurrent);
 				}
@@ -823,7 +782,7 @@ public class Player : MonoBehaviour {
 		if (itemGrabInfoCurrent.grabbedItem is Weapon) {
 			Weapon currentWeapon = itemGrabInfoCurrent.grabbedItem as Weapon;
 			currentWeapon.triggerHeld = false;
-			if (itemGrabInfoCurrent.grabNode.interactionType == GrabNode.InteractionType.Trigger) {
+			if (itemGrabInfoCurrent.grabNode.triggerType == GrabNode.TriggerType.Fire) {
 				if (currentWeapon.chargingEnabled == true) {
 					AttemptToFireWeapon(side, itemGrabInfoCurrent.grabbedItem, handInfoCurrent);
 				}
@@ -1484,7 +1443,7 @@ public class Player : MonoBehaviour {
 			}
 
 			AttachmentNodePair chosenANP = GetAttachmentConnection(itemGrabInfoCurrent, handInfoCurrent);
-			if (chosenANP.nodeAttachedToItem == null) {        // If the attachment item doesn't currently have a possible attachment
+			if (chosenANP == null) {        // If the attachment item doesn't currently have a possible attachment
 				Collider[] pockets = Physics.OverlapSphere(handInfoCurrent.handRigidbody.transform.position, 0.2f, pocketMask);
 				if (pockets.Length > 0) {
 					List<Pocket> availablePockets = new List<Pocket>();
@@ -1534,18 +1493,22 @@ public class Player : MonoBehaviour {
 				}
 			} else {
 				// Pocketing onto attachment slots
-				if (itemGrabInfoCurrent.pocketCandidateLastFrame != chosenANP.nodeAttachedToItem.transform) {   // If the chosenPocket is different from the one found last frame, trigger haptic feedback
+				if (itemGrabInfoCurrent.pocketCandidateLastFrame != chosenANP.nodeParent.transform) {   // If the chosenPocket is different from the one found last frame, trigger haptic feedback
 					StartCoroutine(TriggerHapticFeedback(handInfoCurrent.controllerDevice, 1000, 0.05f, 2));
-					itemGrabInfoCurrent.pocketCandidateLastFrame = chosenANP.nodeAttachedToItem.transform;
+					itemGrabInfoCurrent.pocketCandidateLastFrame = chosenANP.nodeParent.transform;
 				}
 
-				itemGrabInfoCurrent.grabbedItem.pocketCandidate = chosenANP.nodeAttachedToItem.transform;
+				itemGrabInfoCurrent.grabbedItem.pocketCandidate = chosenANP.nodeParent.transform;
 				itemGrabInfoCurrent.grabbedItem.pocketCandidateTime = Time.timeSinceLevelLoad;
-				itemGrabInfoCurrent.grabbedItem.pocketingModel.parent = chosenANP.nodeAttachedToItem.transform;
+				itemGrabInfoCurrent.grabbedItem.pocketingModel.parent = chosenANP.nodeParent.transform;
 
-				itemGrabInfoCurrent.grabbedItem.pocketingModel.parent = chosenANP.nodeAttachedToItem.transform.parent.parent.Find("(Attachments)");
-				itemGrabInfoCurrent.grabbedItem.pocketingModel.rotation = chosenANP.nodeAttachedToItem.transform.rotation * chosenANP.nodeAttachmentItem.transform.localRotation;
-				itemGrabInfoCurrent.grabbedItem.pocketingModel.position = chosenANP.nodeAttachedToItem.transform.position + (itemGrabInfoCurrent.grabbedItem.pocketingModel.rotation * -chosenANP.nodeAttachmentItem.transform.localPosition);
+				itemGrabInfoCurrent.grabbedItem.pocketingModel.parent = chosenANP.nodeParent.transform.parent.parent.Find("(Attachments)");
+
+				Quaternion nodeChildInvertedRotation = Quaternion.AngleAxis(180, chosenANP.nodeParent.transform.right) * chosenANP.nodeParent.transform.rotation;
+				Quaternion rotationDelta = Quaternion.Inverse(itemGrabInfoCurrent.grabbedItem.pocketingModel.rotation) * nodeChildInvertedRotation;
+
+				itemGrabInfoCurrent.grabbedItem.pocketingModel.rotation *= rotationDelta * Quaternion.Inverse(chosenANP.nodeChild.transform.localRotation);
+				itemGrabInfoCurrent.grabbedItem.pocketingModel.position = chosenANP.nodeParent.transform.position + (itemGrabInfoCurrent.grabbedItem.pocketingModel.rotation * -chosenANP.nodeChild.transform.localPosition);
 			}
 		}
 	}

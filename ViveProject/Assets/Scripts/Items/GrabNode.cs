@@ -16,7 +16,7 @@ public class GrabNode : MonoBehaviour {
 	public TriggerType		triggerType;
 	public enum				TriggerType { None, Fire }
 	public InteractionType	interactionType;
-	public enum				InteractionType { None, Trigger }
+	public enum				InteractionType { None, Toggle }
 
 	void OnDrawGizmosSelected() {
 		if (referralNode == null) {
