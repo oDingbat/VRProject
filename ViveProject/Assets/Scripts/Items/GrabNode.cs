@@ -4,6 +4,10 @@ using UnityEngine;
 
 public class GrabNode : MonoBehaviour {
 
+	[Space(10)][Header("Item Reference")]
+	public Item						item;						// The item this grabNode is associated with
+
+
 	[Space(10)][Header("Settings")]
 	public Vector3			rotation;
 	public Vector3			offset;
@@ -17,6 +21,10 @@ public class GrabNode : MonoBehaviour {
 	public enum				TriggerType { None, Fire }
 	public InteractionType	interactionType;
 	public enum				InteractionType { None, Toggle }
+
+	void Start () {
+		item = transform.parent.parent.GetComponent<Item>();
+	}
 
 	void OnDrawGizmosSelected() {
 		if (referralNode == null) {

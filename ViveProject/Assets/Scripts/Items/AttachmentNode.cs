@@ -4,19 +4,25 @@ using UnityEngine;
 
 public class AttachmentNode : MonoBehaviour {
 
+	[Space(10)][Header("Item Reference")]
+	public Item						item;						// The item this attachmentNode is associated with
+
 	[Space(10)][Header("Enums")]
-	public AttachmentType attachmentType;
-	public enum AttachmentType { Barrel, Square, Circle, Triangle }
-	public AttachmentGender attachmentGender;
-	public enum AttachmentGender { Male, Female }
+	public AttachmentType			attachmentType;
+	public enum AttachmentType		{ Barrel, Square, Circle, Triangle }
+	public AttachmentGender			attachmentGender;
+	public enum AttachmentGender	{ Male, Female }
 
 	[Space(10)][Header("Variables")]
-	public bool isAttached;
-	public AttachmentNode connectedNode;
+	public bool						isAttached;
+	public AttachmentNode			connectedNode;
+
+	void Start() {
+		item = transform.parent.parent.GetComponent<Item>();
+	}
 
 	void OnDrawGizmosSelected() {
 		// The purpose of this method is to show a visual representation of the attachmentNode's values in the editor
-
 		Color baseColor = Color.white;
 
 		// Set Male/Female specific values

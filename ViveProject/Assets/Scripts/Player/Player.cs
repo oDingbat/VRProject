@@ -348,6 +348,17 @@ public class Player : MonoBehaviour {
 			attachmentNodePair.nodeChild.connectedNode = attachmentNodePair.nodeParent;
 			attachmentNodePair.nodeParent.connectedNode = attachmentNodePair.nodeChild;
 
+			// Update attachments list of both items
+			attachmentNodePair.nodeParent.item.attachments.Add(attachmentNodePair.nodeChild.item);
+			attachmentNodePair.nodeChild.item.attachments.Add(attachmentNodePair.nodeParent.item);
+			attachmentNodePair.nodeChild.item.isGrabbed = false;
+
+			// If nodeParent's item is a Weapon, update its combined weaponAttributes
+			if (attachmentNodePair.nodeParent.item is Weapon) {
+				Debug.Log("attachment triggered");
+				(attachmentNodePair.nodeParent.item as Weapon).UpdateCombinedAttributes();
+			}
+
 			itemGrabInfoCurrent.grabbedItem.transform.parent = attachmentNodePair.nodeParent.transform.parent.parent.Find("(Attachments)");
 
 			Quaternion nodeChildInvertedRotation = Quaternion.AngleAxis(180, attachmentNodePair.nodeParent.transform.right) * attachmentNodePair.nodeParent.transform.rotation;
@@ -366,13 +377,22 @@ public class Player : MonoBehaviour {
 		Transform attachmentNodesContainer = itemGrabInfoCurrent.grabbedItem.transform.Find("(AttachmentNodes)");
 		if (attachmentNodesContainer) {
 			foreach (Transform itemAttNodeTransform in attachmentNodesContainer) {
-				AttachmentNode hitAttNodeObject = itemAttNodeTransform.GetComponent<AttachmentNode>();
-				if (hitAttNodeObject && hitAttNodeObject.attachmentGender == AttachmentNode.AttachmentGender.Male && hitAttNodeObject.isAttached == true) {
+				AttachmentNode nodeObject = itemAttNodeTransform.GetComponent<AttachmentNode>();
+				if (nodeObject && nodeObject.attachmentGender == AttachmentNode.AttachmentGender.Male && nodeObject.isAttached == true) {
+					// Remove attachments in both items' attachment lists
+					nodeObject.connectedNode.item.attachments.Remove(nodeObject.item);
+					nodeObject.item.attachments.Remove(nodeObject.connectedNode.item);
+
+					// If connectedNode's item is a Weapon, update its combined weaponAttributes
+					if (nodeObject.connectedNode.item is Weapon) {
+						(nodeObject.connectedNode.item as Weapon).UpdateCombinedAttributes();
+					}
+
 					// Detach node
-					hitAttNodeObject.isAttached = false;
-					hitAttNodeObject.connectedNode.isAttached = false;
-					hitAttNodeObject.connectedNode.connectedNode = null;		// Clear this node's connectedNode's connectedNode (yikes)
-					hitAttNodeObject.connectedNode = null;                      // Clear this node's connectedNode
+					nodeObject.isAttached = false;
+					nodeObject.connectedNode.isAttached = false;
+					nodeObject.connectedNode.connectedNode = null;      // Clear this node's connectedNode's connectedNode (yikes)
+					nodeObject.connectedNode = null;                      // Clear this node's connectedNode
 				}
 			}
 
@@ -495,6 +515,8 @@ public class Player : MonoBehaviour {
 
 				if (chosenIAN != null) {
 					itemGrabInfoCurrent.grabbedItem = chosenIAN.item;
+					itemGrabInfoCurrent.grabbedItem.isGrabbed = true;
+					itemGrabInfoCurrent.grabbedItem.timeLastGrabbed = Time.timeSinceLevelLoad;
 					itemGrabInfoCurrent.grabNode = chosenIAN.node;
 
 					// Set correct rigidbody
@@ -531,9 +553,10 @@ public class Player : MonoBehaviour {
 						itemGrabInfoCurrent.grabbedItem.pocketCurrent = null;
 					}
 
-					itemGrabInfoCurrent.grabbedItem.timeLastGrabbed = Time.timeSinceLevelLoad;      // TODO: move?
 					itemGrabInfoCurrent.grabbedRigidbody.useGravity = false;
-
+					if (itemGrabInfoCurrent.grabbedRigidbody.transform.GetComponent<Item>() is Weapon) {
+						itemGrabInfoCurrent.grabbedRigidbody.transform.GetComponent<Weapon>().UpdateCombinedAttributes();
+					}
 
 					if (itemGrabInfoCurrent.grabNode) {
 						if (itemGrabInfoCurrent.grabNode.grabType == GrabNode.GrabType.FixedPositionRotation) {
@@ -677,7 +700,7 @@ public class Player : MonoBehaviour {
 			ReleaseEnvironment(side, envGrabInfoCurrent, envGrabInfoOpposite, handInfoCurrent, handInfoOpposite);
 		} else {
 			// Release: ItemGrab Object
-			ReleaseItem (side, itemGrabInfoCurrent, itemGrabInfoOpposite, handInfoCurrent, handInfoOpposite);
+			ReleaseItem(side, itemGrabInfoCurrent, itemGrabInfoOpposite, handInfoCurrent, handInfoOpposite);
 		}
 	}
 
@@ -686,11 +709,11 @@ public class Player : MonoBehaviour {
 		envGrabInfoCurrent.grabOffset = Vector3.zero;
 		envGrabInfoCurrent.grabCCOffset = Vector3.zero;
 
-		if (envGrabInfoCurrent.climbableGrabbed == null && envGrabInfoCurrent.climbableGrabbed == true) {
+		envGrabInfoCurrent.climbableGrabbed = null;
+
+		if (envGrabInfoCurrent.climbableGrabbed == null && envGrabInfoOpposite.climbableGrabbed == null) {
 			velocityCurrent = Vector3.ClampMagnitude(velocityCurrent, 5f);
 		}
-
-		envGrabInfoCurrent.climbableGrabbed = null;
 	}
 
 	void ReleaseItem (string side, ItemGrabInformation itemGrabInfoCurrent, ItemGrabInformation itemGrabInfoOpposite, HandInformation handInfoCurrent, HandInformation handInfoOpposite) {
@@ -698,6 +721,7 @@ public class Player : MonoBehaviour {
 		if (itemGrabInfoCurrent.grabbedRigidbody == true) {
 			itemGrabInfoCurrent.itemVelocityPercentage = 0.25f;
 			itemGrabInfoOpposite.itemVelocityPercentage = 0.25f;
+
 			if (itemGrabInfoOpposite.grabbedRigidbody != itemGrabInfoCurrent.grabbedRigidbody) {
 				AttachmentNodePair attachmentNodePairInfo = GetAttachmentConnection(itemGrabInfoCurrent, handInfoCurrent);		// Get possible attachmentNodePair for current item (null if no pairs are available)
 				if (attachmentNodePairInfo == null) {        // If there are no possible AttachmentNodePairs for this item
@@ -722,6 +746,13 @@ public class Player : MonoBehaviour {
 					}
 				}
 			}
+
+			// If theres a weapon, update it's combined attributes
+			itemGrabInfoCurrent.grabbedItem.isGrabbed = false;
+			if (itemGrabInfoCurrent.grabbedRigidbody.transform.GetComponent<Item>() is Weapon) {
+				itemGrabInfoCurrent.grabbedRigidbody.transform.GetComponent<Weapon>().UpdateCombinedAttributes();
+			}
+
 		} else {
 			if (handInfoCurrent.jumpLoaded == true) {
 				if (grounded == true || timeLastJumped + 0.1f > Time.timeSinceLevelLoad) {
@@ -741,7 +772,7 @@ public class Player : MonoBehaviour {
 				}
 			}
 		}
-
+		
 		// Release item infos
 		itemGrabInfoCurrent.grabbedRigidbody = null;
 		itemGrabInfoCurrent.grabbedItem = null;
@@ -755,7 +786,7 @@ public class Player : MonoBehaviour {
 			currentWeapon.timeLastTriggered = Time.timeSinceLevelLoad;
 			currentWeapon.AdjustAmmo(0);
 			if (itemGrabInfoCurrent.grabNode.triggerType == GrabNode.TriggerType.Fire) {
-				if (currentWeapon.chargingEnabled == false) {
+				if (currentWeapon.combinedAttributes.chargingEnabled == false) {
 					AttemptToFireWeapon(side, itemGrabInfoCurrent.grabbedItem, handInfoCurrent);
 				}
 			}
@@ -768,11 +799,11 @@ public class Player : MonoBehaviour {
 			currentWeapon.triggerHeld = true;
 			currentWeapon.timeLastTriggered = Time.timeSinceLevelLoad;
 			if (itemGrabInfoCurrent.grabNode.triggerType == GrabNode.TriggerType.Fire) {
-				if (currentWeapon.automatic == true) {
+				if (currentWeapon.combinedAttributes.automatic == true) {
 					AttemptToFireWeapon(side, itemGrabInfoCurrent.grabbedItem, handInfoCurrent);
 				}
-				if (currentWeapon.chargingEnabled == true) {
-					currentWeapon.chargeCurrent = Mathf.Clamp01(currentWeapon.chargeCurrent + (currentWeapon.chargeIncrement * Time.deltaTime));
+				if (currentWeapon.combinedAttributes.chargingEnabled == true) {
+					currentWeapon.chargeCurrent = Mathf.Clamp01(currentWeapon.chargeCurrent + (currentWeapon.combinedAttributes.chargeIncrement * Time.deltaTime));
 				}
 			}
 		}
@@ -783,7 +814,7 @@ public class Player : MonoBehaviour {
 			Weapon currentWeapon = itemGrabInfoCurrent.grabbedItem as Weapon;
 			currentWeapon.triggerHeld = false;
 			if (itemGrabInfoCurrent.grabNode.triggerType == GrabNode.TriggerType.Fire) {
-				if (currentWeapon.chargingEnabled == true) {
+				if (currentWeapon.combinedAttributes.chargingEnabled == true) {
 					AttemptToFireWeapon(side, itemGrabInfoCurrent.grabbedItem, handInfoCurrent);
 				}
 			}
@@ -803,11 +834,11 @@ public class Player : MonoBehaviour {
 
 	void AttemptToFireWeapon(string side, Item currentItem, HandInformation handInfoCurrent) {
 		Weapon currentWeapon = currentItem as Weapon;
-		if (currentWeapon.timeLastFired + (1 / currentWeapon.firerate) <= Time.timeSinceLevelLoad) {
-			if (currentWeapon.chargingEnabled == false || (currentWeapon.chargeCurrent >= currentWeapon.chargeRequired)) {
-				if (currentWeapon.ammoCurrent >= currentWeapon.consumption) {       // Does the weapon enough ammo?
-					if (currentWeapon.consumePerBurst == false) {
-						currentWeapon.AdjustAmmo(-currentWeapon.consumption);
+		if (currentWeapon.timeLastFired + (1 / currentWeapon.combinedAttributes.firerate) <= Time.timeSinceLevelLoad) {
+			if (currentWeapon.combinedAttributes.chargingEnabled == false || (currentWeapon.chargeCurrent >= currentWeapon.combinedAttributes.chargeRequired)) {
+				if (currentWeapon.ammoCurrent >= currentWeapon.combinedAttributes.consumption) {       // Does the weapon enough ammo?
+					if (currentWeapon.combinedAttributes.consumePerBurst == false) {
+						currentWeapon.AdjustAmmo(-currentWeapon.combinedAttributes.consumption);
 					}
 					StartCoroutine(FireWeapon(side, currentItem, handInfoCurrent));
 					currentWeapon.timeLastFired = Time.timeSinceLevelLoad;
@@ -820,10 +851,10 @@ public class Player : MonoBehaviour {
 		Weapon currentWeapon = currentItem as Weapon;
 		Transform barrel = currentItem.transform.Find("(Barrel Point)");
 
-		for (int i = 0; i < Mathf.Clamp(currentWeapon.burstCount, 1, 100); i++) {           // For each burst shot in this fire
-			if (currentWeapon.consumePerBurst == false || currentWeapon.ammoCurrent >= currentWeapon.consumption) {
-				if (currentWeapon.consumePerBurst == true) {
-					currentWeapon.AdjustAmmo(-currentWeapon.consumption);
+		for (int i = 0; i < Mathf.Clamp(currentWeapon.combinedAttributes.burstCount, 1, 100); i++) {           // For each burst shot in this fire
+			if (currentWeapon.combinedAttributes.consumePerBurst == false || currentWeapon.ammoCurrent >= currentWeapon.combinedAttributes.consumption) {
+				if (currentWeapon.combinedAttributes.consumePerBurst == true) {
+					currentWeapon.AdjustAmmo(-currentWeapon.combinedAttributes.consumption);
 				}
 
 				// Step 1: Trigger haptic feedback
@@ -836,69 +867,69 @@ public class Player : MonoBehaviour {
 
 				// Step 2: Apply velocity and angular velocity to weapon
 				if (itemGrabInfoLeft.grabbedItem == itemGrabInfoRight.grabbedItem) {
-					handInfoLeft.handOffsetPosition = Vector3.ClampMagnitude(handInfoLeft.handOffsetPosition + currentItem.transform.rotation * new Vector3(0, 0, -currentWeapon.recoilLinear), handOffsetPositionMax);
-					handInfoRight.handOffsetPosition = Vector3.ClampMagnitude(handInfoRight.handOffsetPosition + currentItem.transform.rotation * new Vector3(0, 0, -currentWeapon.recoilLinear), handOffsetPositionMax);
-					handInfoLeft.handOffsetRotation += new Vector3(Random.Range(-currentWeapon.recoilAngular, currentWeapon.recoilAngular), Random.Range(0, currentWeapon.recoilAngular), 0);
-					handInfoRight.handOffsetRotation += new Vector3(Random.Range(-currentWeapon.recoilAngular, currentWeapon.recoilAngular), Random.Range(0, currentWeapon.recoilAngular), 0);
+					handInfoLeft.handOffsetPosition = Vector3.ClampMagnitude(handInfoLeft.handOffsetPosition + currentItem.transform.rotation * new Vector3(0, 0, -currentWeapon.combinedAttributes.recoilLinear), handOffsetPositionMax);
+					handInfoRight.handOffsetPosition = Vector3.ClampMagnitude(handInfoRight.handOffsetPosition + currentItem.transform.rotation * new Vector3(0, 0, -currentWeapon.combinedAttributes.recoilLinear), handOffsetPositionMax);
+					handInfoLeft.handOffsetRotation += new Vector3(Random.Range(-currentWeapon.combinedAttributes.recoilAngular, currentWeapon.combinedAttributes.recoilAngular), Random.Range(0, currentWeapon.combinedAttributes.recoilAngular), 0);
+					handInfoRight.handOffsetRotation += new Vector3(Random.Range(-currentWeapon.combinedAttributes.recoilAngular, currentWeapon.combinedAttributes.recoilAngular), Random.Range(0, currentWeapon.combinedAttributes.recoilAngular), 0);
 
 					//handInfoLeft.handOffsetRotation *= Quaternion.Euler(Random.Range(-currentWeapon.recoilAngular, currentWeapon.recoilAngular), Random.Range(-currentWeapon.recoilAngular, currentWeapon.recoilAngular), Random.Range(-currentWeapon.recoilAngular, currentWeapon.recoilAngular));
 					//handInfoRight.handOffsetRotation *= Quaternion.Euler(Random.Range(-currentWeapon.recoilAngular, currentWeapon.recoilAngular), Random.Range(-currentWeapon.recoilAngular, currentWeapon.recoilAngular), Random.Range(-currentWeapon.recoilAngular, currentWeapon.recoilAngular));
 				} else {
-					handInfoCurrent.handOffsetPosition = Vector3.ClampMagnitude(handInfoCurrent.handOffsetPosition + currentItem.transform.rotation * new Vector3(0, 0, -currentWeapon.recoilLinear), handOffsetPositionMax);
-					handInfoCurrent.handOffsetRotation += new Vector3(Random.Range(-currentWeapon.recoilAngular * 0.25f, currentWeapon.recoilAngular * 0.25f), Random.Range(0, currentWeapon.recoilAngular), 0);
+					handInfoCurrent.handOffsetPosition = Vector3.ClampMagnitude(handInfoCurrent.handOffsetPosition + currentItem.transform.rotation * new Vector3(0, 0, -currentWeapon.combinedAttributes.recoilLinear), handOffsetPositionMax);
+					handInfoCurrent.handOffsetRotation += new Vector3(Random.Range(-currentWeapon.combinedAttributes.recoilAngular * 0.25f, currentWeapon.combinedAttributes.recoilAngular * 0.25f), Random.Range(0, currentWeapon.combinedAttributes.recoilAngular), 0);
 					//handInfoCurrent.handOffsetRotation *= Quaternion.Euler(Random.Range(-currentWeapon.recoilAngular, currentWeapon.recoilAngular), Random.Range(-currentWeapon.recoilAngular, currentWeapon.recoilAngular), Random.Range(-currentWeapon.recoilAngular, currentWeapon.recoilAngular));
 				}
 
 				// Step 3: Adjust weapon accuracy & get random accuracy
-				currentWeapon.accuracyCurrent = Mathf.Clamp(currentWeapon.accuracyCurrent - currentWeapon.accuracyDecrement, currentWeapon.accuracyMin, currentWeapon.accuracyMax);
+				currentWeapon.accuracyCurrent = Mathf.Clamp(currentWeapon.accuracyCurrent - currentWeapon.combinedAttributes.accuracyDecrement, currentWeapon.combinedAttributes.accuracyMin, currentWeapon.combinedAttributes.accuracyMax);
 				float angleMax = Mathf.Abs(currentWeapon.accuracyCurrent - 1) * 5f;
 				Quaternion randomAccuracy = Quaternion.Euler(Random.Range(-angleMax, angleMax), Random.Range(-angleMax, angleMax), Random.Range(-angleMax, angleMax));
 
-				for (int j = 0; (j < currentWeapon.projectileSpreads.Length || (currentWeapon.projectileSpreads.Length == 0 && j == 0)); j++) {
+				for (int j = 0; (j < currentWeapon.combinedAttributes.projectileSpreads.Length || (currentWeapon.combinedAttributes.projectileSpreads.Length == 0 && j == 0)); j++) {
 
 					// Step 5: Get random spread deviations
-					Quaternion projectileSpreadDeviation = Quaternion.Euler(Random.Range(-currentWeapon.projectileSpreadDeviation, currentWeapon.projectileSpreadDeviation), Random.Range(-currentWeapon.projectileSpreadDeviation, currentWeapon.projectileSpreadDeviation), 0);
+					Quaternion projectileSpreadDeviation = Quaternion.Euler(Random.Range(-currentWeapon.combinedAttributes.projectileSpreadDeviation, currentWeapon.combinedAttributes.projectileSpreadDeviation), Random.Range(-currentWeapon.combinedAttributes.projectileSpreadDeviation, currentWeapon.combinedAttributes.projectileSpreadDeviation), 0);
 
 					// Step 4: Create new projectile
-					GameObject newProjectile = (GameObject)Instantiate(currentWeapon.projectile, barrel.position + barrel.forward * 0.2f, currentItem.transform.rotation * randomAccuracy);
-					if (currentWeapon.projectileSpreads.Length > 0) {
-						if (currentWeapon.projectileSpreadType == Weapon.SpreadType.Circular) {
-							newProjectile.transform.rotation *= projectileSpreadDeviation * Quaternion.Euler(0, 0, currentWeapon.projectileSpreads[j].x) * Quaternion.Euler(currentWeapon.projectileSpreads[j].y, 0, 0);
+					GameObject newProjectile = (GameObject)Instantiate(currentWeapon.combinedAttributes.projectile, barrel.position + barrel.forward * 0.2f, currentItem.transform.rotation * randomAccuracy);
+					if (currentWeapon.combinedAttributes.projectileSpreads.Length > 0) {
+						if (currentWeapon.combinedAttributes.projectileSpreadType == Weapon.SpreadType.Circular) {
+							newProjectile.transform.rotation *= projectileSpreadDeviation * Quaternion.Euler(0, 0, currentWeapon.combinedAttributes.projectileSpreads[j].x) * Quaternion.Euler(currentWeapon.combinedAttributes.projectileSpreads[j].y, 0, 0);
 						} else {
-							newProjectile.transform.rotation *= Quaternion.Euler(currentWeapon.projectileSpreads[j].y, currentWeapon.projectileSpreads[j].x, 0);
+							newProjectile.transform.rotation *= Quaternion.Euler(currentWeapon.combinedAttributes.projectileSpreads[j].y, currentWeapon.combinedAttributes.projectileSpreads[j].x, 0);
 						}
 					}
 					Projectile newProjectileClass = newProjectile.GetComponent<Projectile>();
-					if (currentWeapon.chargingEnabled == true) {
-						newProjectileClass.velocity = newProjectile.transform.forward * (currentWeapon.projectileVelocity - (currentWeapon.projectileVelocity * currentWeapon.chargeInfluenceVelocity * Mathf.Abs(currentWeapon.chargeCurrent - 1)));
+					if (currentWeapon.combinedAttributes.chargingEnabled == true) {
+						newProjectileClass.velocity = newProjectile.transform.forward * (currentWeapon.combinedAttributes.projectileVelocity - (currentWeapon.combinedAttributes.projectileVelocity * currentWeapon.combinedAttributes.chargeInfluenceVelocity * Mathf.Abs(currentWeapon.chargeCurrent - 1)));
 					} else {
-						newProjectileClass.velocity = newProjectile.transform.forward * currentWeapon.projectileVelocity;
+						newProjectileClass.velocity = newProjectile.transform.forward * currentWeapon.combinedAttributes.projectileVelocity;
 					}
-					newProjectileClass.deceleration = currentWeapon.projectileDeceleration;
-					newProjectileClass.decelerationType = currentWeapon.projectileDecelerationType;
-					newProjectileClass.gravity = currentWeapon.projectileGravity;
-					newProjectileClass.ricochetCount = currentWeapon.projectileRicochetCount;
-					newProjectileClass.ricochetAngleMax = currentWeapon.projectileRicochetAngleMax;
-					newProjectileClass.lifespan = currentWeapon.projectileLifespan;
-					newProjectileClass.sticky = currentWeapon.projectileIsSticky;
+					newProjectileClass.deceleration = currentWeapon.combinedAttributes.projectileDeceleration;
+					newProjectileClass.decelerationType = currentWeapon.combinedAttributes.projectileDecelerationType;
+					newProjectileClass.gravity = currentWeapon.combinedAttributes.projectileGravity;
+					newProjectileClass.ricochetCount = currentWeapon.combinedAttributes.projectileRicochetCount;
+					newProjectileClass.ricochetAngleMax = currentWeapon.combinedAttributes.projectileRicochetAngleMax;
+					newProjectileClass.lifespan = currentWeapon.combinedAttributes.projectileLifespan;
+					newProjectileClass.sticky = currentWeapon.combinedAttributes.projectileIsSticky;
 					audioManager.PlayClipAtPoint(currentWeapon.soundFireNormal, barrel.position, 2f);
 
 				}
 			} else {
 				// TODO: Dry shot
 			}
-			yield return new WaitForSeconds(currentWeapon.burstDelay);
+			yield return new WaitForSeconds(currentWeapon.combinedAttributes.burstDelay);
 		}
 
-		if (currentWeapon.chargingEnabled == true) {
-			currentWeapon.chargeCurrent = Mathf.Clamp01(currentWeapon.chargeCurrent - currentWeapon.chargeDecrementPerShot);
+		if (currentWeapon.combinedAttributes.chargingEnabled == true) {
+			currentWeapon.chargeCurrent = Mathf.Clamp01(currentWeapon.chargeCurrent - currentWeapon.combinedAttributes.chargeDecrementPerShot);
 		}
 	}
 
 	void ThrowItem(HandInformation handInfoCurrent, ItemGrabInformation itemGrabInfoCurrent, Vector3 velocity) {
 		// If we are currently grabbing (throwing) an item that is an attachment on another item, set the current item to that parent item
 		Item mainItem = itemGrabInfoCurrent.grabbedItem;
-		while (mainItem.transform.parent.name == "(Attachments)") {     // If this is an attachment that is currently attached (repeat until we are no longer in an attached attachment)
+		while (mainItem.transform.parent != null && mainItem.transform.parent.name == "(Attachments)") {     // If this is an attachment that is currently attached (repeat until we are no longer in an attached attachment)
 			mainItem = mainItem.transform.parent.parent.GetComponent<Item>();
 		}
 
@@ -1297,7 +1328,7 @@ public class Player : MonoBehaviour {
 		Vector3 hmdFlatForward = new Vector3(hmd.transform.forward.x, 0, hmd.transform.forward.z).normalized;
 		Vector3 hmdFlatUp = new Vector3(hmd.transform.up.x, 0, hmd.transform.up.z).normalized;
 
-		Vector3 hmdFlatFinal = Vector3.Lerp(hmdFlatForward, hmdFlatUp, Mathf.Clamp01(Vector3.Angle(hmd.transform.up, Vector3.up) / 90));
+		Vector3 hmdFlatFinal = Vector3.Lerp(hmdFlatForward, (hmd.transform.forward.y > 0) ? -hmdFlatUp : hmdFlatUp, Mathf.Clamp01(Vector3.Angle(hmd.transform.up, Vector3.up) / 90));
 		avatar.rotation = Quaternion.LookRotation(hmdFlatFinal, Vector3.up);
 	}
 
@@ -1350,7 +1381,7 @@ public class Player : MonoBehaviour {
 
 			// Accuracy - Dual Wield
 			if (itemGrabInfoLeft.grabbedItem is Weapon) {
-				weaponLeft.accuracyCurrent = Mathf.Clamp(weaponLeft.accuracyCurrent + (weaponLeft.accuracyIncrement * Time.deltaTime), weaponLeft.accuracyMin, weaponLeft.accuracyMax);
+				weaponLeft.accuracyCurrent = Mathf.Clamp(weaponLeft.accuracyCurrent + (weaponLeft.combinedAttributes.accuracyIncrement * Time.deltaTime), weaponLeft.combinedAttributes.accuracyMin, weaponLeft.combinedAttributes.accuracyMax);
 			}
 
 		} else {
@@ -1358,7 +1389,7 @@ public class Player : MonoBehaviour {
 			if (itemGrabInfoLeft.grabbedItem) {
 				UpdateItemPhysics("Left", itemGrabInfoLeft, itemGrabInfoRight, envGrabInfoLeft, envGrabInfoRight, handInfoLeft, handInfoRight);
 				if (weaponLeft) {
-					weaponLeft.accuracyCurrent = Mathf.Clamp(weaponLeft.accuracyCurrent + (weaponLeft.accuracyIncrement * Time.deltaTime), weaponLeft.accuracyMin, weaponLeft.accuracyMax);
+					weaponLeft.accuracyCurrent = Mathf.Clamp(weaponLeft.accuracyCurrent + (weaponLeft.combinedAttributes.accuracyIncrement * Time.deltaTime), weaponLeft.combinedAttributes.accuracyMin, weaponLeft.combinedAttributes.accuracyMax);
 				}
 			}
 
@@ -1366,7 +1397,7 @@ public class Player : MonoBehaviour {
 			if (itemGrabInfoRight.grabbedItem) {
 				UpdateItemPhysics("Right", itemGrabInfoRight, itemGrabInfoLeft, envGrabInfoLeft, envGrabInfoRight, handInfoRight, handInfoLeft);
 				if (weaponRight) {
-					weaponRight.accuracyCurrent = Mathf.Clamp(weaponRight.accuracyCurrent + (weaponRight.accuracyIncrement * Time.deltaTime), weaponRight.accuracyMin, weaponRight.accuracyMax);
+					weaponRight.accuracyCurrent = Mathf.Clamp(weaponRight.accuracyCurrent + (weaponRight.combinedAttributes.accuracyIncrement * Time.deltaTime), weaponRight.combinedAttributes.accuracyMin, weaponRight.combinedAttributes.accuracyMax);
 				}
 			}
 		}
@@ -1438,7 +1469,7 @@ public class Player : MonoBehaviour {
 		if (handInfoCurrent.itemReleasingDisabled == false || !handInfoCurrent.controllerDevice.GetPress(Valve.VR.EVRButtonId.k_EButton_Grip)) {
 			// If this item is an attachment on another item, set the current item to that parent item
 			Item mainItem = itemGrabInfoCurrent.grabbedItem;
-			while (mainItem.transform.parent.name == "(Attachments)") {     // If this is an attachment that is currently attached (repeat until we are no longer in an attached attachment)
+			while (mainItem.transform.parent != null && mainItem.transform.parent.name == "(Attachments)") {     // If this is an attachment that is currently attached (repeat until we are no longer in an attached attachment)
 				mainItem = mainItem.transform.parent.parent.GetComponent<Item>();
 			}
 

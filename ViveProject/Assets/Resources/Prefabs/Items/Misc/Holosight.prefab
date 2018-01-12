@@ -151,7 +151,7 @@ GameObject:
   serializedVersion: 5
   m_Component:
   - component: {fileID: 4743134073882996}
-  m_Layer: 0
+  m_Layer: 26
   m_Name: (AttachmentNodes)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -269,7 +269,7 @@ Transform:
   m_PrefabInternal: {fileID: 100100000}
   m_GameObject: {fileID: 1163894180762618}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -11.486, y: 2.023, z: -3.35913}
+  m_LocalPosition: {x: -11.389, y: 2.023, z: -3.35913}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children:
   - {fileID: 4743134073882996}
@@ -448,7 +448,7 @@ MeshRenderer:
   m_LightProbeUsage: 1
   m_ReflectionProbeUsage: 1
   m_Materials:
-  - {fileID: 2100000, guid: 10f6e4016179c764b9b4154f0ddcfc83, type: 2}
+  - {fileID: 2100000, guid: 3e7cac854504c40498fdc428c485cde5, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -631,7 +631,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9c91d961150a277479ca2aab3e847d1d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  attachmentType: 0
+  item: {fileID: 0}
+  attachmentType: 1
   attachmentGender: 0
   isAttached: 0
   connectedNode: {fileID: 0}
@@ -646,6 +647,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1ae84068cbb977f45be26c57ff3a4ed9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  item: {fileID: 0}
   rotation: {x: 30, y: 0, z: 0}
   offset: {x: 0, y: 0, z: 0}
   referralNode: {fileID: 0}
@@ -664,6 +666,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a8970fea36ff79343b883da19a4917c6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  itemName: Holosight
+  nonDualWieldable: 0
+  isGrabbed: 0
+  timeLastGrabbed: 0
+  pocketGrabNode: {fileID: 0}
+  pocketCurrent: {fileID: 0}
+  pocketSize: 1
+  pocketingModel: {fileID: 0}
+  pocketCandidate: {fileID: 0}
+  pocketCandidateTime: 0
+  pocketingModelMaterialPrivate: {fileID: 0}
+  pocketingModelRotationOffset: {x: 0, y: 0, z: 0, w: 0}
   itemRigidbody: {fileID: 0}
   rigidbodyCopy:
     mass: 0
@@ -674,19 +688,71 @@ MonoBehaviour:
     interpolation: 0
     collisionDetectionMode: 0
     constraints: 0
-  itemName: Holosight
-  timeLastGrabbed: 0
-  nonDualWieldable: 0
-  pocketGrabNode: {fileID: 0}
-  pocketCurrent: {fileID: 0}
-  pocketSize: 1
-  pocketingModel: {fileID: 0}
-  pocketCandidate: {fileID: 0}
-  pocketCandidateTime: 0
-  pocketingModelMaterialPrivate: {fileID: 0}
-  pocketingModelRotationOffset: {x: 0, y: 0, z: 0, w: 0}
+  attachments: []
   grabNodes: {fileID: 0}
   isAttached: 0
+  attachmentAttributesPassive:
+    automatic: 0
+    firerate: -0.75
+    burstCount: 0
+    burstDelay: 0
+    ammoMax: 0
+    consumption: 0
+    consumePerBurst: 0
+    accuracyMax: 0
+    accuracyMin: 0
+    accuracyIncrement: 0
+    accuracyDecrement: 0
+    recoilLinear: 0
+    recoilAngular: 0
+    chargingEnabled: 0
+    chargeIncrement: 0
+    chargeDecrement: 0
+    chargeDecrementPerShot: 0
+    chargeRequired: 0
+    chargeInfluenceVelocity: 0
+    projectileSpreads: []
+    projectileSpreadType: 0
+    projectileSpreadDeviation: 0
+    projectileRicochetCount: 0
+    projectileRicochetAngleMax: 0
+    projectileVelocity: 0
+    projectileGravity: 0
+    projectileDecelerationType: 0
+    projectileDeceleration: 0
+    projectileLifespan: 0
+    projectileIsSticky: 0
+  attachmentAttributesActive:
+    automatic: 0
+    firerate: 0
+    burstCount: 0
+    burstDelay: 0
+    ammoMax: 0
+    consumption: 0
+    consumePerBurst: 0
+    accuracyMax: 0
+    accuracyMin: 0
+    accuracyIncrement: 0
+    accuracyDecrement: 0
+    recoilLinear: 0
+    recoilAngular: 0
+    chargingEnabled: 0
+    chargeIncrement: 0
+    chargeDecrement: 0
+    chargeDecrementPerShot: 0
+    chargeRequired: 0
+    chargeInfluenceVelocity: 0
+    projectileSpreads: []
+    projectileSpreadType: 0
+    projectileSpreadDeviation: 0
+    projectileRicochetCount: 0
+    projectileRicochetAngleMax: 0
+    projectileVelocity: 0
+    projectileGravity: 0
+    projectileDecelerationType: 0
+    projectileDeceleration: 0
+    projectileLifespan: 0
+    projectileIsSticky: 0
 --- !u!135 &135129233008480298
 SphereCollider:
   m_ObjectHideFlags: 1

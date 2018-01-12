@@ -5,15 +5,13 @@ using UnityEngine;
 [System.Serializable]
 public abstract class Item : MonoBehaviour {
 
-	public Rigidbody			itemRigidbody;
-	public RigidbodyCopy		rigidbodyCopy;
-
-	[Header("Information")]
+	[Space(10)][Header("Information")]
 	public string				itemName;
-	public float				timeLastGrabbed;
 	public bool					nonDualWieldable;
+	public bool					isGrabbed;								// Is this item currently being grabbed?
+	public float				timeLastGrabbed;						// The time at which the item was last grabbed
 
-	[Header("Pocketing Info")]
+	[Space(10)][Header("Pocketing Info")]
 	public GrabNode				pocketGrabNode;
 	public Pocket				pocketCurrent;
 	public Pocket.PocketSize	pocketSize = Pocket.PocketSize.Small;
@@ -22,6 +20,14 @@ public abstract class Item : MonoBehaviour {
 	public float				pocketCandidateTime;
 	public Material				pocketingModelMaterialPrivate;
 	public Quaternion			pocketingModelRotationOffset;
+
+	[Space(10)][Header("Rigidbody Information")]
+	public Rigidbody			itemRigidbody;
+	public RigidbodyCopy		rigidbodyCopy;
+
+
+	[Space(10)][Header("Attachments")]
+	public List<Item>			attachments = new List<Item>();
 
 	AudioSource audioSourceHit;
 	AudioSource audioSourceMove;

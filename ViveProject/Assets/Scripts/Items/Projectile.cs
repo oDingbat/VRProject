@@ -77,7 +77,7 @@ public class Projectile : MonoBehaviour {
 			}
 		} else {
 			transform.position += velocity * Time.deltaTime;
-			velocity += new Vector3(0, gravity * -9.807f * Time.deltaTime, 0);
+			velocity += new Vector3(0, gravity * Time.deltaTime, 0);
 			if (decelerationType == DecelerationType.Normal) {
 				velocity = velocity.normalized * Mathf.Clamp(velocity.magnitude - (deceleration * Time.deltaTime), 0, Mathf.Infinity);
 			} else {

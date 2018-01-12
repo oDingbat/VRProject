@@ -69,21 +69,21 @@ public class Sentry : MonoBehaviour {
 	}
 
 	void AttemptWeaponFire () {
-		if (weapon.timeLastFired + (1 / weapon.firerate) <= Time.timeSinceLevelLoad) {
+		if (weapon.timeLastFired + (1 / weapon.combinedAttributes.firerate) <= Time.timeSinceLevelLoad) {
 			weapon.timeLastFired = Time.timeSinceLevelLoad;
 			FireWeapon();
 		}
 	}
 
 	void FireWeapon () {
-		GameObject newProjectile = (GameObject)Instantiate(weapon.projectile, barrel.position + barrel.forward * 0.2f, head.rotation * Quaternion.Euler(Random.Range(-1, 1), Random.Range(-1, 1), Random.Range(-1, 1)));
+		GameObject newProjectile = (GameObject)Instantiate(weapon.combinedAttributes.projectile, barrel.position + barrel.forward * 0.2f, head.rotation * Quaternion.Euler(Random.Range(-1, 1), Random.Range(-1, 1), Random.Range(-1, 1)));
 		Projectile newProjectileClass = newProjectile.GetComponent<Projectile>();
-		newProjectileClass.velocity = head.forward * weapon.projectileVelocity;
-		newProjectileClass.deceleration = weapon.projectileDeceleration;
-		newProjectileClass.decelerationType = weapon.projectileDecelerationType;
-		newProjectileClass.gravity = weapon.projectileGravity;
-		newProjectileClass.ricochetCount = weapon.projectileRicochetCount;
-		newProjectileClass.ricochetAngleMax = weapon.projectileRicochetAngleMax;
+		newProjectileClass.velocity = head.forward * weapon.combinedAttributes.projectileVelocity;
+		newProjectileClass.deceleration = weapon.combinedAttributes.projectileDeceleration;
+		newProjectileClass.decelerationType = weapon.combinedAttributes.projectileDecelerationType;
+		newProjectileClass.gravity = weapon.combinedAttributes.projectileGravity;
+		newProjectileClass.ricochetCount = weapon.combinedAttributes.projectileRicochetCount;
+		newProjectileClass.ricochetAngleMax = weapon.combinedAttributes.projectileRicochetAngleMax;
 	}
 
 }
