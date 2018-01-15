@@ -849,7 +849,6 @@ public class Player : MonoBehaviour {
 
 	IEnumerator FireWeapon(string hand, Item currentItem, HandInformation handInfoCurrent) {
 		Weapon currentWeapon = currentItem as Weapon;
-		Transform barrel = currentItem.transform.Find("(Barrel Point)");
 
 		for (int i = 0; i < Mathf.Clamp(currentWeapon.combinedAttributes.burstCount, 1, 100); i++) {           // For each burst shot in this fire
 			if (currentWeapon.combinedAttributes.consumePerBurst == false || currentWeapon.ammoCurrent >= currentWeapon.combinedAttributes.consumption) {
@@ -891,7 +890,7 @@ public class Player : MonoBehaviour {
 					Quaternion projectileSpreadDeviation = Quaternion.Euler(Random.Range(-currentWeapon.combinedAttributes.projectileSpreadDeviation, currentWeapon.combinedAttributes.projectileSpreadDeviation), Random.Range(-currentWeapon.combinedAttributes.projectileSpreadDeviation, currentWeapon.combinedAttributes.projectileSpreadDeviation), 0);
 
 					// Step 4: Create new projectile
-					GameObject newProjectile = (GameObject)Instantiate(currentWeapon.combinedAttributes.projectile, barrel.position + barrel.forward * 0.2f, currentItem.transform.rotation * randomAccuracy);
+					GameObject newProjectile = (GameObject)Instantiate(currentWeapon.combinedAttributes.projectile, currentWeapon.barrelPoint.position + currentWeapon.barrelPoint.forward * 0.2f, currentItem.transform.rotation * randomAccuracy);
 					if (currentWeapon.combinedAttributes.projectileSpreads.Length > 0) {
 						if (currentWeapon.combinedAttributes.projectileSpreadType == Weapon.SpreadType.Circular) {
 							newProjectile.transform.rotation *= projectileSpreadDeviation * Quaternion.Euler(0, 0, currentWeapon.combinedAttributes.projectileSpreads[j].x) * Quaternion.Euler(currentWeapon.combinedAttributes.projectileSpreads[j].y, 0, 0);
@@ -912,7 +911,7 @@ public class Player : MonoBehaviour {
 					newProjectileClass.ricochetAngleMax = currentWeapon.combinedAttributes.projectileRicochetAngleMax;
 					newProjectileClass.lifespan = currentWeapon.combinedAttributes.projectileLifespan;
 					newProjectileClass.sticky = currentWeapon.combinedAttributes.projectileIsSticky;
-					audioManager.PlayClipAtPoint(currentWeapon.soundFireNormal, barrel.position, 2f);
+					audioManager.PlayClipAtPoint(currentWeapon.soundFireNormal, currentWeapon.barrelPoint.position, 2f);
 
 				}
 			} else {

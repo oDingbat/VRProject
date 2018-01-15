@@ -32,11 +32,21 @@ public abstract class Item : MonoBehaviour {
 	AudioSource audioSourceHit;
 	AudioSource audioSourceMove;
 
-	public GrabNode grabNodes;
+	public List<AttachmentNode> attachmentNodes;
 
 	void Start () {
 		itemRigidbody = GetComponent<Rigidbody>();
 		rigidbodyCopy = new RigidbodyCopy(itemRigidbody);
+
+		// Create list of attachmentNodes
+		if (transform.Find("(AttachmentNodes")) {
+			foreach (Transform childAttachmentNode in transform.Find("(AttachmentNodes)")) {
+				if (childAttachmentNode.GetComponent<AttachmentNode>()) {
+					attachmentNodes.Add(childAttachmentNode.GetComponent<AttachmentNode>());
+				}
+			}
+		}
+
 		if (transform.Find("(PocketingModel)")) {
 			pocketingModel = transform.Find("(PocketingModel)");
 

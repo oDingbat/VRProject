@@ -24,6 +24,9 @@ public class Weapon : Item {
 	public WeaponAttributes			baseAttributes;
 	public WeaponAttributes			combinedAttributes;
 
+	[Space(10)][Header("Position Attributes")]
+	public Transform barrelPoint;
+
 	[System.Serializable]
 	public class WeaponAttributes {
 		[Header("Firing Attributes")]
@@ -220,6 +223,8 @@ public class Weapon : Item {
 		// Set combinedAttributes equal to the weapon's base attributes first
 		combinedAttributes = new WeaponAttributes(baseAttributes);
 
+		barrelPoint = transform.Find("(BarrelPoint)");
+
 		if (attachments.Count > 0) {
 			List<WeaponAttributes> allAttributes = new List<WeaponAttributes>();
 
@@ -227,10 +232,26 @@ public class Weapon : Item {
 			for (int i = 0; i < attachments.Count; i++) {
 				if (attachments[i] is Attachment) {         // Is the current attachment actually an Attachment class Object
 					Attachment attachmentObject = attachments[i] as Attachment;
+
+					// Creating allAttributes List
 					if (attachmentObject.isGrabbed == true && attachmentObject.attributesAlwaysPassive == false) {       // Is the attachment currently being grabbed and alwaysPassive is false?
 						allAttributes.Add(attachmentObject.attachmentAttributesActive);		// If yes, add its active attributes
 					} else {
 						allAttributes.Add(attachmentObject.attachmentAttributesPassive);		// If no, add its passive attributes
+					}
+
+					// Finding Barrel Point
+					if (attachments[i].transform.Find("(BarrelPoint)") != null) {
+						bool currentNodeWorks = true;
+						for (int a = 0; a < attachments[i].attachmentNodes.Count; a++) {
+							if (attachments[i].attachmentNodes[a].attachmentType == AttachmentNode.AttachmentType.Barrel && attachments[i].attachmentNodes[a].isAttached == false) {
+								currentNodeWorks = false;
+							}
+						}
+
+						if (currentNodeWorks == true) {
+							barrelPoint = attachments[i].transform.Find("(BarrelPoint)");
+						}
 					}
 				}
 			}
