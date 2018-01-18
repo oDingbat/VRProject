@@ -6,6 +6,7 @@ public class AttachmentNode : MonoBehaviour {
 
 	[Space(10)][Header("Item Reference")]
 	public Item						item;						// The item this attachmentNode is associated with
+	public GrabNode					associatedGrabNode;			// The grabNode this attachmentNode is associated with
 
 	[Space(10)][Header("Enums")]
 	public AttachmentType			attachmentType;

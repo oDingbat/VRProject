@@ -1,18 +1,24 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System;
 
 public class GrabNode : MonoBehaviour {
 
 	[Space(10)][Header("Item Reference")]
 	public Item						item;						// The item this grabNode is associated with
-
+	public List<GrabNode>			grabNodeChildren;			// The grabNodes attached to this grabNode
+	public GrabNode					grabNodeParent;
 
 	[Space(10)][Header("Settings")]
 	public Vector3			rotation;
 	public Vector3			offset;
 	public GrabNode			referralNode;
 	public int				dominance;
+	public bool				grabThisNodeFirst;		// Should the player grab this grabNode rather than it's attached grabNodes (ie: yes for the trigger handle, so we grab the firing mechanism; no for body parts of weapons with grips attached)
+	
+	[Space(10)][Header("Variables")]
+	public bool interactionOn;
 
 	[Space(10)][Header("Enums")]
 	public GrabType			grabType = GrabType.Dynamic;
@@ -20,10 +26,14 @@ public class GrabNode : MonoBehaviour {
 	public TriggerType		triggerType;
 	public enum				TriggerType { None, Fire }
 	public InteractionType	interactionType;
-	public enum				InteractionType { None, Toggle }
+	public enum				InteractionType { Toggle, Hold }
+
+	// Events
+	public event Action<bool> eventTriggerInteraction;
 
 	void Start () {
 		item = transform.parent.parent.GetComponent<Item>();
+		TriggerInteraction(interactionOn);
 	}
 
 	void OnDrawGizmosSelected() {
@@ -45,6 +55,14 @@ public class GrabNode : MonoBehaviour {
 			}
 		} else {
 			Debug.DrawLine(transform.position + transform.parent.rotation * offset, referralNode.transform.position + transform.parent.rotation * referralNode.offset, Color.red, 0);
+		}
+	}
+
+	public void TriggerInteraction (bool interactionState) {
+		interactionOn = interactionState;
+		
+		if (eventTriggerInteraction != null) {
+			eventTriggerInteraction.Invoke(interactionState);
 		}
 	}
 

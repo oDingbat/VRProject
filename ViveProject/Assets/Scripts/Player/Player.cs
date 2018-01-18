@@ -228,7 +228,7 @@ public class Player : MonoBehaviour {
 	void UpdateControllerInput(string side, ItemGrabInformation itemGrabInfoCurrent, ItemGrabInformation itemGrabInfoOpposite, EnvironmentGrabInformation envGrabInfoCurrent, EnvironmentGrabInformation envGrabInfoOpposite, HandInformation handInfoCurrent, HandInformation handInfoOpposite) {
 		if (side == "Right") {
 			if (handInfoCurrent.controllerDevice.GetPressDown(Valve.VR.EVRButtonId.k_EButton_ApplicationMenu)) {
-				flashlight.SetActive(!flashlight.activeSelf);
+				//flashlight.SetActive(!flashlight.activeSelf);
 			}
 		}
 
@@ -259,7 +259,7 @@ public class Player : MonoBehaviour {
 		if (handInfoCurrent.controllerDevice.GetPressUp(Valve.VR.EVRButtonId.k_EButton_Grip)) {
 			handInfoCurrent.grabbingDisabled = false;
 			if (envGrabInfoCurrent.climbableGrabbed == true || itemGrabInfoCurrent.grabbedItem == false || ((itemGrabInfoCurrent.grabbedItem && itemGrabInfoCurrent.grabbedItem is Misc) || handInfoCurrent.itemReleasingDisabled == false)) {
-				ReleaseAll (side, itemGrabInfoCurrent, itemGrabInfoOpposite, envGrabInfoCurrent, envGrabInfoOpposite, handInfoCurrent, handInfoOpposite);
+				ReleaseAll(side, itemGrabInfoCurrent, itemGrabInfoOpposite, envGrabInfoCurrent, envGrabInfoOpposite, handInfoCurrent, handInfoOpposite);
 				handInfoCurrent.handGameObject.GetComponent<BoxCollider>().enabled = true;
 			}
 		}
@@ -289,6 +289,22 @@ public class Player : MonoBehaviour {
 						handInfoCurrent.itemReleasingDisabled = true;
 						DetachAttachment(itemGrabInfoCurrent, handInfoCurrent);
 					}
+				}
+			}
+		}
+
+		// Handling grabNode interaction (ie: flashlights, lasersights, etc)
+		if (itemGrabInfoCurrent.grabNode) {
+			if (itemGrabInfoCurrent.grabNode.interactionType == GrabNode.InteractionType.Toggle) {
+				if (handInfoCurrent.controllerDevice.GetPressDown(EVRButtonId.k_EButton_ApplicationMenu)) {
+					itemGrabInfoCurrent.grabNode.TriggerInteraction(!itemGrabInfoCurrent.grabNode.interactionOn);
+					
+				}
+			} else {
+				if (handInfoCurrent.controllerDevice.GetPress(EVRButtonId.k_EButton_ApplicationMenu)) {
+					itemGrabInfoCurrent.grabNode.TriggerInteraction(true);
+				} else {
+					itemGrabInfoCurrent.grabNode.TriggerInteraction(false);
 				}
 			}
 		}
@@ -353,10 +369,19 @@ public class Player : MonoBehaviour {
 			attachmentNodePair.nodeChild.item.attachments.Add(attachmentNodePair.nodeParent.item);
 			attachmentNodePair.nodeChild.item.isGrabbed = false;
 
+			// Update grabNode information
+			if (attachmentNodePair.nodeParent.associatedGrabNode && attachmentNodePair.nodeChild.associatedGrabNode) {
+				attachmentNodePair.nodeParent.associatedGrabNode.grabNodeChildren.Add(attachmentNodePair.nodeChild.associatedGrabNode);
+				attachmentNodePair.nodeChild.associatedGrabNode.grabNodeParent = attachmentNodePair.nodeParent.associatedGrabNode;
+			}
+
 			// If nodeParent's item is a Weapon, update its combined weaponAttributes
 			if (attachmentNodePair.nodeParent.item is Weapon) {
-				Debug.Log("attachment triggered");
 				(attachmentNodePair.nodeParent.item as Weapon).UpdateCombinedAttributes();
+			}
+
+			if (attachmentNodePair.nodeChild.item is Attachment) {
+				(attachmentNodePair.nodeChild.item as Attachment).timeAttached = Time.timeSinceLevelLoad;
 			}
 
 			itemGrabInfoCurrent.grabbedItem.transform.parent = attachmentNodePair.nodeParent.transform.parent.parent.Find("(Attachments)");
@@ -364,8 +389,11 @@ public class Player : MonoBehaviour {
 			Quaternion nodeChildInvertedRotation = Quaternion.AngleAxis(180, attachmentNodePair.nodeParent.transform.right) * attachmentNodePair.nodeParent.transform.rotation;
 			Quaternion rotationDelta = Quaternion.Inverse(itemGrabInfoCurrent.grabbedItem.transform.rotation) * nodeChildInvertedRotation;
 
-			itemGrabInfoCurrent.grabbedItem.transform.rotation *= rotationDelta * Quaternion.Inverse(attachmentNodePair.nodeChild.transform.localRotation);
-			itemGrabInfoCurrent.grabbedItem.transform.position = attachmentNodePair.nodeParent.transform.position + (itemGrabInfoCurrent.grabbedItem.transform.rotation * -attachmentNodePair.nodeChild.transform.localPosition);
+			//itemGrabInfoCurrent.grabbedItem.transform.rotation *= rotationDelta * Quaternion.Inverse(attachmentNodePair.nodeChild.transform.localRotation);
+			//itemGrabInfoCurrent.grabbedItem.transform.position = attachmentNodePair.nodeParent.transform.position + (itemGrabInfoCurrent.grabbedItem.transform.rotation * rotationDelta * Quaternion.Inverse(attachmentNodePair.nodeChild.transform.localRotation) * -attachmentNodePair.nodeChild.transform.localPosition);
+			Attachment grabbedAttachment = itemGrabInfoCurrent.grabbedItem as Attachment;
+			grabbedAttachment.desiredRotation = Quaternion.Inverse(itemGrabInfoCurrent.grabbedItem.transform.parent.rotation) * itemGrabInfoCurrent.grabbedItem.transform.rotation * rotationDelta * Quaternion.Inverse(attachmentNodePair.nodeChild.transform.localRotation);
+			grabbedAttachment.desiredPosition = Quaternion.Inverse(itemGrabInfoCurrent.grabbedItem.transform.parent.rotation) * ((attachmentNodePair.nodeParent.transform.position + (itemGrabInfoCurrent.grabbedItem.transform.rotation * rotationDelta * Quaternion.Inverse(attachmentNodePair.nodeChild.transform.localRotation) * -attachmentNodePair.nodeChild.transform.localPosition)) - itemGrabInfoCurrent.grabbedItem.transform.parent.position); // TODO: clean this ugly ass calculation
 
 			itemGrabInfoCurrent.grabbedItem.rigidbodyCopy = new RigidbodyCopy(itemGrabInfoCurrent.grabbedRigidbody);
 			Destroy(itemGrabInfoCurrent.grabbedRigidbody);
@@ -386,6 +414,12 @@ public class Player : MonoBehaviour {
 					// If connectedNode's item is a Weapon, update its combined weaponAttributes
 					if (nodeObject.connectedNode.item is Weapon) {
 						(nodeObject.connectedNode.item as Weapon).UpdateCombinedAttributes();
+					}
+
+					// Update grabNode information
+					if (nodeObject.associatedGrabNode && nodeObject.associatedGrabNode.grabNodeParent) {
+						nodeObject.associatedGrabNode.grabNodeParent.grabNodeChildren.Remove(nodeObject.associatedGrabNode);
+						nodeObject.associatedGrabNode.grabNodeParent = null;
 					}
 
 					// Detach node
@@ -475,6 +509,7 @@ public class Player : MonoBehaviour {
 			Collider[] itemColliders = Physics.OverlapSphere(originPosition, 0.2f, itemGrabLayerMask);
 			List<ItemAndNode> itemAndNodes = new List<ItemAndNode>();
 
+			// Search through all hit colliders to find possible items & nodes
 			foreach (Collider hitItem in itemColliders) {
 				if (hitItem.transform.gameObject.layer == LayerMask.NameToLayer("Item")) {
 					Item itemCurrent = null;
@@ -491,6 +526,7 @@ public class Player : MonoBehaviour {
 						if (nodeCurrent && nodeCurrent.referralNode != null) {
 							nodeCurrent = nodeCurrent.referralNode;
 						}
+						
 						itemAndNodes.Add(new ItemAndNode(itemCurrent, nodeCurrent));
 					}
 				}
@@ -514,6 +550,31 @@ public class Player : MonoBehaviour {
 				}
 
 				if (chosenIAN != null) {
+					// Check to see if nodeCurrent is attached to another grabNode with higher dominance
+					if (chosenIAN.node) {
+						if (chosenIAN.node.grabThisNodeFirst == false) {
+							if (chosenIAN.node.grabNodeParent != null && chosenIAN.node.grabNodeParent.grabThisNodeFirst == true) { // If this node is attached to a parent, and it has nodeFirst, make that node the currentNode
+								chosenIAN.node = chosenIAN.node.grabNodeParent;
+								chosenIAN.item = chosenIAN.node.transform.parent.parent.GetComponent<Item>();
+							} else {
+								if (chosenIAN.node.grabNodeChildren.Count > 0) {
+									Debug.Log("Dafuq");
+									GrabNode childNodeCurrent = chosenIAN.node;
+									float closestChildNodeDistance = Mathf.Infinity;
+									for (int i = 0; i < chosenIAN.node.grabNodeChildren.Count; i++) {
+										float currentChildNodeDistance = Vector3.Distance(originPosition, chosenIAN.node.grabNodeChildren[i].transform.position);
+										if (currentChildNodeDistance < 0.2f && currentChildNodeDistance < closestChildNodeDistance) {
+											childNodeCurrent = chosenIAN.node.grabNodeChildren[i];
+											closestChildNodeDistance = currentChildNodeDistance;
+										}
+									}
+									chosenIAN.node = childNodeCurrent;
+									chosenIAN.item = childNodeCurrent.transform.parent.parent.GetComponent<Item>();
+								}
+							}
+						}
+					}
+
 					itemGrabInfoCurrent.grabbedItem = chosenIAN.item;
 					itemGrabInfoCurrent.grabbedItem.isGrabbed = true;
 					itemGrabInfoCurrent.grabbedItem.timeLastGrabbed = Time.timeSinceLevelLoad;

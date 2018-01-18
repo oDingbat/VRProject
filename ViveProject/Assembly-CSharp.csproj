@@ -115,6 +115,8 @@
      <Compile Include="Assets\Scripts\Items\Inheritors\Consumable.cs" />
      <Compile Include="Assets\Scripts\Items\Inheritors\Misc.cs" />
      <Compile Include="Assets\Scripts\Items\Inheritors\Weapon.cs" />
+     <Compile Include="Assets\Scripts\Items\InteractionSubscribers\FlashlightSub.cs" />
+     <Compile Include="Assets\Scripts\Items\InteractionSubscribers\InteractionSubscriber.cs" />
      <Compile Include="Assets\Scripts\Items\Item.cs" />
      <Compile Include="Assets\Scripts\Items\ItemConstraints.cs" />
      <Compile Include="Assets\Scripts\Items\Pocket.cs" />
