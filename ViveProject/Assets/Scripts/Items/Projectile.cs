@@ -54,11 +54,7 @@ public class Projectile : MonoBehaviour {
 						hit.transform.GetComponent<Entity>().TakeDamage(25);
 						StartCoroutine(BreakProjectile(hit.point));
 					}
-
-					if (sticky == true && (hit.transform.gameObject.tag == "Environment" || hit.transform.GetComponent<Rigidbody>())) {
-						transform.parent = hit.transform;
-					}
-
+					
 					Vector3 normalPerpendicular = velocity.normalized - hit.normal * Vector3.Dot(velocity.normalized, hit.normal);
 
 					if (hit.transform.GetComponent<Rigidbody>()) {
@@ -72,6 +68,50 @@ public class Projectile : MonoBehaviour {
 						velocity = Vector3.Reflect(velocity, hit.normal);
 					} else {
 						StartCoroutine(BreakProjectile(hit.point));
+					}
+
+					if (sticky == true && (hit.transform.gameObject.tag == "Environment" || hit.transform.GetComponent<Rigidbody>())) {
+
+						// Change prefab into a grabNode for the hit item
+						if (hit.transform.gameObject.layer == LayerMask.NameToLayer("Item")) {
+
+							if (hit.transform.parent && hit.transform.parent.parent != null && hit.transform.parent.parent.GetComponent<Item>()) {
+								if (hit.transform.parent.parent.Find(("(Attachments)"))) {
+									transform.parent = hit.transform.parent.parent.transform.Find("(Attachments)").transform;
+								} else {
+									GameObject newCollidersGameObject = new GameObject();
+									newCollidersGameObject.transform.name = "(Attachments)";
+									newCollidersGameObject.transform.parent = hit.transform.parent.parent;
+									newCollidersGameObject.transform.localPosition = Vector3.zero;
+									newCollidersGameObject.transform.localEulerAngles = Vector3.zero;
+
+									transform.parent = newCollidersGameObject.transform;
+								}
+							} else {
+								if (hit.transform.Find(("(Attachments)"))) {
+									transform.parent = hit.transform.Find("(Attachments)").transform;
+								} else {
+									GameObject newCollidersGameObject = new GameObject();
+									newCollidersGameObject.transform.name = "(Attachments)";
+									newCollidersGameObject.transform.parent = hit.transform;
+									newCollidersGameObject.transform.localPosition = Vector3.zero;
+									newCollidersGameObject.transform.localEulerAngles = Vector3.zero;
+
+									transform.parent = newCollidersGameObject.transform;
+								}
+							}
+
+
+							Transform[] transformsInProjectile = transform.GetComponentsInChildren<Transform>();
+							foreach (Transform tCurrent in transformsInProjectile) {
+								tCurrent.gameObject.layer = LayerMask.NameToLayer("Item");
+							}
+
+							gameObject.AddComponent<Misc>();
+							Destroy(this);
+						} else {
+							transform.parent = hit.transform;
+						}
 					}
 				}
 			}
