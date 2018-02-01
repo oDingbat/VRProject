@@ -3,7 +3,7 @@ guid: b4b4528c73f084e46a417d8c0f444bc2
 timeCreated: 1504490349
 licenseType: Free
 ModelImporter:
-  serializedVersion: 21
+  serializedVersion: 22
   fileIDToRecycleName:
     100000: Barrel
     100002: Barrel_001
@@ -21,6 +21,9 @@ ModelImporter:
     100026: Sphere
     100028: Terrain
     100030: Cube_001
+    100032: Plane
+    100034: Plane_001
+    100036: Cylinder_004
     400000: Barrel
     400002: Barrel_001
     400004: Barrel_002
@@ -37,6 +40,9 @@ ModelImporter:
     400026: Sphere
     400028: Terrain
     400030: Cube_001
+    400032: Plane
+    400034: Plane_001
+    400036: Cylinder_004
     2300000: Barrel
     2300002: Barrel_001
     2300004: Barrel_002
@@ -52,6 +58,9 @@ ModelImporter:
     2300024: Sphere
     2300026: Terrain
     2300028: Cube_001
+    2300030: Plane
+    2300032: Plane_001
+    2300034: Cylinder_004
     3300000: Barrel
     3300002: Barrel_001
     3300004: Barrel_002
@@ -67,6 +76,9 @@ ModelImporter:
     3300024: Sphere
     3300026: Terrain
     3300028: Cube_001
+    3300030: Plane
+    3300032: Plane_001
+    3300034: Cylinder_004
     4300000: Barrel_002
     4300002: Barrel_001
     4300004: Barrel
@@ -82,12 +94,27 @@ ModelImporter:
     4300024: Cylinder
     4300026: Cube
     4300028: Cube_001
+    4300030: Plane_001
+    4300032: Plane
+    4300034: Cylinder_004
     7400000: Default Take
     9500000: //RootNode
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Dev_Orange
+    second: {fileID: 2100000, guid: 348912af9430d2841b1e65642f74fd1b, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: unnamed
+    second: {fileID: 2100000, guid: 4a3e53daff09381468eca5d495296725, type: 2}
   materials:
     importMaterials: 1
     materialName: 0
     materialSearch: 1
+    materialLocation: 0
   animations:
     legacyGenerateAnimations: 4
     bakeSimulation: 0
@@ -100,6 +127,7 @@ ModelImporter:
     animationImportWarnings: 
     animationRetargetingWarnings: 
     animationDoRetargetingWarnings: 0
+    importAnimatedCustomProperties: 0
     animationCompression: 1
     animationRotationError: 0.5
     animationPositionError: 0.5
@@ -119,11 +147,13 @@ ModelImporter:
     importCameras: 1
     importLights: 1
     swapUVChannels: 0
-    generateSecondaryUV: 0
+    generateSecondaryUV: 1
     useFileUnits: 1
     optimizeMeshForGPU: 1
     keepQuads: 0
     weldVertices: 1
+    preserveHierarchy: 0
+    indexFormat: 1
     secondaryUVAngleDistortion: 8
     secondaryUVAreaDistortion: 15.000001
     secondaryUVHardAngle: 88

@@ -21,7 +21,7 @@ GameObject:
   - component: {fileID: 4658358680551912}
   - component: {fileID: 65996532786147050}
   - component: {fileID: 114598588106599666}
-  m_Layer: 14
+  m_Layer: 18
   m_Name: Collider (8)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -38,7 +38,7 @@ GameObject:
   - component: {fileID: 4031680233206884}
   - component: {fileID: 65657524264347834}
   - component: {fileID: 114080836862859572}
-  m_Layer: 14
+  m_Layer: 18
   m_Name: Collider (7)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -55,7 +55,7 @@ GameObject:
   - component: {fileID: 4054730478417248}
   - component: {fileID: 65505370135015376}
   - component: {fileID: 114361221662803890}
-  m_Layer: 14
+  m_Layer: 18
   m_Name: Collider (4)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -72,7 +72,7 @@ GameObject:
   - component: {fileID: 4453412813211944}
   - component: {fileID: 65571398268515792}
   - component: {fileID: 114891212117653466}
-  m_Layer: 14
+  m_Layer: 18
   m_Name: Collider (2)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -89,7 +89,7 @@ GameObject:
   - component: {fileID: 4902479719037070}
   - component: {fileID: 65690821873888988}
   - component: {fileID: 114451505605055752}
-  m_Layer: 14
+  m_Layer: 18
   m_Name: Collider (3)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -109,7 +109,7 @@ GameObject:
   - component: {fileID: 95512740404814130}
   - component: {fileID: 54007678751173630}
   - component: {fileID: 114783717535791292}
-  m_Layer: 14
+  m_Layer: 18
   m_Name: Barrel_Red
   m_TagString: Item
   m_Icon: {fileID: 0}
@@ -126,7 +126,7 @@ GameObject:
   - component: {fileID: 4782582520336786}
   - component: {fileID: 65262242275310766}
   - component: {fileID: 114682803677038382}
-  m_Layer: 14
+  m_Layer: 18
   m_Name: Collider (10)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -141,7 +141,7 @@ GameObject:
   serializedVersion: 5
   m_Component:
   - component: {fileID: 4749843786126340}
-  m_Layer: 14
+  m_Layer: 18
   m_Name: (Colliders)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -158,7 +158,7 @@ GameObject:
   - component: {fileID: 4229025513282818}
   - component: {fileID: 65155314134706574}
   - component: {fileID: 114213827655675970}
-  m_Layer: 14
+  m_Layer: 18
   m_Name: Collider (5)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -175,7 +175,7 @@ GameObject:
   - component: {fileID: 4212035737751434}
   - component: {fileID: 65369524616478918}
   - component: {fileID: 114152654224166284}
-  m_Layer: 14
+  m_Layer: 18
   m_Name: Collider (9)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -192,7 +192,7 @@ GameObject:
   - component: {fileID: 4804537848093038}
   - component: {fileID: 65781811084194928}
   - component: {fileID: 114105437077575550}
-  m_Layer: 14
+  m_Layer: 18
   m_Name: Collider (6)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -284,7 +284,7 @@ Transform:
   m_PrefabInternal: {fileID: 100100000}
   m_GameObject: {fileID: 1638390199810260}
   m_LocalRotation: {x: -0.7071068, y: 0, z: -0, w: 0.7071068}
-  m_LocalPosition: {x: -5.876, y: 0.446, z: -18.09}
+  m_LocalPosition: {x: -5.797705, y: 6.4, z: -15.346393}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children:
   - {fileID: 4749843786126340}
@@ -361,6 +361,7 @@ MeshRenderer:
   m_Enabled: 1
   m_CastShadows: 1
   m_ReceiveShadows: 1
+  m_DynamicOccludee: 1
   m_MotionVectors: 1
   m_LightProbeUsage: 1
   m_ReflectionProbeUsage: 1
@@ -376,6 +377,7 @@ MeshRenderer:
   m_PreserveUVs: 0
   m_IgnoreNormalsForChartDetection: 0
   m_ImportantGI: 0
+  m_StitchLightmapSeams: 0
   m_SelectedEditorRenderState: 3
   m_MinimumChartSize: 4
   m_AutoUVMaxDistance: 0.5
@@ -542,11 +544,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1ae84068cbb977f45be26c57ff3a4ed9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  item: {fileID: 0}
+  grabNodeChildren: []
+  grabNodeParent: {fileID: 0}
   rotation: {x: 0, y: 0, z: 0}
   offset: {x: 0, y: 0, z: 0}
   referralNode: {fileID: 0}
   dominance: 0
+  grabThisNodeFirst: 0
+  interactionOn: 0
   grabType: 2
+  triggerType: 0
   interactionType: 0
 --- !u!114 &114105437077575550
 MonoBehaviour:
@@ -559,11 +567,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1ae84068cbb977f45be26c57ff3a4ed9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  item: {fileID: 0}
+  grabNodeChildren: []
+  grabNodeParent: {fileID: 0}
   rotation: {x: 0, y: 0, z: 0}
   offset: {x: 0, y: 0, z: 0}
   referralNode: {fileID: 0}
   dominance: 0
+  grabThisNodeFirst: 0
+  interactionOn: 0
   grabType: 2
+  triggerType: 0
   interactionType: 0
 --- !u!114 &114152654224166284
 MonoBehaviour:
@@ -576,11 +590,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1ae84068cbb977f45be26c57ff3a4ed9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  item: {fileID: 0}
+  grabNodeChildren: []
+  grabNodeParent: {fileID: 0}
   rotation: {x: 0, y: 0, z: 0}
   offset: {x: 0, y: 0, z: 0}
   referralNode: {fileID: 0}
   dominance: 0
+  grabThisNodeFirst: 0
+  interactionOn: 0
   grabType: 2
+  triggerType: 0
   interactionType: 0
 --- !u!114 &114213827655675970
 MonoBehaviour:
@@ -593,11 +613,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1ae84068cbb977f45be26c57ff3a4ed9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  item: {fileID: 0}
+  grabNodeChildren: []
+  grabNodeParent: {fileID: 0}
   rotation: {x: 0, y: 0, z: 0}
   offset: {x: 0, y: 0, z: 0}
   referralNode: {fileID: 0}
   dominance: 0
+  grabThisNodeFirst: 0
+  interactionOn: 0
   grabType: 2
+  triggerType: 0
   interactionType: 0
 --- !u!114 &114361221662803890
 MonoBehaviour:
@@ -610,11 +636,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1ae84068cbb977f45be26c57ff3a4ed9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  item: {fileID: 0}
+  grabNodeChildren: []
+  grabNodeParent: {fileID: 0}
   rotation: {x: 0, y: 0, z: 0}
   offset: {x: 0, y: 0, z: 0}
   referralNode: {fileID: 0}
   dominance: 0
+  grabThisNodeFirst: 0
+  interactionOn: 0
   grabType: 2
+  triggerType: 0
   interactionType: 0
 --- !u!114 &114451505605055752
 MonoBehaviour:
@@ -627,11 +659,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1ae84068cbb977f45be26c57ff3a4ed9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  item: {fileID: 0}
+  grabNodeChildren: []
+  grabNodeParent: {fileID: 0}
   rotation: {x: 0, y: 0, z: 0}
   offset: {x: 0, y: 0, z: 0}
   referralNode: {fileID: 0}
   dominance: 0
+  grabThisNodeFirst: 0
+  interactionOn: 0
   grabType: 2
+  triggerType: 0
   interactionType: 0
 --- !u!114 &114598588106599666
 MonoBehaviour:
@@ -644,11 +682,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1ae84068cbb977f45be26c57ff3a4ed9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  item: {fileID: 0}
+  grabNodeChildren: []
+  grabNodeParent: {fileID: 0}
   rotation: {x: 0, y: 0, z: 0}
   offset: {x: 0, y: 0, z: 0}
   referralNode: {fileID: 0}
   dominance: 0
+  grabThisNodeFirst: 0
+  interactionOn: 0
   grabType: 2
+  triggerType: 0
   interactionType: 0
 --- !u!114 &114682803677038382
 MonoBehaviour:
@@ -661,11 +705,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1ae84068cbb977f45be26c57ff3a4ed9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  item: {fileID: 0}
+  grabNodeChildren: []
+  grabNodeParent: {fileID: 0}
   rotation: {x: 0, y: 0, z: 0}
   offset: {x: 0, y: 0, z: 0}
   referralNode: {fileID: 0}
   dominance: 0
+  grabThisNodeFirst: 0
+  interactionOn: 0
   grabType: 2
+  triggerType: 0
   interactionType: 0
 --- !u!114 &114783717535791292
 MonoBehaviour:
@@ -678,8 +728,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: eefeaf2d6958af249b6c6eb385901356, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  itemRigidbody: {fileID: 0}
   itemName: Barrel
+  nonDualWieldable: 0
+  isGrabbed: 0
   timeLastGrabbed: 0
   pocketGrabNode: {fileID: 0}
   pocketCurrent: {fileID: 0}
@@ -689,7 +740,18 @@ MonoBehaviour:
   pocketCandidateTime: 0
   pocketingModelMaterialPrivate: {fileID: 0}
   pocketingModelRotationOffset: {x: 0, y: 0, z: 0, w: 0}
-  grabNodes: {fileID: 0}
+  itemRigidbody: {fileID: 0}
+  rigidbodyCopy:
+    mass: 0
+    drag: 0
+    angularDrag: 0
+    useGravity: 0
+    isKinematic: 0
+    interpolation: 0
+    collisionDetectionMode: 0
+    constraints: 0
+  attachments: []
+  attachmentNodes: []
 --- !u!114 &114891212117653466
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -701,9 +763,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1ae84068cbb977f45be26c57ff3a4ed9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  item: {fileID: 0}
+  grabNodeChildren: []
+  grabNodeParent: {fileID: 0}
   rotation: {x: 0, y: 0, z: 0}
   offset: {x: 0, y: 0, z: 0}
   referralNode: {fileID: 0}
   dominance: 0
+  grabThisNodeFirst: 0
+  interactionOn: 0
   grabType: 2
+  triggerType: 0
   interactionType: 0

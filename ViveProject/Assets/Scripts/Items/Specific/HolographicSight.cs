@@ -13,11 +13,11 @@ public class HolographicSight : MonoBehaviour {
 	public Transform dotRight;
 
 	void Update () {
-		if (transform.parent.Find("(Barrel Point)") != null) {
-			Transform barrel = transform.parent.Find("(Barrel Point)");
+		if (transform.parent && transform.parent.parent && transform.parent.parent && transform.parent.parent.parent && transform.parent.parent.parent.GetComponent<Weapon>() != null) {
+			Transform barrel = transform.parent.parent.parent.GetComponent<Weapon>().barrelPoint;
 
-			Vector3 left = Quaternion.Inverse(InputTracking.GetLocalRotation(VRNode.LeftEye)) * InputTracking.GetLocalPosition(VRNode.LeftEye);
-			Vector3 right = Quaternion.Inverse(InputTracking.GetLocalRotation(VRNode.RightEye)) * InputTracking.GetLocalPosition(VRNode.RightEye);
+			Vector3 left = Quaternion.Inverse(UnityEngine.XR.InputTracking.GetLocalRotation(UnityEngine.XR.XRNode.LeftEye)) * UnityEngine.XR.InputTracking.GetLocalPosition(UnityEngine.XR.XRNode.LeftEye);
+			Vector3 right = Quaternion.Inverse(UnityEngine.XR.InputTracking.GetLocalRotation(UnityEngine.XR.XRNode.RightEye)) * UnityEngine.XR.InputTracking.GetLocalPosition(UnityEngine.XR.XRNode.RightEye);
 			Vector3 leftWorld, rightWorld;
 			Vector3 offset = (left - right) * 0.5f;
 
@@ -34,6 +34,8 @@ public class HolographicSight : MonoBehaviour {
 				dotLeft.gameObject.SetActive(false);
 			}
 
+			Debug.DrawLine(leftWorld, (barrel.transform.position + barrel.transform.forward * 1000), Color.red);
+
 			dotLeft.localScale = Vector3.one * Mathf.Sqrt(Vector3.Distance(leftWorld, dotLeft.position)) * 0.1f * scale;
 			dotLeft.rotation = transform.rotation;
 
@@ -44,6 +46,8 @@ public class HolographicSight : MonoBehaviour {
 			} else {
 				dotRight.gameObject.SetActive(false);
 			}
+
+			Debug.DrawLine(rightWorld, (barrel.transform.position + barrel.transform.forward * 1000), Color.blue);
 
 			dotRight.localScale = Vector3.one * Mathf.Sqrt(Vector3.Distance(rightWorld, dotRight.position)) * 0.1f * scale;
 			dotRight.rotation = transform.rotation;

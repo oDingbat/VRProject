@@ -19,8 +19,8 @@ GameObject:
   serializedVersion: 5
   m_Component:
   - component: {fileID: 4163784409156970}
-  m_Layer: 14
-  m_Name: (Barrel Point)
+  m_Layer: 18
+  m_Name: (BarrelPoint)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -36,7 +36,7 @@ GameObject:
   - component: {fileID: 4101817788768404}
   - component: {fileID: 65216191708820712}
   - component: {fileID: 114257323546063986}
-  m_Layer: 14
+  m_Layer: 18
   m_Name: Body
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -54,7 +54,7 @@ GameObject:
   - component: {fileID: 33382541515155812}
   - component: {fileID: 23851589809123298}
   - component: {fileID: 95263817777654482}
-  m_Layer: 14
+  m_Layer: 18
   m_Name: (Model)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -71,7 +71,7 @@ GameObject:
   - component: {fileID: 4840231011414118}
   - component: {fileID: 135703257370081568}
   - component: {fileID: 114523388404736630}
-  m_Layer: 26
+  m_Layer: 21
   m_Name: AttNode (Square)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -86,7 +86,7 @@ GameObject:
   serializedVersion: 5
   m_Component:
   - component: {fileID: 4066367153535696}
-  m_Layer: 14
+  m_Layer: 18
   m_Name: (Attachments)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -103,7 +103,7 @@ GameObject:
   - component: {fileID: 4896683759300842}
   - component: {fileID: 65024878587344248}
   - component: {fileID: 114573531407313646}
-  m_Layer: 14
+  m_Layer: 18
   m_Name: Grip
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -121,7 +121,7 @@ GameObject:
   - component: {fileID: 33244330242135860}
   - component: {fileID: 23755486299440694}
   - component: {fileID: 95363352673255424}
-  m_Layer: 14
+  m_Layer: 18
   m_Name: (Model)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -138,7 +138,7 @@ GameObject:
   - component: {fileID: 4358544079473992}
   - component: {fileID: 65835142533472318}
   - component: {fileID: 114670927786479002}
-  m_Layer: 14
+  m_Layer: 18
   m_Name: Handle
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -153,7 +153,7 @@ GameObject:
   serializedVersion: 5
   m_Component:
   - component: {fileID: 4413484525172688}
-  m_Layer: 14
+  m_Layer: 18
   m_Name: (Colliders)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -170,7 +170,7 @@ GameObject:
   - component: {fileID: 224483852013113344}
   - component: {fileID: 223477488292693494}
   - component: {fileID: 114343979176552316}
-  m_Layer: 14
+  m_Layer: 18
   m_Name: (Canvas)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -187,7 +187,7 @@ GameObject:
   - component: {fileID: 4627828278212966}
   - component: {fileID: 135576117182280300}
   - component: {fileID: 114708445459537108}
-  m_Layer: 26
+  m_Layer: 21
   m_Name: AttNode (Square) (2)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -204,7 +204,7 @@ GameObject:
   - component: {fileID: 4748242434767282}
   - component: {fileID: 135638152677164756}
   - component: {fileID: 114430213757369826}
-  m_Layer: 26
+  m_Layer: 21
   m_Name: AttNode (Circle)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -219,7 +219,7 @@ GameObject:
   serializedVersion: 5
   m_Component:
   - component: {fileID: 4759042326062488}
-  m_Layer: 14
+  m_Layer: 18
   m_Name: (PocketingModel)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -236,7 +236,7 @@ GameObject:
   - component: {fileID: 4865926488884514}
   - component: {fileID: 135813609377293974}
   - component: {fileID: 114239169981195360}
-  m_Layer: 26
+  m_Layer: 21
   m_Name: AttNode (Barrel)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -251,7 +251,7 @@ GameObject:
   serializedVersion: 5
   m_Component:
   - component: {fileID: 4668991267159218}
-  m_Layer: 26
+  m_Layer: 18
   m_Name: (AttachmentNodes)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -269,7 +269,7 @@ GameObject:
   - component: {fileID: 222171135490871528}
   - component: {fileID: 114122468045040420}
   - component: {fileID: 114741598981201416}
-  m_Layer: 14
+  m_Layer: 18
   m_Name: Text
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -286,7 +286,7 @@ GameObject:
   - component: {fileID: 4995504091302694}
   - component: {fileID: 54691661401274304}
   - component: {fileID: 114798522993516976}
-  m_Layer: 14
+  m_Layer: 18
   m_Name: Assault Rifle
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -326,7 +326,7 @@ Transform:
   m_PrefabInternal: {fileID: 100100000}
   m_GameObject: {fileID: 1033229967053376}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.067, z: 0.478}
+  m_LocalPosition: {x: 0, y: 0.067, z: 0.493}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 4995504091302694}
@@ -490,7 +490,7 @@ Transform:
   m_PrefabInternal: {fileID: 100100000}
   m_GameObject: {fileID: 1953632734251298}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -11.632, y: 1.609, z: -3.4091299}
+  m_LocalPosition: {x: -11.144764, y: 1.14, z: -4.2876062}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children:
   - {fileID: 4668991267159218}
@@ -512,6 +512,7 @@ MeshRenderer:
   m_Enabled: 1
   m_CastShadows: 1
   m_ReceiveShadows: 1
+  m_DynamicOccludee: 1
   m_MotionVectors: 1
   m_LightProbeUsage: 1
   m_ReflectionProbeUsage: 1
@@ -527,6 +528,7 @@ MeshRenderer:
   m_PreserveUVs: 0
   m_IgnoreNormalsForChartDetection: 0
   m_ImportantGI: 0
+  m_StitchLightmapSeams: 0
   m_SelectedEditorRenderState: 3
   m_MinimumChartSize: 4
   m_AutoUVMaxDistance: 0.5
@@ -544,6 +546,7 @@ MeshRenderer:
   m_Enabled: 1
   m_CastShadows: 1
   m_ReceiveShadows: 1
+  m_DynamicOccludee: 1
   m_MotionVectors: 1
   m_LightProbeUsage: 1
   m_ReflectionProbeUsage: 1
@@ -559,6 +562,7 @@ MeshRenderer:
   m_PreserveUVs: 0
   m_IgnoreNormalsForChartDetection: 0
   m_ImportantGI: 0
+  m_StitchLightmapSeams: 0
   m_SelectedEditorRenderState: 3
   m_MinimumChartSize: 4
   m_AutoUVMaxDistance: 0.5
@@ -713,6 +717,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   item: {fileID: 0}
+  associatedGrabNode: {fileID: 114257323546063986}
   attachmentType: 0
   attachmentGender: 1
   isAttached: 0
@@ -729,10 +734,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   item: {fileID: 0}
+  grabNodeChildren: []
+  grabNodeParent: {fileID: 0}
   rotation: {x: 0, y: 0, z: 0}
   offset: {x: 0, y: 0, z: 0.1}
   referralNode: {fileID: 0}
   dominance: 0
+  grabThisNodeFirst: 0
+  interactionOn: 0
   grabType: 2
   triggerType: 0
   interactionType: 0
@@ -769,6 +778,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   item: {fileID: 0}
+  associatedGrabNode: {fileID: 114257323546063986}
   attachmentType: 2
   attachmentGender: 1
   isAttached: 0
@@ -785,6 +795,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   item: {fileID: 0}
+  associatedGrabNode: {fileID: 114257323546063986}
   attachmentType: 1
   attachmentGender: 1
   isAttached: 0
@@ -801,10 +812,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   item: {fileID: 0}
+  grabNodeChildren: []
+  grabNodeParent: {fileID: 0}
   rotation: {x: 0, y: 0, z: 0}
   offset: {x: 0, y: -0, z: 0.1}
   referralNode: {fileID: 0}
   dominance: 1
+  grabThisNodeFirst: 0
+  interactionOn: 0
   grabType: 2
   triggerType: 0
   interactionType: 0
@@ -820,10 +835,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   item: {fileID: 0}
+  grabNodeChildren: []
+  grabNodeParent: {fileID: 0}
   rotation: {x: 30, y: 0, z: 0}
   offset: {x: 0, y: -0.05, z: 0.08}
   referralNode: {fileID: 0}
   dominance: 2
+  grabThisNodeFirst: 0
+  interactionOn: 0
   grabType: 0
   triggerType: 1
   interactionType: 1
@@ -839,6 +858,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   item: {fileID: 0}
+  associatedGrabNode: {fileID: 114573531407313646}
   attachmentType: 1
   attachmentGender: 1
   isAttached: 0
@@ -890,7 +910,7 @@ MonoBehaviour:
     collisionDetectionMode: 0
     constraints: 0
   attachments: []
-  grabNodes: {fileID: 0}
+  attachmentNodes: []
   triggerHeld: 0
   timeLastFired: 0
   timeLastTriggered: 0
@@ -899,7 +919,7 @@ MonoBehaviour:
   chargeCurrent: 0
   baseAttributes:
     automatic: 1
-    firerate: 5
+    firerate: 10
     burstCount: 1
     burstDelay: 0.1
     ammoMax: 0
@@ -909,8 +929,8 @@ MonoBehaviour:
     accuracyMin: 1
     accuracyIncrement: 5
     accuracyDecrement: 0.1
-    recoilLinear: 0.05
-    recoilAngular: 0.05
+    recoilLinear: 0.02
+    recoilAngular: 0.075
     chargingEnabled: 0
     chargeIncrement: 0
     chargeDecrement: 0
@@ -923,7 +943,7 @@ MonoBehaviour:
     projectileSpreadDeviation: 0
     projectileRicochetCount: 2
     projectileRicochetAngleMax: 90
-    projectileVelocity: 800
+    projectileVelocity: 400
     projectileGravity: -9.81
     projectileDecelerationType: 0
     projectileDeceleration: 0
@@ -963,6 +983,7 @@ MonoBehaviour:
     projectileLifespan: 0
     projectileIsSticky: 0
     projectile: {fileID: 0}
+  barrelPoint: {fileID: 0}
   soundFireNormal: {fileID: 8300000, guid: 1b50830133d42e445bd833041e678f7a, type: 3}
 --- !u!135 &135576117182280300
 SphereCollider:

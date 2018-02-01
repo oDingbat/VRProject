@@ -14,29 +14,29 @@ TagManager:
   - UI
   - 
   - 
-  - Player
-  - Hand Left
-  - Hand Right
-  - Head
   - Environment
-  - Overlay
-  - Item
-  - Heavy Item
-  - Item Detail
+  - 
   - Climbable
-  - Lens
+  - ClimbablePhysics
+  - 
+  - Player
+  - 
   - Enemy
-  - Pocket
-  - Platform
-  - Projectile
-  - Eye Left
-  - Eye Right
-  - Player Clipping
+  - 
+  - HandLeft
+  - HandRight
+  - 
+  - Item
+  - 
   - AttachmentNode
+  - PocketNode
   - 
+  - Projectile
   - 
+  - EyeLeft
+  - EyeRight
   - 
-  - 
+  - Lens
   - 
   m_SortingLayers:
   - name: Default

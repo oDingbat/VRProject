@@ -558,7 +558,6 @@ public class Player : MonoBehaviour {
 								chosenIAN.item = chosenIAN.node.transform.parent.parent.GetComponent<Item>();
 							} else {
 								if (chosenIAN.node.grabNodeChildren.Count > 0) {
-									Debug.Log("Dafuq");
 									GrabNode childNodeCurrent = chosenIAN.node;
 									float closestChildNodeDistance = Mathf.Infinity;
 									for (int i = 0; i < chosenIAN.node.grabNodeChildren.Count; i++) {
@@ -603,8 +602,7 @@ public class Player : MonoBehaviour {
 								grabbedItemParentItem = grabbedItemParentItem.parent.parent;
 							}
 						}
-
-						Debug.Log(itemGrabInfoCurrent.grabbedRigidbody);
+						
 					} else {
 						itemGrabInfoCurrent.grabbedRigidbody = chosenIAN.item.transform.GetComponent<Rigidbody>();
 					}
@@ -622,7 +620,7 @@ public class Player : MonoBehaviour {
 					if (itemGrabInfoCurrent.grabNode) {
 						if (itemGrabInfoCurrent.grabNode.grabType == GrabNode.GrabType.FixedPositionRotation) {
 							Vector3 attachmentOffset = Vector3.zero;
-							if (itemGrabInfoCurrent.grabbedItem.transform.parent.name == "(Attachments)") {
+							if (itemGrabInfoCurrent.grabbedItem.transform.parent && itemGrabInfoCurrent.grabbedItem.transform.parent.name == "(Attachments)") {
 								attachmentOffset = itemGrabInfoCurrent.grabbedItem.transform.localPosition;
 							}
 							itemGrabInfoCurrent.grabOffset = Quaternion.Euler(itemGrabInfoCurrent.grabNode.rotation) * -(attachmentOffset + itemGrabInfoCurrent.grabNode.transform.localPosition + itemGrabInfoCurrent.grabNode.offset);
@@ -676,9 +674,9 @@ public class Player : MonoBehaviour {
 			grabWorldPos = itemGrabInfoCurrent.grabbedRigidbody.transform.position + itemGrabInfoCurrent.grabbedRigidbody.transform.rotation * (Quaternion.Inverse(itemGrabInfoCurrent.grabRotation) * -itemGrabInfoCurrent.grabOffset);
 		}
 
-		Debug.DrawLine(grabWorldPos + new Vector3(0, -0.125f, 0), grabWorldPos + new Vector3(0, 0.125f, 0), Color.green);
-		Debug.DrawLine(grabWorldPos + new Vector3(-0.125f, 0, 0), grabWorldPos + new Vector3(0.125f, 0, 0), Color.green);
-		Debug.DrawLine(grabWorldPos + new Vector3(0, 0, -0.125f), grabWorldPos + new Vector3(0, 0, 0.125f), Color.green);
+		//Debug.DrawLine(grabWorldPos + new Vector3(0, -0.125f, 0), grabWorldPos + new Vector3(0, 0.125f, 0), Color.green);
+		//Debug.DrawLine(grabWorldPos + new Vector3(-0.125f, 0, 0), grabWorldPos + new Vector3(0.125f, 0, 0), Color.green);
+		//Debug.DrawLine(grabWorldPos + new Vector3(0, 0, -0.125f), grabWorldPos + new Vector3(0, 0, 0.125f), Color.green);
 
 		return grabWorldPos;
 	}
@@ -1195,7 +1193,7 @@ public class Player : MonoBehaviour {
 		}
 
 		// Step 5: Move HeadCC if leaning too far
-		Debug.DrawLine(hmd.transform.position, new Vector3(bodyCC.transform.position.x, hmd.transform.position.y, bodyCC.transform.position.z), Color.red, 0, false);   // Shows a line representing lean distance drawing from the bodyCC to the headCC
+		//Debug.DrawLine(hmd.transform.position, new Vector3(bodyCC.transform.position.x, hmd.transform.position.y, bodyCC.transform.position.z), Color.red, 0, false);   // Shows a line representing lean distance drawing from the bodyCC to the headCC
 		leanDistance = Vector3.Distance(new Vector3(headCC.transform.position.x, 0, headCC.transform.position.z) + neckOffset, new Vector3(bodyCC.transform.position.x, 0, bodyCC.transform.position.z));       // Current lean distance
 		if (leanDistance > maxLeanDistance) {       // Is the player currently leaning further than the max lean distance allows?
 			Vector3 leanPullBack = (bodyCC.transform.position - headCC.transform.position); // The direction to pull the hmd back
@@ -1212,7 +1210,7 @@ public class Player : MonoBehaviour {
 		// This method moves the player's bodyCC, and in turn headCC, by applying movement based on the player's velocity
 		Vector3 bodyPositionBefore = bodyCC.transform.position;
 
-		Debug.DrawRay(bodyCC.transform.position, velocityCurrent, Color.green);		// Debug ray showing player velocity
+		//Debug.DrawRay(bodyCC.transform.position, velocityCurrent, Color.green);		// Debug ray showing player velocity
 
 		// Step 1: Apply Gravity for this frame
 		velocityCurrent += new Vector3(0, -9.8f * Time.deltaTime, 0);
@@ -1235,7 +1233,7 @@ public class Player : MonoBehaviour {
 
 		// Step 5: Move HeadCC if leaning too far
 		Vector3 neckOffset = new Vector3(hmd.transform.forward.x + hmd.transform.up.x, 0, hmd.transform.forward.z + hmd.transform.up.z).normalized * -0.15f;        // The current neck offset for how far away the bodyCC should be from the center of the headCC
-		Debug.DrawLine(hmd.transform.position, new Vector3(bodyCC.transform.position.x, hmd.transform.position.y, bodyCC.transform.position.z), Color.red, 0, false);   // Shows a line representing lean distance drawing from the bodyCC to the headCC
+		//Debug.DrawLine(hmd.transform.position, new Vector3(bodyCC.transform.position.x, hmd.transform.position.y, bodyCC.transform.position.z), Color.red, 0, false);   // Shows a line representing lean distance drawing from the bodyCC to the headCC
 		leanDistance = Vector3.Distance(new Vector3(headCC.transform.position.x, 0, headCC.transform.position.z) + neckOffset, new Vector3(bodyCC.transform.position.x, 0, bodyCC.transform.position.z));       // Current lean distance
 		if (leanDistance > maxLeanDistance) {       // Is the player currently leaning further than the max lean distance allows?
 			Vector3 leanPullBack = (bodyCC.transform.position - headCC.transform.position); // The direction to pull the hmd back
@@ -1383,7 +1381,8 @@ public class Player : MonoBehaviour {
 	}
 
 	void UpdateAvatar() {
-		avatar.position = bodyCC.transform.position - new Vector3(0, bodyCC.height / 2f, 0);
+		//avatar.position = bodyCC.transform.position - new Vector3(0, bodyCC.height / 2f, 0);
+		avatar.position = bodyCC.transform.position;
 		avatarTorso.position = new Vector3(bodyCC.transform.position.x, headCC.transform.position.y - 0.3f, bodyCC.transform.position.z);
 		Vector3 hmdFlatForward = new Vector3(hmd.transform.forward.x, 0, hmd.transform.forward.z).normalized;
 		Vector3 hmdFlatUp = new Vector3(hmd.transform.up.x, 0, hmd.transform.up.z).normalized;

@@ -353,11 +353,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1ae84068cbb977f45be26c57ff3a4ed9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  item: {fileID: 0}
+  grabNodeChildren: []
+  grabNodeParent: {fileID: 0}
   rotation: {x: 0, y: 0, z: 0}
   offset: {x: 0, y: 0, z: 0}
   referralNode: {fileID: 0}
   dominance: 0
+  grabThisNodeFirst: 0
+  interactionOn: 0
   grabType: 2
+  triggerType: 0
   interactionType: 0
 --- !u!114 &114269951127384708
 MonoBehaviour:
@@ -370,11 +376,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1ae84068cbb977f45be26c57ff3a4ed9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  item: {fileID: 0}
+  grabNodeChildren: []
+  grabNodeParent: {fileID: 0}
   rotation: {x: 0, y: 0, z: 0}
   offset: {x: 0, y: 0, z: 0}
   referralNode: {fileID: 0}
   dominance: 0
+  grabThisNodeFirst: 0
+  interactionOn: 0
   grabType: 2
+  triggerType: 0
   interactionType: 0
 --- !u!114 &114303678717566810
 MonoBehaviour:
@@ -387,11 +399,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1ae84068cbb977f45be26c57ff3a4ed9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  item: {fileID: 0}
+  grabNodeChildren: []
+  grabNodeParent: {fileID: 0}
   rotation: {x: 0, y: 0, z: 0}
   offset: {x: 0, y: 0, z: 0}
   referralNode: {fileID: 0}
   dominance: 0
+  grabThisNodeFirst: 0
+  interactionOn: 0
   grabType: 2
+  triggerType: 0
   interactionType: 0
 --- !u!114 &114349516663260888
 MonoBehaviour:
@@ -419,11 +437,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1ae84068cbb977f45be26c57ff3a4ed9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  item: {fileID: 0}
+  grabNodeChildren: []
+  grabNodeParent: {fileID: 0}
   rotation: {x: 0, y: 0, z: 0}
   offset: {x: 0, y: 0, z: 0}
   referralNode: {fileID: 0}
   dominance: 0
+  grabThisNodeFirst: 0
+  interactionOn: 0
   grabType: 2
+  triggerType: 0
   interactionType: 0
 --- !u!114 &114733982784823506
 MonoBehaviour:
@@ -436,11 +460,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1ae84068cbb977f45be26c57ff3a4ed9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  item: {fileID: 0}
+  grabNodeChildren: []
+  grabNodeParent: {fileID: 0}
   rotation: {x: 0, y: 0, z: 0}
   offset: {x: 0, y: 0, z: 0}
   referralNode: {fileID: 0}
   dominance: 0
+  grabThisNodeFirst: 0
+  interactionOn: 0
   grabType: 2
+  triggerType: 0
   interactionType: 0
 --- !u!114 &114987882198384920
 MonoBehaviour:
@@ -453,8 +483,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: eefeaf2d6958af249b6c6eb385901356, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  itemRigidbody: {fileID: 0}
   itemName: 
+  nonDualWieldable: 0
+  isGrabbed: 0
   timeLastGrabbed: 0
   pocketGrabNode: {fileID: 0}
   pocketCurrent: {fileID: 0}
@@ -464,4 +495,15 @@ MonoBehaviour:
   pocketCandidateTime: 0
   pocketingModelMaterialPrivate: {fileID: 0}
   pocketingModelRotationOffset: {x: 0, y: 0, z: 0, w: 0}
-  grabNodes: {fileID: 0}
+  itemRigidbody: {fileID: 0}
+  rigidbodyCopy:
+    mass: 0
+    drag: 0
+    angularDrag: 0
+    useGravity: 0
+    isKinematic: 0
+    interpolation: 0
+    collisionDetectionMode: 0
+    constraints: 0
+  attachments: []
+  attachmentNodes: []

@@ -21,7 +21,7 @@ GameObject:
   - component: {fileID: 4786791261619784}
   - component: {fileID: 54875146786233844}
   - component: {fileID: 114919724348785576}
-  m_Layer: 14
+  m_Layer: 18
   m_Name: Boltorizor
   m_TagString: Item
   m_Icon: {fileID: 0}
@@ -36,7 +36,7 @@ GameObject:
   serializedVersion: 5
   m_Component:
   - component: {fileID: 4326373296810928}
-  m_Layer: 14
+  m_Layer: 18
   m_Name: (Attachments)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -51,7 +51,7 @@ GameObject:
   serializedVersion: 5
   m_Component:
   - component: {fileID: 4881405294594756}
-  m_Layer: 14
+  m_Layer: 18
   m_Name: (AttachmentNodes)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -68,7 +68,7 @@ GameObject:
   - component: {fileID: 4326211205599252}
   - component: {fileID: 135923050852431948}
   - component: {fileID: 114056802011332856}
-  m_Layer: 26
+  m_Layer: 21
   m_Name: AttachmentNode
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -83,7 +83,7 @@ GameObject:
   serializedVersion: 5
   m_Component:
   - component: {fileID: 4166808449535530}
-  m_Layer: 14
+  m_Layer: 18
   m_Name: (PocketingModel)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -99,7 +99,7 @@ GameObject:
   m_Component:
   - component: {fileID: 4089804508070940}
   - component: {fileID: 95604277137215368}
-  m_Layer: 14
+  m_Layer: 18
   m_Name: (Model)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -116,7 +116,7 @@ GameObject:
   - component: {fileID: 4830740782581306}
   - component: {fileID: 33116022380138886}
   - component: {fileID: 23540192366995528}
-  m_Layer: 14
+  m_Layer: 18
   m_Name: Cube
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -131,7 +131,7 @@ GameObject:
   serializedVersion: 5
   m_Component:
   - component: {fileID: 4448630900775704}
-  m_Layer: 14
+  m_Layer: 18
   m_Name: (Colliders)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -148,7 +148,7 @@ GameObject:
   - component: {fileID: 4776064422736686}
   - component: {fileID: 33935948119263778}
   - component: {fileID: 23917366171404356}
-  m_Layer: 14
+  m_Layer: 18
   m_Name: Cube (1)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -165,7 +165,7 @@ GameObject:
   - component: {fileID: 4476917444520878}
   - component: {fileID: 33878686608037908}
   - component: {fileID: 23520695305206378}
-  m_Layer: 14
+  m_Layer: 18
   m_Name: Cube
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -182,7 +182,7 @@ GameObject:
   - component: {fileID: 4916500509738534}
   - component: {fileID: 65652242632510556}
   - component: {fileID: 114625592571761832}
-  m_Layer: 14
+  m_Layer: 18
   m_Name: Cube (2)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -199,7 +199,7 @@ GameObject:
   - component: {fileID: 4073784180562410}
   - component: {fileID: 33587197673154694}
   - component: {fileID: 23051982967229426}
-  m_Layer: 14
+  m_Layer: 18
   m_Name: Cube (2)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -322,7 +322,7 @@ Transform:
   m_PrefabInternal: {fileID: 100100000}
   m_GameObject: {fileID: 1061433727099190}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -11.793, y: 2.023, z: -3.35913}
+  m_LocalPosition: {x: -12.150724, y: 0.136, z: -3.489705}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children:
   - {fileID: 4881405294594756}
@@ -382,6 +382,7 @@ MeshRenderer:
   m_Enabled: 1
   m_CastShadows: 1
   m_ReceiveShadows: 1
+  m_DynamicOccludee: 1
   m_MotionVectors: 1
   m_LightProbeUsage: 1
   m_ReflectionProbeUsage: 1
@@ -397,6 +398,7 @@ MeshRenderer:
   m_PreserveUVs: 1
   m_IgnoreNormalsForChartDetection: 0
   m_ImportantGI: 0
+  m_StitchLightmapSeams: 0
   m_SelectedEditorRenderState: 3
   m_MinimumChartSize: 4
   m_AutoUVMaxDistance: 0.5
@@ -414,11 +416,12 @@ MeshRenderer:
   m_Enabled: 1
   m_CastShadows: 1
   m_ReceiveShadows: 1
+  m_DynamicOccludee: 1
   m_MotionVectors: 1
   m_LightProbeUsage: 1
   m_ReflectionProbeUsage: 1
   m_Materials:
-  - {fileID: 2100000, guid: 10f6e4016179c764b9b4154f0ddcfc83, type: 2}
+  - {fileID: 2100000, guid: 0b2a879e160b77e4d8721523acd5110a, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -429,6 +432,7 @@ MeshRenderer:
   m_PreserveUVs: 1
   m_IgnoreNormalsForChartDetection: 0
   m_ImportantGI: 0
+  m_StitchLightmapSeams: 0
   m_SelectedEditorRenderState: 3
   m_MinimumChartSize: 4
   m_AutoUVMaxDistance: 0.5
@@ -446,6 +450,7 @@ MeshRenderer:
   m_Enabled: 1
   m_CastShadows: 1
   m_ReceiveShadows: 1
+  m_DynamicOccludee: 1
   m_MotionVectors: 1
   m_LightProbeUsage: 1
   m_ReflectionProbeUsage: 1
@@ -461,6 +466,7 @@ MeshRenderer:
   m_PreserveUVs: 1
   m_IgnoreNormalsForChartDetection: 0
   m_ImportantGI: 0
+  m_StitchLightmapSeams: 0
   m_SelectedEditorRenderState: 3
   m_MinimumChartSize: 4
   m_AutoUVMaxDistance: 0.5
@@ -478,6 +484,7 @@ MeshRenderer:
   m_Enabled: 1
   m_CastShadows: 1
   m_ReceiveShadows: 1
+  m_DynamicOccludee: 1
   m_MotionVectors: 1
   m_LightProbeUsage: 1
   m_ReflectionProbeUsage: 1
@@ -493,6 +500,7 @@ MeshRenderer:
   m_PreserveUVs: 1
   m_IgnoreNormalsForChartDetection: 0
   m_ImportantGI: 0
+  m_StitchLightmapSeams: 0
   m_SelectedEditorRenderState: 3
   m_MinimumChartSize: 4
   m_AutoUVMaxDistance: 0.5
@@ -655,7 +663,7 @@ MonoBehaviour:
   attributesAlwaysPassive: 1
   attachmentAttributesPassive:
     automatic: 0
-    firerate: -0.25
+    firerate: -0.8
     burstCount: 0
     burstDelay: 0
     ammoMax: 0
@@ -684,7 +692,7 @@ MonoBehaviour:
     projectileDeceleration: 0
     projectileLifespan: 1
     projectileIsSticky: 1
-    projectile: {fileID: 1937972091572080, guid: 3898f956b7a5bf246b8b70c7219ca4c7,
+    projectile: {fileID: 1087837154491904, guid: 3898f956b7a5bf246b8b70c7219ca4c7,
       type: 2}
   attachmentAttributesActive:
     automatic: 0

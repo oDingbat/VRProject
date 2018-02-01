@@ -17,7 +17,7 @@ public class AmmoTooltip : MonoBehaviour {
 		text = GetComponent<Text>();
 		weapon = transform.parent.parent.GetComponent<Weapon>();
 
-		playerHead = GameObject.Find("Camera (eye)").transform;
+		playerHead = GameObject.Find("Camera (both) (eye)").transform;
 
 		if (weapon) {
 			weapon.eventAdjustAmmo += AdjustText;
