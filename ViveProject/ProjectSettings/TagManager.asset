@@ -27,7 +27,7 @@ TagManager:
   - HandRight
   - 
   - Item
-  - 
+  - EnvironmentItem
   - AttachmentNode
   - PocketNode
   - 
@@ -35,8 +35,8 @@ TagManager:
   - 
   - EyeLeft
   - EyeRight
-  - 
-  - Lens
+  - VehiclePhysics
+  - VehicleClimbable
   - 
   m_SortingLayers:
   - name: Default

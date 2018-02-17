@@ -104,11 +104,12 @@
      <Compile Include="Assets\Scripts\Entities\Sentry.cs" />
      <Compile Include="Assets\Scripts\Entities\StatusEffects.cs" />
      <Compile Include="Assets\Scripts\Entities\Vitals.cs" />
+     <Compile Include="Assets\Scripts\Environmental\EnvironmentItems\EnvironmentItem.cs" />
+     <Compile Include="Assets\Scripts\Environmental\EnvironmentItems\HingeItem.cs" />
      <Compile Include="Assets\Scripts\Environmental\PlatformController.cs" />
      <Compile Include="Assets\Scripts\ImageEffects\Glow\GlowComposite.cs" />
      <Compile Include="Assets\Scripts\ImageEffects\Glow\GlowController.cs" />
      <Compile Include="Assets\Scripts\ImageEffects\Glow\GlowObjectCmd.cs" />
-     <Compile Include="Assets\Scripts\ImageEffects\Glow\NewShit.cs" />
      <Compile Include="Assets\Scripts\Items\AttachmentNode.cs" />
      <Compile Include="Assets\Scripts\Items\GrabNode.cs" />
      <Compile Include="Assets\Scripts\Items\Inheritors\Attachment.cs" />
@@ -231,6 +232,9 @@
      <Compile Include="Assets\SteamVR\Scripts\SteamVR_TrackedObject.cs" />
      <Compile Include="Assets\SteamVR\Scripts\SteamVR_UpdatePoses.cs" />
      <Compile Include="Assets\SteamVR\Scripts\SteamVR_Utils.cs" />
+     <Compile Include="Assets\VehiclePackage\Scripts\EasySuspension.cs" />
+     <Compile Include="Assets\VehiclePackage\Scripts\VehicleController.cs" />
+     <Compile Include="Assets\VehiclePackage\Scripts\Wheel.cs" />
      <None Include="Assets\PostProcessing\Resources\Shaders\DepthOfField.shader" />
      <None Include="Assets\SteamVR\Resources\SteamVR_Fade.shader" />
      <None Include="Assets\Shaders\GlowCmdShader.shader" />
