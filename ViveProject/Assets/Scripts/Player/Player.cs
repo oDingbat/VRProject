@@ -1551,7 +1551,7 @@ public class Player : MonoBehaviour {
 				Vector3 handPosOffset = handInfoCurrent.controller.transform.position - anchorPos;
 				Vector3 grabWorldPos = envGrabInfoCurrent.grabbedRigidbody.transform.position + (envGrabInfoCurrent.grabbedRigidbody.transform.rotation * envGrabInfoCurrent.grabOffset);
 				Vector3 grabWorldOffsetPos = grabWorldPos - anchorPos;
-				Vector3 desiredPos = anchorPos + (Vector3.ProjectOnPlane(handPosOffset, envGrabInfoCurrent.grabbedRigidbody.transform.rotation * currentHingeItem.hingeJoint.axis).normalized * currentHingeItem.HingeMovementNormalizeDistance) + Vector3.Project(grabWorldOffsetPos, envGrabInfoCurrent.grabbedRigidbody.transform.rotation * currentHingeItem.hingeJoint.axis);
+				Vector3 desiredPos = anchorPos + (Vector3.ProjectOnPlane(handPosOffset, envGrabInfoCurrent.grabbedRigidbody.transform.rotation * currentHingeItem.hingeJoint.axis).normalized * currentHingeItem.hingeMovementNormalizeDistance) + Vector3.Project(grabWorldOffsetPos, envGrabInfoCurrent.grabbedRigidbody.transform.rotation * currentHingeItem.hingeJoint.axis);
 
 				Vector3 velocityDirection = desiredPos - grabWorldPos;
 				velocityDirection *= Mathf.Sqrt(velocityDirection.magnitude);
