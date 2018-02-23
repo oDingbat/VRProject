@@ -66,6 +66,7 @@ public class Weapon : Item {
 
 		[Space(10)]
 		[Header("Projectile Attributes")]
+		public int projectileBaseDamage;				// The base damage of the projectile
 		public Vector2[] projectileSpreads;             // The projectile spreads of the weapon. Each index represents an individual spread the the rotation of that index being applied to it. Used for multi-projectile based weapons (ie: shotguns)
 		public SpreadType projectileSpreadType;
 		public float projectileSpreadDeviation;         // The random rotation deviation given to each projectile in projectile spreads
@@ -99,6 +100,7 @@ public class Weapon : Item {
 			chargeDecrementPerShot = copiedAttributes.chargeDecrementPerShot;
 			chargeRequired = copiedAttributes.chargeRequired;
 			chargeInfluenceVelocity = copiedAttributes.chargeInfluenceVelocity;
+			projectileBaseDamage = copiedAttributes.projectileBaseDamage;
 			projectileSpreads = copiedAttributes.projectileSpreads;
 			projectileSpreadType = copiedAttributes.projectileSpreadType;
 			projectileSpreadDeviation = copiedAttributes.projectileSpreadDeviation;
@@ -138,6 +140,7 @@ public class Weapon : Item {
 			chargeDecrementPerShot = 0;
 			chargeRequired = 0;
 			chargeInfluenceVelocity = 0;
+			projectileBaseDamage = 0;
 			projectileSpreadDeviation = 0;
 			projectileRicochetAngleMax = 0;
 			projectileVelocity = 0;
@@ -167,6 +170,7 @@ public class Weapon : Item {
 			projectileIsSticky = false;
 
 			// percentages
+			
 			firerate = 1;
 			burstDelay = 1;
 			accuracyMax = 1;
@@ -180,6 +184,7 @@ public class Weapon : Item {
 			chargeDecrementPerShot = 1;
 			chargeRequired = 1;
 			chargeInfluenceVelocity = 1;
+			projectileBaseDamage = 1;
 			projectileSpreadDeviation = 1;
 			projectileRicochetAngleMax = 1;
 			projectileVelocity = 1;
@@ -216,7 +221,9 @@ public class Weapon : Item {
 
 	public void AdjustAmmo (int a) {
 		ammoCurrent = (int)Mathf.Clamp(ammoCurrent + a, 0, combinedAttributes.ammoMax);
-		eventAdjustAmmo.Invoke();
+		if (eventAdjustAmmo != null) {
+			eventAdjustAmmo.Invoke();
+		}
 	}
 
 	public void UpdateCombinedAttributes () {
@@ -281,6 +288,7 @@ public class Weapon : Item {
 				combinedAttachmentAttributes.chargeDecrementPerShot += allAttributes[j].chargeDecrementPerShot;
 				combinedAttachmentAttributes.chargeRequired += allAttributes[j].chargeRequired;
 				combinedAttachmentAttributes.chargeInfluenceVelocity += allAttributes[j].chargeInfluenceVelocity;
+				combinedAttachmentAttributes.projectileBaseDamage += allAttributes[j].projectileBaseDamage;
 				combinedAttachmentAttributes.projectileSpreadDeviation += allAttributes[j].projectileSpreadDeviation;
 				combinedAttachmentAttributes.projectileRicochetAngleMax += allAttributes[j].projectileRicochetAngleMax;
 				combinedAttachmentAttributes.projectileVelocity += allAttributes[j].projectileVelocity;
@@ -323,6 +331,7 @@ public class Weapon : Item {
 			combinedAttributes.chargeDecrementPerShot *= combinedAttachmentAttributes.chargeDecrementPerShot;
 			combinedAttributes.chargeRequired *= combinedAttachmentAttributes.chargeRequired;
 			combinedAttributes.chargeInfluenceVelocity *= combinedAttachmentAttributes.chargeInfluenceVelocity;
+			combinedAttributes.projectileBaseDamage *= combinedAttachmentAttributes.projectileBaseDamage;
 			combinedAttributes.projectileSpreadDeviation *= combinedAttachmentAttributes.projectileSpreadDeviation;
 			combinedAttributes.projectileRicochetAngleMax *= combinedAttachmentAttributes.projectileRicochetAngleMax;
 			combinedAttributes.projectileVelocity *= combinedAttachmentAttributes.projectileVelocity;

@@ -15,6 +15,13 @@ public class ShatteredProjectilePiece : MonoBehaviour {
 			rigidbody.velocity += transform.rotation * Quaternion.Euler(velocityVector) * (transform.forward * velocityMagnitude);
 			collider.enabled = true;
 		}
+
+		StartCoroutine(SelfDestruct());
+	}
+
+	IEnumerator SelfDestruct () {
+		yield return new WaitForSeconds(5f);
+		Destroy(gameObject);
 	}
 
 	void OnDrawGizmosSelected() {

@@ -361,16 +361,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   collisionMask:
     serializedVersion: 2
-    m_Bits: 4294769865
+    m_Bits: 4294901193
   initialVelocityMagnitude: 0
   velocity: {x: 0, y: 0, z: 0}
   deceleration: 0
   decelerationType: 0
   gravity: 0
   sticky: 1
+  baseDamage: 24
   lifespan: 5
   projectileCollider: {fileID: 65962301438634272}
   ricochetCount: 1000
   ricochetAngleMax: 360
   prefabProjectileShattered: {fileID: 1446682178879366, guid: f290dc89d4f57a9419cd9d89a37158a1,
+    type: 2}
+  prefabDamageText: {fileID: 1387646521758812, guid: ae8bb3faaa857794da25d791fc794aa8,
     type: 2}

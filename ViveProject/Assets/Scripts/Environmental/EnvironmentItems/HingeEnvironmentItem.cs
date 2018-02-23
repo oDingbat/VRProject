@@ -3,17 +3,11 @@ using System.Collections.Generic;
 using UnityEngine;
 
 [RequireComponent (typeof(HingeJoint), typeof(Rigidbody))]
-public class HingeItem : EnvironmentItem {
+public class HingeEnvironmentItem : EnvironmentItem {
 
 	[Space(10)][Header("Objects")]
 	public HingeJoint	hingeJoint;
-	public Rigidbody	rigidbody;
 	
-	[Space(10)][Header("Grabbing Information")]
-	public Player		playerGrabbing;
-	public string		handGrabbingSide;
-	public bool			isGrabbed;
-
 	[Space(10)][Header("Movement Settings")]
 	public float[]		snapAngles;
 	[Range(1f, 180f)]
@@ -56,9 +50,11 @@ public class HingeItem : EnvironmentItem {
 	}
 
 	void UpdateHapticFeedback () {
-		if (Mathf.Abs(angleLastHaptic - hingeJoint.angle) >= 5f) {
-			angleLastHaptic = hingeJoint.angle;
-			StartCoroutine(playerGrabbing.TriggerHapticFeedback((handGrabbingSide == "Left" ? playerGrabbing.handInfoLeft : playerGrabbing.handInfoRight).controllerDevice, (ushort)(800f * hapticFeedbackStrength), 0f));
+		if (playerGrabbing == true) {
+			if (Mathf.Abs(angleLastHaptic - hingeJoint.angle) >= 5f) {
+				angleLastHaptic = hingeJoint.angle;
+				StartCoroutine(playerGrabbing.TriggerHapticFeedback((handGrabbingSide == "Left" ? playerGrabbing.handInfoLeft : playerGrabbing.handInfoRight).controllerDevice, (ushort)(800f * hapticFeedbackStrength), 0f));
+			}
 		}
 	}
 

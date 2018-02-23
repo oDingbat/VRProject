@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.AI;
 
 [RequireComponent (typeof (Entity))]
-public class Dummy : MonoBehaviour {
+public class DummyNavigator : MonoBehaviour {
 
 	Rigidbody thisRigidbody;
 	public NavMeshAgent navMeshAgent;

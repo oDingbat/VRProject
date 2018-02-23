@@ -807,7 +807,7 @@ public class Player : MonoBehaviour {
 		envGrabInfoCurrent.grabOffset = Vector3.zero;
 		envGrabInfoCurrent.grabCCOffset = Vector3.zero;
 
-		if (envGrabInfoCurrent.environmentItem != null && envGrabInfoCurrent.environmentItem is HingeItem) {
+		if (envGrabInfoCurrent.environmentItem != null && envGrabInfoCurrent.environmentItem is HingeEnvironmentItem) {
 			envGrabInfoCurrent.environmentItem.OnRelease();
 		}
 
@@ -962,10 +962,10 @@ public class Player : MonoBehaviour {
 
 				// Step 1: Trigger haptic feedback
 				if (itemGrabInfoLeft.grabbedRigidbody == itemGrabInfoRight.grabbedRigidbody) {
-					StartCoroutine(TriggerHapticFeedback(handInfoLeft.controllerDevice, 3999, 0.1f));
-					StartCoroutine(TriggerHapticFeedback(handInfoRight.controllerDevice, 3999, 0.1f));
+					StartCoroutine(TriggerHapticFeedback(handInfoLeft.controllerDevice, 3999, 0.02f));
+					StartCoroutine(TriggerHapticFeedback(handInfoRight.controllerDevice, 3999, 0.02f));
 				} else {
-					StartCoroutine(TriggerHapticFeedback((hand == "Left" ? handInfoLeft.controllerDevice : handInfoRight.controllerDevice), 3999, 0.1f));
+					StartCoroutine(TriggerHapticFeedback((hand == "Left" ? handInfoLeft.controllerDevice : handInfoRight.controllerDevice), 3999, 0.02f));
 				}
 
 				// Step 2: Apply velocity and angular velocity to weapon
@@ -1013,6 +1013,7 @@ public class Player : MonoBehaviour {
 					newProjectileClass.gravity = currentWeapon.combinedAttributes.projectileGravity;
 					newProjectileClass.ricochetCount = currentWeapon.combinedAttributes.projectileRicochetCount;
 					newProjectileClass.ricochetAngleMax = currentWeapon.combinedAttributes.projectileRicochetAngleMax;
+					newProjectileClass.baseDamage = currentWeapon.combinedAttributes.projectileBaseDamage;
 					newProjectileClass.lifespan = currentWeapon.combinedAttributes.projectileLifespan;
 					newProjectileClass.sticky = currentWeapon.combinedAttributes.projectileIsSticky;
 					audioManager.PlayClipAtPoint(currentWeapon.soundFireNormal, currentWeapon.barrelPoint.position, 2f);
@@ -1102,11 +1103,11 @@ public class Player : MonoBehaviour {
 		if (envGrabInfoLeft.climbableGrabbed == null && envGrabInfoRight.climbableGrabbed == null) {
 			isClimbing = false;
 			if (grounded == true) {
-				velocityCurrent = Vector3.Lerp(velocityCurrent, new Vector3(velocityDesired.x, velocityCurrent.y, velocityDesired.z), 25 * Time.deltaTime * Mathf.Clamp01(groundedTime));
+				velocityCurrent = Vector3.Lerp(velocityCurrent, new Vector3(velocityDesired.x, velocityCurrent.y, velocityDesired.z), 12.5f * Time.deltaTime * Mathf.Clamp01(groundedTime));
 			} else {
 				if (handInfoLeft.controllerDevice.GetAxis(Valve.VR.EVRButtonId.k_EButton_SteamVR_Touchpad) != Vector2.zero) {
 					Vector3 normalizedVelocityDesired = new Vector3(velocityDesired.x, 0, velocityDesired.z).normalized * (Mathf.Clamp01(new Vector3(velocityDesired.x, 0, velocityDesired.z).magnitude) * Mathf.Clamp(new Vector3(velocityCurrent.x, 0, velocityCurrent.z).magnitude, moveSpeedCurrent, Mathf.Infinity));
-					velocityCurrent = Vector3.Lerp(velocityCurrent, new Vector3(normalizedVelocityDesired.x, velocityCurrent.y, normalizedVelocityDesired.z), 2.5f * Time.deltaTime);
+					velocityCurrent = Vector3.Lerp(velocityCurrent, new Vector3(normalizedVelocityDesired.x, velocityCurrent.y, normalizedVelocityDesired.z), 1f * Time.deltaTime);
 				}
 			}
 		} else {
@@ -1544,8 +1545,18 @@ public class Player : MonoBehaviour {
 		// Handles physics updates for environment items being grabbed (ie: doors, levers, etc)
 		
 		if (envGrabInfoCurrent.grabbedRigidbody != null) {
-			if (envGrabInfoCurrent.environmentItem is HingeItem) {
-				HingeItem currentHingeItem = (envGrabInfoCurrent.environmentItem as HingeItem);
+			if (envGrabInfoCurrent.environmentItem is SimpleEnvironmentItem) {       // Is the environmentItem a simpleEnvironmentItem?
+				SimpleEnvironmentItem currentHingeItem = (envGrabInfoCurrent.environmentItem as SimpleEnvironmentItem);
+
+				Vector3 grabWorldPos = envGrabInfoCurrent.grabbedRigidbody.transform.position + (envGrabInfoCurrent.grabbedRigidbody.transform.rotation * envGrabInfoCurrent.grabOffset);
+				Vector3 handPos = handInfoCurrent.controller.transform.position;
+				Vector3 velocityDesired = (handPos - grabWorldPos);
+				velocityDesired = Vector3.ClampMagnitude(velocityDesired * 5000, velocityDesired.magnitude * 25000);
+				velocityDesired *= Mathf.Sqrt(envGrabInfoCurrent.grabbedRigidbody.mass);
+
+				envGrabInfoCurrent.grabbedRigidbody.AddForceAtPosition(velocityDesired, grabWorldPos);
+			} else if (envGrabInfoCurrent.environmentItem is HingeEnvironmentItem) {		// Is the environmentItem a hingeEnvironmentItem?
+				HingeEnvironmentItem currentHingeItem = (envGrabInfoCurrent.environmentItem as HingeEnvironmentItem);
 
 				Vector3 anchorPos = (envGrabInfoCurrent.grabbedRigidbody.transform.position + (envGrabInfoCurrent.grabbedRigidbody.transform.rotation * currentHingeItem.hingeJoint.anchor));
 				Vector3 handPosOffset = handInfoCurrent.controller.transform.position - anchorPos;

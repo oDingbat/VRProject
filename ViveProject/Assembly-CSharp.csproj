@@ -51,6 +51,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+     <Compile Include="Assets\DamageText.cs" />
      <Compile Include="Assets\PostProcessing\Runtime\Attributes\GetSetAttribute.cs" />
      <Compile Include="Assets\PostProcessing\Runtime\Attributes\MinAttribute.cs" />
      <Compile Include="Assets\PostProcessing\Runtime\Attributes\TrackballAttribute.cs" />
@@ -98,14 +99,15 @@
      <Compile Include="Assets\PostProcessing\Utilities\CustomMotionTexture\ExampleWheelController.cs" />
      <Compile Include="Assets\Scripts\Audio\AudioManager.cs" />
      <Compile Include="Assets\Scripts\Entities\Attributes.cs" />
-     <Compile Include="Assets\Scripts\Entities\Dummy.cs" />
-     <Compile Include="Assets\Scripts\Entities\DummyFly.cs" />
+     <Compile Include="Assets\Scripts\Entities\DummyNavigator.cs" />
      <Compile Include="Assets\Scripts\Entities\Entity.cs" />
+     <Compile Include="Assets\Scripts\Entities\EntityBone.cs" />
      <Compile Include="Assets\Scripts\Entities\Sentry.cs" />
      <Compile Include="Assets\Scripts\Entities\StatusEffects.cs" />
      <Compile Include="Assets\Scripts\Entities\Vitals.cs" />
      <Compile Include="Assets\Scripts\Environmental\EnvironmentItems\EnvironmentItem.cs" />
-     <Compile Include="Assets\Scripts\Environmental\EnvironmentItems\HingeItem.cs" />
+     <Compile Include="Assets\Scripts\Environmental\EnvironmentItems\HingeEnvironmentItem.cs" />
+     <Compile Include="Assets\Scripts\Environmental\EnvironmentItems\SimpleEnvironmentItem.cs" />
      <Compile Include="Assets\Scripts\Environmental\PlatformController.cs" />
      <Compile Include="Assets\Scripts\ImageEffects\Glow\GlowComposite.cs" />
      <Compile Include="Assets\Scripts\ImageEffects\Glow\GlowController.cs" />
@@ -125,7 +127,6 @@
      <Compile Include="Assets\Scripts\Items\Specific\HolographicSight.cs" />
      <Compile Include="Assets\Scripts\Player\Player.cs" />
      <Compile Include="Assets\Scripts\Projectiles\Projectile.cs" />
-     <Compile Include="Assets\Scripts\Projectiles\ShatteredProjectile.cs" />
      <Compile Include="Assets\Scripts\Projectiles\ShatteredProjectilePiece.cs" />
      <Compile Include="Assets\Scripts\Random\AutoRotate.cs" />
      <Compile Include="Assets\Scripts\Random\FPSCounter.cs" />
