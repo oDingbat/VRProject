@@ -64,34 +64,33 @@ public class Projectile : MonoBehaviour {
 	public void UpdateProjectileMovement () {
 		RaycastHit hit;
 		if (Physics.Raycast(transform.position, velocity.normalized, out hit, velocity.magnitude * Time.deltaTime, collisionMask)) {
-			if (hit.transform.gameObject.tag == "Player") {
-				//GameObject.Find("Player Body").GetComponent<Entity>().TakeDamage(baseDamage);
-				StartCoroutine(BreakProjectile(hit.point));
-			} else {
-				DamageParentingEntity(hit);
 
-				Vector3 normalPerpendicular = velocity.normalized - hit.normal * Vector3.Dot(velocity.normalized, hit.normal);
+			EntityBone hitEntityBone = hit.transform.GetComponent<EntityBone>();
+			Rigidbody hitRigidbody = hit.transform.GetComponent<Rigidbody>();
+			Vector3 normalPerpendicular = velocity.normalized - hit.normal * Vector3.Dot(velocity.normalized, hit.normal);
+			
+			if (hitEntityBone == true) {        // If the object we hit has an EntityBone component, damage it's entity
+				DamageHitEntity(hit, hitEntityBone);
+			}
 
-				if (hit.transform.GetComponent<Rigidbody>()) {
-					hit.transform.GetComponent<Rigidbody>().AddForceAtPosition(velocity.normalized * Mathf.Sqrt(velocity.magnitude) * Mathf.Sqrt(Vector3.Angle(normalPerpendicular, velocity.normalized) * 2500f), hit.point);
-				}
+			if (hitRigidbody == true) {         // If the object we hit has a rigidbody component, apply a force at the hit position
+				hitRigidbody.AddForceAtPosition(velocity.normalized * Mathf.Sqrt(velocity.magnitude) * Mathf.Sqrt(Vector3.Angle(normalPerpendicular, velocity.normalized) * 2500f), hit.point);
+			}
+			
+			if (ricochetCount > 0 && Vector3.Angle(normalPerpendicular, velocity.normalized) <= ricochetAngleMax) {  // Does this projectile have ricochets left and is the contact and less than or equal to the ricochetAngleMax?
+				// Ricochet
+				ricochetCount--;		// Subtract one ricochet from the total amount left
+				transform.position = hit.point + (hit.normal * 0.001f);
+				transform.rotation = Quaternion.LookRotation(Vector3.Reflect(velocity.normalized, hit.normal));
+				velocity = Vector3.Reflect(velocity, hit.normal);
+			} else {	// Don't have any ricochets left or the angle bad?
+				
+				if (sticky == true) {       // Is this projectile sticky?
+					
+					projectileCollider.enabled = true;      // Enable the projectile's collider
+					SetProjectileLayer("ProjectileSticky");
 
-				if (ricochetCount > 0 && Vector3.Angle(normalPerpendicular, velocity.normalized) <= ricochetAngleMax) {
-					ricochetCount--;
-					transform.position = hit.point + (hit.normal * 0.001f);
-					transform.rotation = Quaternion.LookRotation(Vector3.Reflect(velocity.normalized, hit.normal));
-					velocity = Vector3.Reflect(velocity, hit.normal);
-				} else {
-					StartCoroutine(BreakProjectile(hit.point));
-				}
-
-				if (sticky == true && (hit.transform.gameObject.layer == LayerMask.NameToLayer("Environment") || hit.transform.GetComponent<Rigidbody>())) {
-
-					// Enable the projectile's collider																																	// YHAFN
-					projectileCollider.enabled = true;
-
-					// Change prefab into a grabNode for the hit item
-					if (hit.transform.gameObject.layer == LayerMask.NameToLayer("Item")) {
+					if (hit.transform.gameObject.layer == LayerMask.NameToLayer("Item")) {		// If the hit object is an Item
 						if (hit.transform.parent && hit.transform.parent.parent != null && hit.transform.parent.parent.GetComponent<Item>()) {
 							if (hit.transform.parent.parent.Find(("(Attachments)"))) {
 								transform.parent = hit.transform.parent.parent.transform.Find("(Attachments)").transform;
@@ -118,28 +117,26 @@ public class Projectile : MonoBehaviour {
 							}
 						}
 
-
-						Transform[] transformsInProjectile = transform.GetComponentsInChildren<Transform>();
-						foreach (Transform tCurrent in transformsInProjectile) {
-							tCurrent.gameObject.layer = LayerMask.NameToLayer("Item");
-						}
-
 						gameObject.AddComponent<Misc>();
 						Destroy(this);
 					} else if (hit.transform.gameObject.layer == LayerMask.NameToLayer("EnvironmentItem")) {
+						Debug.Log("Yup");
 						transform.position = hit.point;
 						transform.parent = hit.transform;
-
-						Transform[] transformsInProjectile = transform.GetComponentsInChildren<Transform>();
-						foreach (Transform tCurrent in transformsInProjectile) {
-							tCurrent.gameObject.layer = LayerMask.NameToLayer("EnvironmentItem");
-						}
+						
+						StartCoroutine(BreakProjectile(hit.point));
 					} else {
+						transform.position = hit.point;
 						transform.parent = hit.transform;
+						StartCoroutine(BreakProjectile(hit.point));
 					}
+				} else {                    // Not sticky? then break this projectile
+					StartCoroutine(BreakProjectile(hit.point));
 				}
+				
 			}
 		} else {
+			// If the projectile did not hit anything
 			transform.position += velocity * Time.deltaTime;
 			velocity += new Vector3(0, gravity * Time.deltaTime, 0);
 			if (decelerationType == DecelerationType.Normal) {
@@ -153,19 +150,17 @@ public class Projectile : MonoBehaviour {
 		}
 	}
 
-	void DamageParentingEntity (RaycastHit hit) {
-		Entity hitEntity = hit.transform.GetComponent<Entity>();
-		if (hitEntity != null) {
-			hitEntity.TakeDamage(baseDamage, hit.point, hit.normal);
-			StartCoroutine(BreakProjectile(transform.position));
-		} else {
-			EntityBone hitEntityBone = hit.transform.GetComponent<EntityBone>();
-			if (hitEntityBone != null) {
-				int damageCalculated = (int)Mathf.Round((float)baseDamage * hitEntityBone.damageMultiplier);
-				hitEntityBone.entity.TakeDamage(damageCalculated, hit.point, hit.normal);
-				StartCoroutine(BreakProjectile(transform.position));
-			}
+	void SetProjectileLayer (string layerName) {
+		Transform[] transformsInProjectile = transform.GetComponentsInChildren<Transform>();
+		foreach (Transform tCurrent in transformsInProjectile) {
+			tCurrent.gameObject.layer = LayerMask.NameToLayer(layerName);
 		}
+	}
+
+	void DamageHitEntity (RaycastHit hit, EntityBone hitEntityBone) {
+		int damageCalculated = (int)Mathf.Round((float)baseDamage * hitEntityBone.damageMultiplier);
+		hitEntityBone.entity.TakeDamage(damageCalculated, (damageCalculated / 25) * hitEntityBone.stunMultiplier, hit.point, hit.normal);
+		StartCoroutine(BreakProjectile(transform.position));
 	}
 
 	IEnumerator BreakProjectile(Vector3 finalPos) {

@@ -96,13 +96,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   collisionMask:
     serializedVersion: 2
-    m_Bits: 4294901705
+    m_Bits: 2080309193
   initialVelocityMagnitude: 0
   velocity: {x: 0, y: 0, z: 0}
   deceleration: 0
   decelerationType: 0
   gravity: 0
   sticky: 0
+  baseDamage: 0
   lifespan: 5
   projectileCollider: {fileID: 0}
   ricochetCount: 1000

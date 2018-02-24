@@ -76,6 +76,7 @@ public class Player : MonoBehaviour {
 	float moveSpeedStanding = 4f;
 	float moveSpeedCrouching = 2f;
 	float moveSpeedLaying = 1f;
+	float maxEnvironmentItemGrabDistance = 0.5f;
 
 	[Space(10)] [Header("Movement Variables")]
 	public Vector3 velocityCurrent;     // The current velocity of the player
@@ -1523,7 +1524,7 @@ public class Player : MonoBehaviour {
 				itemGrabInfoCurrent.grabbedRigidbody.velocity = Vector3.Lerp(itemGrabInfoCurrent.grabbedRigidbody.velocity, Vector3.ClampMagnitude(((handInfoCurrent.handRigidbody.position + grabOffsetCurrent) - itemGrabInfoCurrent.grabbedRigidbody.transform.position) / Time.fixedDeltaTime, (itemGrabInfoCurrent.grabbedRigidbody.GetComponent<HingeJoint>()) ? 1 : 500) * itemGrabInfoCurrent.itemVelocityPercentage, Mathf.Clamp01(50 * Time.deltaTime));
 				//grabInfoCurrent.grabbedRigidbody.velocity = Vector3.Lerp(grabInfoCurrent.grabbedRigidbody.velocity, Vector3.ClampMagnitude(((handInfoCurrent.handRigidbody.transform.position + (dualWieldDirectionChangeRotation * handDominant.transform.rotation * ((grabDualWieldDominantHand == "Left") ? itemGrabInfoLeft.grabOffset : itemGrabInfoRight.grabOffset))) - grabbedItemDominant.transform.position) / Time.fixedDeltaTime, (grabbedItemDominant.GetComponent<HingeJoint>()) ? 1 : 100) * Mathf.Lerp(itemGrabInfoLeft.itemVelocityPercentage, itemGrabInfoRight.itemVelocityPercentage, 0.5f), Mathf.Clamp01(50 * Time.deltaTime));
 
-				if (!itemGrabInfoCurrent.grabbedRigidbody.GetComponent<HingeJoint>()) {
+				if (!itemGrabInfoCurrent.grabbedRigidbody.GetComponent<HingeJoint>()) {		// TODO: Do we still need this?
 					Quaternion rotationDeltaItem = (handInfoCurrent.handRigidbody.transform.rotation * itemGrabInfoCurrent.grabRotation) * Quaternion.Inverse(itemGrabInfoCurrent.grabbedRigidbody.transform.rotation);
 					float angleItem;
 					Vector3 axisItem;
@@ -1545,11 +1546,13 @@ public class Player : MonoBehaviour {
 		// Handles physics updates for environment items being grabbed (ie: doors, levers, etc)
 		
 		if (envGrabInfoCurrent.grabbedRigidbody != null) {
+
+			Vector3 grabWorldPos = envGrabInfoCurrent.grabbedRigidbody.transform.position + (envGrabInfoCurrent.grabbedRigidbody.transform.rotation * envGrabInfoCurrent.grabOffset);
+			Vector3 handPos = handInfoCurrent.controller.transform.position;
+
 			if (envGrabInfoCurrent.environmentItem is SimpleEnvironmentItem) {       // Is the environmentItem a simpleEnvironmentItem?
 				SimpleEnvironmentItem currentHingeItem = (envGrabInfoCurrent.environmentItem as SimpleEnvironmentItem);
-
-				Vector3 grabWorldPos = envGrabInfoCurrent.grabbedRigidbody.transform.position + (envGrabInfoCurrent.grabbedRigidbody.transform.rotation * envGrabInfoCurrent.grabOffset);
-				Vector3 handPos = handInfoCurrent.controller.transform.position;
+				
 				Vector3 velocityDesired = (handPos - grabWorldPos);
 				velocityDesired = Vector3.ClampMagnitude(velocityDesired * 5000, velocityDesired.magnitude * 25000);
 				velocityDesired *= Mathf.Sqrt(envGrabInfoCurrent.grabbedRigidbody.mass);
@@ -1560,7 +1563,6 @@ public class Player : MonoBehaviour {
 
 				Vector3 anchorPos = (envGrabInfoCurrent.grabbedRigidbody.transform.position + (envGrabInfoCurrent.grabbedRigidbody.transform.rotation * currentHingeItem.hingeJoint.anchor));
 				Vector3 handPosOffset = handInfoCurrent.controller.transform.position - anchorPos;
-				Vector3 grabWorldPos = envGrabInfoCurrent.grabbedRigidbody.transform.position + (envGrabInfoCurrent.grabbedRigidbody.transform.rotation * envGrabInfoCurrent.grabOffset);
 				Vector3 grabWorldOffsetPos = grabWorldPos - anchorPos;
 				Vector3 desiredPos = anchorPos + (Vector3.ProjectOnPlane(handPosOffset, envGrabInfoCurrent.grabbedRigidbody.transform.rotation * currentHingeItem.hingeJoint.axis).normalized * currentHingeItem.hingeMovementNormalizeDistance) + Vector3.Project(grabWorldOffsetPos, envGrabInfoCurrent.grabbedRigidbody.transform.rotation * currentHingeItem.hingeJoint.axis);
 
@@ -1573,6 +1575,11 @@ public class Player : MonoBehaviour {
 				Debug.DrawRay(grabWorldPos, velocityDirection, Color.red);
 			
 				envGrabInfoCurrent.grabbedRigidbody.AddForceAtPosition(envGrabInfoCurrent.grabbedRigidbody.mass * velocityDirection * 200, grabWorldPos);
+			}
+
+			// If the distance between the grabbed object and the grabbing hand is greater than maxEnvironmentItemGrabDistance, release that item
+			if (Vector3.Distance(grabWorldPos, handPos) > maxEnvironmentItemGrabDistance) {
+				ReleaseEnvironment(hand, envGrabInfoCurrent, envGrabInfoOpposite, handInfoCurrent, handInfoOpposite);
 			}
 		}
 	}

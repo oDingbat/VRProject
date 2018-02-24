@@ -52,6 +52,9 @@
   </ItemGroup>
   <ItemGroup>
      <Compile Include="Assets\DamageText.cs" />
+     <Compile Include="Assets\DummyHeadtracker.cs" />
+     <Compile Include="Assets\EntityManager.cs" />
+     <Compile Include="Assets\ItemManager.cs" />
      <Compile Include="Assets\PostProcessing\Runtime\Attributes\GetSetAttribute.cs" />
      <Compile Include="Assets\PostProcessing\Runtime\Attributes\MinAttribute.cs" />
      <Compile Include="Assets\PostProcessing\Runtime\Attributes\TrackballAttribute.cs" />
@@ -102,6 +105,7 @@
      <Compile Include="Assets\Scripts\Entities\DummyNavigator.cs" />
      <Compile Include="Assets\Scripts\Entities\Entity.cs" />
      <Compile Include="Assets\Scripts\Entities\EntityBone.cs" />
+     <Compile Include="Assets\Scripts\Entities\Relationship.cs" />
      <Compile Include="Assets\Scripts\Entities\Sentry.cs" />
      <Compile Include="Assets\Scripts\Entities\StatusEffects.cs" />
      <Compile Include="Assets\Scripts\Entities\Vitals.cs" />

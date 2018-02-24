@@ -9,9 +9,11 @@ public class EntityBone : MonoBehaviour {
 	public Rigidbody rigidbody;
 	[Range (0, 5)]
 	public float damageMultiplier = 1;      // The value that a piece of damage is multiplied by and then dealt the the parent entity (default = 1, critital > 1, armor < 1, etc)
-	
+	public float stunMultiplier = 1;
+
 	float meleeDamageCooldown = 0.2f;
 	float impactDamageVelocityMinimum = 3f;
+	float impactDamageConstant = 4f;
 
 	void Start () {
 		FindEntity();
@@ -42,14 +44,14 @@ public class EntityBone : MonoBehaviour {
 			EntityBone collisionEntityBone = collision.gameObject.GetComponent<EntityBone>();
 			if (collisionEntityBone == null || (collisionEntityBone == true && collisionEntityBone.entity != entity)) {
 				if (collision.relativeVelocity.magnitude > impactDamageVelocityMinimum) {       // Was the collision's force greater than the minimum to deal damage?
-					Debug.Log("gameobject: " + (collision.collider.gameObject ? true : false) + ", rigidbody: " + collision.rigidbody + "relativeVelocity: " + collision.relativeVelocity.magnitude);
 					entity.timeLastMeleeDamage = Time.time;
 					Rigidbody rigidbodyCollision = collision.rigidbody;
 					if (rigidbodyCollision != null) {
-						RaycastHit simulatedHit;
-						entity.TakeDamage((int)Mathf.Round(collision.relativeVelocity.magnitude * (rigidbodyCollision.mass / rigidbody.mass) * 4), collision.contacts[0].point, -collision.contacts[0].normal);
+						float impactDamage = collision.relativeVelocity.magnitude * (rigidbodyCollision.mass / rigidbody.mass) * impactDamageConstant;
+						entity.TakeDamage((int)Mathf.Round(impactDamage), (impactDamage / 50) * stunMultiplier, collision.contacts[0].point, -collision.contacts[0].normal);
 					} else {
-						//entity.TakeDamage((int)Mathf.Round(collision.relativeVelocity.magnitude));
+						float impactDamage = collision.relativeVelocity.magnitude * impactDamageConstant;
+						entity.TakeDamage((int)Mathf.Round(impactDamage), (impactDamage / 50) * stunMultiplier, collision.contacts[0].point, -collision.contacts[0].normal);
 					}
 				}
 			}

@@ -6,17 +6,17 @@ using UnityEngine;
 [System.Serializable]
 public class Vitals {
 
+	[Space(10)] [Header("Health")]
 	public int healthCurrent;
 	public int healthMax;
 
-	public bool isDead;
+	[Space(10)] [Header("Stunning")]
+	public float stunCurrent;
+	public float stunMax;
+	public float stunThreshold;
 
-	public void TakeDamage (int damage) {
-		healthCurrent = Mathf.Clamp(healthCurrent - damage, 0, healthMax);
-	}
-
-	public void Heal (int healAmount) {
-		healthCurrent = Mathf.Clamp(healthCurrent + healAmount, 0, healthMax);
-	}
-
+	[Space(10)] [Header("Booleans")]
+	public bool isDead = false;
+	public bool isConscious = false;
+	
 }

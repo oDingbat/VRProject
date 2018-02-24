@@ -20,7 +20,7 @@ TagManager:
   - ClimbablePhysics
   - 
   - Player
-  - 
+  - PlayerPhysics
   - Enemy
   - 
   - HandLeft
@@ -32,7 +32,7 @@ TagManager:
   - PocketNode
   - 
   - Projectile
-  - 
+  - ProjectileSticky
   - EyeLeft
   - EyeRight
   - VehiclePhysics
