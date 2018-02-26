@@ -13,7 +13,6 @@ public class EntityBone : MonoBehaviour {
 
 	float meleeDamageCooldown = 0.2f;
 	float impactDamageVelocityMinimum = 3f;
-	float impactDamageConstant = 4f;
 
 	void Start () {
 		FindEntity();
@@ -43,14 +42,16 @@ public class EntityBone : MonoBehaviour {
 		if (entity.timeLastMeleeDamage + meleeDamageCooldown <= Time.time) {
 			EntityBone collisionEntityBone = collision.gameObject.GetComponent<EntityBone>();
 			if (collisionEntityBone == null || (collisionEntityBone == true && collisionEntityBone.entity != entity)) {
-				if (collision.relativeVelocity.magnitude > impactDamageVelocityMinimum) {       // Was the collision's force greater than the minimum to deal damage?
+				float impactForce = Mathf.Sqrt((collision.impulse / Time.fixedDeltaTime).magnitude) / 3f;
+				if (impactForce > impactDamageVelocityMinimum) {       // Was the collision's force greater than the minimum to deal damage?
 					entity.timeLastMeleeDamage = Time.time;
 					Rigidbody rigidbodyCollision = collision.rigidbody;
 					if (rigidbodyCollision != null) {
-						float impactDamage = collision.relativeVelocity.magnitude * (rigidbodyCollision.mass / rigidbody.mass) * impactDamageConstant;
+						//float impactDamage = collision.relativeVelocity.magnitude * (rigidbodyCollision.mass / rigidbody.mass) * impactDamageConstant;
+						float impactDamage = impactForce * damageMultiplier;
 						entity.TakeDamage((int)Mathf.Round(impactDamage), (impactDamage / 50) * stunMultiplier, collision.contacts[0].point, -collision.contacts[0].normal);
 					} else {
-						float impactDamage = collision.relativeVelocity.magnitude * impactDamageConstant;
+						float impactDamage = impactForce * damageMultiplier;
 						entity.TakeDamage((int)Mathf.Round(impactDamage), (impactDamage / 50) * stunMultiplier, collision.contacts[0].point, -collision.contacts[0].normal);
 					}
 				}
