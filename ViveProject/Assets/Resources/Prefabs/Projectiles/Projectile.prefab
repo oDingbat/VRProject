@@ -36,7 +36,7 @@ Transform:
   m_PrefabInternal: {fileID: 100100000}
   m_GameObject: {fileID: 1799400920980828}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 40.25524, y: -0.84260315, z: -0.43140793}
+  m_LocalPosition: {x: 4.058, y: 2.104, z: 1.07}
   m_LocalScale: {x: 0.1, y: 0.1, z: 0.1}
   m_Children: []
   m_Father: {fileID: 0}
@@ -96,7 +96,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   collisionMask:
     serializedVersion: 2
-    m_Bits: 2080309193
+    m_Bits: 2067726281
   initialVelocityMagnitude: 0
   velocity: {x: 0, y: 0, z: 0}
   deceleration: 0

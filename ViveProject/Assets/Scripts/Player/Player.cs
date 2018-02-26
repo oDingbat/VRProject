@@ -109,6 +109,7 @@ public class Player : MonoBehaviour {
 		public Quaternion grabRotation;             // The desired rotation of the item relative to the hand's rotation
 		public Vector3 grabOffset;                  // Stores the offset between the hand and the item which when rotated according to rotationOffset is the desired position of the object.
 		public Vector3 grabPoint;                   // (For dynamic-grabNode or non-grabNode items) records the exact point at which the item was grabbed
+		public Vector3 grabLocalPos;
 		public float itemVelocityPercentage;        // When items are first picked up their IVP = 0; over time grabbed approaches 1 linearly; this value determines the magnitude of the velocity (and angularVelocity) of the item
 		public Transform pocketCandidateLastFrame;     // The pocket candidate found last frame (null if there was none found)
 		public Transform grabbableItemLastFrame;
@@ -118,6 +119,7 @@ public class Player : MonoBehaviour {
 			grabbedItem = null;
 			grabNode = null;
 			grabRotation = Quaternion.Euler(0, 0, 0);
+			grabLocalPos = Vector3.zero;
 			grabOffset = Vector3.zero;
 			itemVelocityPercentage = 0;
 			side = "null";
@@ -149,6 +151,7 @@ public class Player : MonoBehaviour {
 			grabNode = null;
 			grabRotation = Quaternion.Euler(0, 0, 0);
 			grabRotationLastFrame = Quaternion.Euler(0, 0, 0);
+			grabPoint = Vector3.zero;
 			grabOffset = Vector3.zero;
 			grabCCOffset = Vector3.zero;
 			itemVelocityPercentage = 0;
@@ -180,6 +183,7 @@ public class Player : MonoBehaviour {
 	}
 
 	void Start() {
+		QualitySettings.vSyncCount = 0;
 		bodyCC = GetComponent<CharacterController>();          // Grab the character controller at the start
 		avatar = transform.parent.Find("Avatar");
 		avatarTorso = avatar.Find("Torso");
@@ -199,6 +203,9 @@ public class Player : MonoBehaviour {
 	}
 
 	void Update() {
+		Time.fixedDeltaTime = Time.deltaTime;           // IMPORTANT (Fixes physics/sec hiccup) TODO: Yikes maybe move this? IDK
+
+
 		CheckSetControllers();
 		if (handInfoLeft.controllerDevice.index != 0 && handInfoRight.controllerDevice.index != 0) {
 			UpdateControllerInput("Left", itemGrabInfoLeft, itemGrabInfoRight, envGrabInfoLeft, envGrabInfoRight, handInfoLeft, handInfoRight);
@@ -217,10 +224,14 @@ public class Player : MonoBehaviour {
 
 		handInfoLeft.controllerPosLastFrame = handInfoLeft.controller.transform.position;
 		handInfoRight.controllerPosLastFrame = handInfoRight.controller.transform.position;
+
+		UpdateHandAndItemPhysics();
+		
 	}
 
 	void FixedUpdate() {
-		UpdateHandAndItemPhysics();
+		//UpdateHandAndItemPhysics();
+		
 	}
 
 	void CheckSetControllers() {
@@ -470,9 +481,11 @@ public class Player : MonoBehaviour {
 				if (itemGrabInfoCurrent.grabNode.grabType == GrabNode.GrabType.FixedPositionRotation) {
 					itemGrabInfoCurrent.grabOffset = Quaternion.Euler(itemGrabInfoCurrent.grabNode.rotation) * ((Quaternion.Inverse(itemGrabInfoCurrent.grabbedItem.transform.rotation) * -(itemGrabInfoCurrent.grabNode.transform.position - itemGrabInfoCurrent.grabbedItem.transform.position)) - itemGrabInfoCurrent.grabNode.offset);
 					itemGrabInfoCurrent.grabRotation = Quaternion.Euler(itemGrabInfoCurrent.grabNode.rotation);
+					itemGrabInfoCurrent.grabLocalPos = itemGrabInfoCurrent.grabNode.transform.position + (itemGrabInfoCurrent.grabbedRigidbody.transform.rotation * itemGrabInfoCurrent.grabNode.offset);
 				} else if (itemGrabInfoCurrent.grabNode.grabType == GrabNode.GrabType.FixedPosition) {
 					itemGrabInfoCurrent.grabOffset = Quaternion.Euler(itemGrabInfoCurrent.grabNode.rotation) * (-itemGrabInfoCurrent.grabNode.transform.localPosition - itemGrabInfoCurrent.grabNode.offset);
 					itemGrabInfoCurrent.grabRotation = Quaternion.Inverse(handInfoCurrent.controller.transform.rotation) * itemGrabInfoCurrent.grabbedRigidbody.transform.rotation;
+					itemGrabInfoCurrent.grabLocalPos = itemGrabInfoCurrent.grabNode.transform.position + (itemGrabInfoCurrent.grabbedRigidbody.transform.rotation * itemGrabInfoCurrent.grabNode.offset);
 				} else if (itemGrabInfoCurrent.grabNode.grabType == GrabNode.GrabType.Dynamic || itemGrabInfoCurrent.grabNode.grabType == GrabNode.GrabType.Referral) {
 					GetDynamicItemGrabInfo(ref itemGrabInfoCurrent, ref handInfoCurrent);
 				}
@@ -645,9 +658,11 @@ public class Player : MonoBehaviour {
 							}
 							itemGrabInfoCurrent.grabOffset = Quaternion.Euler(itemGrabInfoCurrent.grabNode.rotation) * -(attachmentOffset + itemGrabInfoCurrent.grabNode.transform.localPosition + itemGrabInfoCurrent.grabNode.offset);
 							itemGrabInfoCurrent.grabRotation = Quaternion.Euler(itemGrabInfoCurrent.grabNode.rotation);
+							itemGrabInfoCurrent.grabLocalPos = itemGrabInfoCurrent.grabNode.transform.localPosition + itemGrabInfoCurrent.grabNode.offset;
 						} else if (itemGrabInfoCurrent.grabNode.grabType == GrabNode.GrabType.FixedPosition) {
 							itemGrabInfoCurrent.grabOffset = Quaternion.Euler(itemGrabInfoCurrent.grabNode.rotation) * (-itemGrabInfoCurrent.grabNode.transform.localPosition - itemGrabInfoCurrent.grabNode.offset);
 							itemGrabInfoCurrent.grabRotation = Quaternion.Inverse(handInfoCurrent.controller.transform.rotation) * itemGrabInfoCurrent.grabbedRigidbody.transform.rotation;
+							itemGrabInfoCurrent.grabLocalPos = itemGrabInfoCurrent.grabNode.transform.localPosition + itemGrabInfoCurrent.grabNode.offset;
 						} else if (itemGrabInfoCurrent.grabNode.grabType == GrabNode.GrabType.Dynamic || itemGrabInfoCurrent.grabNode.grabType == GrabNode.GrabType.Referral) {
 							// Here
 							GetDynamicItemGrabInfo(ref itemGrabInfoCurrent, ref handInfoCurrent);
@@ -693,11 +708,6 @@ public class Player : MonoBehaviour {
 		if (itemGrabInfoCurrent != null) {
 			grabWorldPos = itemGrabInfoCurrent.grabbedRigidbody.transform.position + itemGrabInfoCurrent.grabbedRigidbody.transform.rotation * (Quaternion.Inverse(itemGrabInfoCurrent.grabRotation) * -itemGrabInfoCurrent.grabOffset);
 		}
-
-		//Debug.DrawLine(grabWorldPos + new Vector3(0, -0.125f, 0), grabWorldPos + new Vector3(0, 0.125f, 0), Color.green);
-		//Debug.DrawLine(grabWorldPos + new Vector3(-0.125f, 0, 0), grabWorldPos + new Vector3(0.125f, 0, 0), Color.green);
-		//Debug.DrawLine(grabWorldPos + new Vector3(0, 0, -0.125f), grabWorldPos + new Vector3(0, 0, 0.125f), Color.green);
-
 		return grabWorldPos;
 	}
 
@@ -719,13 +729,28 @@ public class Player : MonoBehaviour {
 							}
 							return;
 						}
+					} else if (hitItem.transform.gameObject.layer == LayerMask.NameToLayer("ProjectileSticky")) {
+						if (hitItem.transform.parent && hitItem.transform.parent.parent.parent.name == "[StickyProjectiles]") {
+							Debug.Log("yes2");
+							Rigidbody hitItemRigidbody = hitItem.attachedRigidbody;
+							if (hitItemRigidbody) {
+								Debug.Log("yes3");
+								envGrabInfoCurrent.grabOffset = Quaternion.Inverse(hitItemRigidbody.transform.rotation) * (originPosition - hitItemRigidbody.transform.position);
+								envGrabInfoCurrent.grabbedRigidbody = hitItemRigidbody;
+								if (hitItemRigidbody.transform.GetComponent<EnvironmentItem>()) {
+									envGrabInfoCurrent.environmentItem = hitItemRigidbody.transform.GetComponent<EnvironmentItem>();
+									envGrabInfoCurrent.environmentItem.OnGrab(this, side);
+								}
+								return;
+							}
+						}
 					}
 				}
 
 				// For grabbing Climbables
 				Collider[] climbColliders = Physics.OverlapSphere(originPosition, 0.065f, envGrabLayerMask);
 				foreach (Collider hitClimb in climbColliders) {
-					if (hitClimb.transform.gameObject.layer == LayerMask.NameToLayer("Climbable") || hitClimb.transform.gameObject.layer == LayerMask.NameToLayer("VehicleClimbable") || (hitClimb.transform.gameObject.layer == LayerMask.NameToLayer("Environment") && (hmd.transform.position.y - rig.transform.position.y < heightCutoffCrouching))) {
+					if (hitClimb.transform.gameObject.layer == LayerMask.NameToLayer("Climbable") || hitClimb.transform.gameObject.layer == LayerMask.NameToLayer("ClimbablePhysics") || hitClimb.transform.gameObject.layer == LayerMask.NameToLayer("VehicleClimbable") || (hitClimb.transform.gameObject.layer == LayerMask.NameToLayer("Environment") && (hmd.transform.position.y - rig.transform.position.y < heightCutoffCrouching))) {
 						envGrabInfoCurrent.grabOffset = bodyCC.transform.position - hitClimb.transform.position;
 						envGrabInfoCurrent.grabRotation = hitClimb.transform.rotation;
 						envGrabInfoCurrent.grabCCOffset = handInfoCurrent.controller.transform.position - bodyCC.transform.position;
@@ -775,6 +800,7 @@ public class Player : MonoBehaviour {
 		itemGrabInfoCurrent.grabPoint = closestColliderPoint;
 		itemGrabInfoCurrent.grabOffset = Quaternion.Inverse(handInfoCurrent.handGameObject.transform.rotation) * Quaternion.AngleAxis(0, handInfoCurrent.controller.transform.right) * (itemGrabInfoCurrent.grabbedRigidbody.transform.position - itemGrabInfoCurrent.grabPoint);
 		itemGrabInfoCurrent.grabRotation = Quaternion.Inverse(handInfoCurrent.handGameObject.transform.rotation) * Quaternion.AngleAxis(0, handInfoCurrent.controller.transform.right) * itemGrabInfoCurrent.grabbedRigidbody.transform.rotation;
+		itemGrabInfoCurrent.grabLocalPos = Quaternion.Inverse(itemGrabInfoCurrent.grabbedRigidbody.transform.rotation) * (itemGrabInfoCurrent.grabPoint - itemGrabInfoCurrent.grabbedRigidbody.transform.position);
 
 	}
 
@@ -995,7 +1021,7 @@ public class Player : MonoBehaviour {
 					Quaternion projectileSpreadDeviation = Quaternion.Euler(Random.Range(-currentWeapon.combinedAttributes.projectileSpreadDeviation, currentWeapon.combinedAttributes.projectileSpreadDeviation), Random.Range(-currentWeapon.combinedAttributes.projectileSpreadDeviation, currentWeapon.combinedAttributes.projectileSpreadDeviation), 0);
 
 					// Step 4: Create new projectile
-					GameObject newProjectile = (GameObject)Instantiate(currentWeapon.combinedAttributes.projectile, currentWeapon.barrelPoint.position + currentWeapon.barrelPoint.forward * 0.2f, currentItem.transform.rotation * randomAccuracy);
+					GameObject newProjectile = (GameObject)Instantiate(currentWeapon.combinedAttributes.projectile, currentWeapon.barrelPoint.position + currentWeapon.barrelPoint.forward * 0.01f, currentItem.transform.rotation * randomAccuracy);
 					if (currentWeapon.combinedAttributes.projectileSpreads.Length > 0) {
 						if (currentWeapon.combinedAttributes.projectileSpreadType == Weapon.SpreadType.Circular) {
 							newProjectile.transform.rotation *= projectileSpreadDeviation * Quaternion.Euler(0, 0, currentWeapon.combinedAttributes.projectileSpreads[j].x) * Quaternion.Euler(currentWeapon.combinedAttributes.projectileSpreads[j].y, 0, 0);
@@ -1518,12 +1544,15 @@ public class Player : MonoBehaviour {
 
 			UpdateItemPocketingModel(handInfoCurrent, itemGrabInfoCurrent);
 
-			if (Vector3.Distance(itemGrabInfoCurrent.grabbedRigidbody.transform.position, handInfoCurrent.handRigidbody.transform.position + grabOffsetCurrent) > 0.5f) {
+			//debugBall1.transform.position = itemGrabInfoCurrent.grabbedRigidbody.transform.position + (itemGrabInfoCurrent.grabbedRigidbody.transform.rotation * itemGrabInfoCurrent.grabLocalPos);
+
+			Vector3 grabWorldPosition = itemGrabInfoCurrent.grabbedRigidbody.transform.position + (itemGrabInfoCurrent.grabbedRigidbody.transform.rotation * itemGrabInfoCurrent.grabLocalPos);
+			if (Vector3.Distance(grabWorldPosition, handInfoCurrent.handRigidbody.transform.position + grabOffsetCurrent) > 0.5f) {
 				ReleaseAll(hand, itemGrabInfoCurrent, itemGrabInfoOpposite, envGrabInfoCurrent, envGrabInfoOpposite, handInfoCurrent, handInfoOpposite);		// TODO : hey this is why you fall when dropping a weapon due to distance while also climbing
 			} else {
-				itemGrabInfoCurrent.grabbedRigidbody.velocity = Vector3.Lerp(itemGrabInfoCurrent.grabbedRigidbody.velocity, Vector3.ClampMagnitude(((handInfoCurrent.handRigidbody.position + grabOffsetCurrent) - itemGrabInfoCurrent.grabbedRigidbody.transform.position) / Time.fixedDeltaTime, (itemGrabInfoCurrent.grabbedRigidbody.GetComponent<HingeJoint>()) ? 1 : 500) * itemGrabInfoCurrent.itemVelocityPercentage, Mathf.Clamp01(50 * Time.deltaTime));
+				itemGrabInfoCurrent.grabbedRigidbody.velocity = Vector3.Lerp(itemGrabInfoCurrent.grabbedRigidbody.velocity, Vector3.ClampMagnitude(((handInfoCurrent.handRigidbody.position + grabOffsetCurrent) - itemGrabInfoCurrent.grabbedRigidbody.transform.position) / Time.fixedDeltaTime, 500) * itemGrabInfoCurrent.itemVelocityPercentage, 1);
 				//grabInfoCurrent.grabbedRigidbody.velocity = Vector3.Lerp(grabInfoCurrent.grabbedRigidbody.velocity, Vector3.ClampMagnitude(((handInfoCurrent.handRigidbody.transform.position + (dualWieldDirectionChangeRotation * handDominant.transform.rotation * ((grabDualWieldDominantHand == "Left") ? itemGrabInfoLeft.grabOffset : itemGrabInfoRight.grabOffset))) - grabbedItemDominant.transform.position) / Time.fixedDeltaTime, (grabbedItemDominant.GetComponent<HingeJoint>()) ? 1 : 100) * Mathf.Lerp(itemGrabInfoLeft.itemVelocityPercentage, itemGrabInfoRight.itemVelocityPercentage, 0.5f), Mathf.Clamp01(50 * Time.deltaTime));
-
+				
 				if (!itemGrabInfoCurrent.grabbedRigidbody.GetComponent<HingeJoint>()) {		// TODO: Do we still need this?
 					Quaternion rotationDeltaItem = (handInfoCurrent.handRigidbody.transform.rotation * itemGrabInfoCurrent.grabRotation) * Quaternion.Inverse(itemGrabInfoCurrent.grabbedRigidbody.transform.rotation);
 					float angleItem;
@@ -1535,7 +1564,7 @@ public class Player : MonoBehaviour {
 
 					if (angleItem != float.NaN) {
 						itemGrabInfoCurrent.grabbedRigidbody.maxAngularVelocity = Mathf.Infinity;
-						itemGrabInfoCurrent.grabbedRigidbody.angularVelocity = Vector3.Lerp(itemGrabInfoCurrent.grabbedRigidbody.angularVelocity, (angleItem * axisItem) * itemGrabInfoCurrent.itemVelocityPercentage * 0.95f, Mathf.Clamp01(50 *  Time.deltaTime));
+						itemGrabInfoCurrent.grabbedRigidbody.angularVelocity = Vector3.Lerp(itemGrabInfoCurrent.grabbedRigidbody.angularVelocity, (angleItem * axisItem) * itemGrabInfoCurrent.itemVelocityPercentage, 1);
 					}
 				}
 			}

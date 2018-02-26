@@ -50,7 +50,6 @@ public class DummyHeadtracker : MonoBehaviour {
 		headTurnStrength = Mathf.Lerp(headTurnStrength, rotationDistance, 5f * Time.deltaTime);
 
 		if (rotationDistance >= headTurnAngleMax) {
-			Debug.Log("Yup");
 			Quaternion rotationDeltaItem = rotationDesired * Quaternion.Inverse(head.transform.rotation);
 			float angleItem;
 			Vector3 axisItem;

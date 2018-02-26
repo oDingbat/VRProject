@@ -22,7 +22,6 @@ public class Projectile : MonoBehaviour {
 	public int			ricochetCount;
 	public float		ricochetAngleMax;
 	bool				broken;
-	bool				firstFrameLoaded;
 
 	public GameObject prefabProjectileShattered;
 	public GameObject prefabDamageText;
@@ -51,13 +50,8 @@ public class Projectile : MonoBehaviour {
 	}
 
 	void Update () {
-		if (firstFrameLoaded == true) {
-			if (broken == false) {
-				UpdateProjectileMovement();
-			}
-		} else {
-			transform.position -= transform.forward * 0.01f;
-			firstFrameLoaded = true;
+		if (broken == false) {
+			UpdateProjectileMovement();
 		}
 	}
 
@@ -74,7 +68,7 @@ public class Projectile : MonoBehaviour {
 			}
 
 			if (hitRigidbody == true) {         // If the object we hit has a rigidbody component, apply a force at the hit position
-				hitRigidbody.AddForceAtPosition(velocity.normalized * Mathf.Sqrt(velocity.magnitude) * Mathf.Sqrt(Vector3.Angle(normalPerpendicular, velocity.normalized) * 2500f), hit.point);
+				hitRigidbody.AddForceAtPosition(velocity.normalized * Mathf.Sqrt(velocity.magnitude) * Mathf.Sqrt(Vector3.Angle(normalPerpendicular, velocity.normalized) * 5000f), hit.point);
 			}
 			
 			if (ricochetCount > 0 && Vector3.Angle(normalPerpendicular, velocity.normalized) <= ricochetAngleMax) {  // Does this projectile have ricochets left and is the contact and less than or equal to the ricochetAngleMax?
@@ -88,7 +82,7 @@ public class Projectile : MonoBehaviour {
 				if (sticky == true) {       // Is this projectile sticky?
 					
 					projectileCollider.enabled = true;      // Enable the projectile's collider
-					SetProjectileLayer("ProjectileSticky");
+					SetProjectileLayer("Climbable");
 
 					if (hit.transform.gameObject.layer == LayerMask.NameToLayer("Item")) {		// If the hit object is an Item
 						if (hit.transform.parent && hit.transform.parent.parent != null && hit.transform.parent.parent.GetComponent<Item>()) {
@@ -120,14 +114,15 @@ public class Projectile : MonoBehaviour {
 						gameObject.AddComponent<Misc>();
 						Destroy(this);
 					} else if (hit.transform.gameObject.layer == LayerMask.NameToLayer("EnvironmentItem")) {
-						Debug.Log("Yup");
 						transform.position = hit.point;
-						transform.parent = hit.transform;
-						
+						SetParentToTransform(hit.transform);
+
+						SetProjectileLayer("ProjectileSticky");
+
 						StartCoroutine(BreakProjectile(hit.point));
 					} else {
 						transform.position = hit.point;
-						transform.parent = hit.transform;
+						SetParentToTransform(hit.transform);
 						StartCoroutine(BreakProjectile(hit.point));
 					}
 				} else {                    // Not sticky? then break this projectile
@@ -147,6 +142,19 @@ public class Projectile : MonoBehaviour {
 			if (velocity.magnitude <= 5 && initialVelocityMagnitude > 50) {
 				StartCoroutine(BreakProjectile(transform.position));
 			}
+		}
+	}
+
+	void SetParentToTransform (Transform newParent) {
+		if (newParent.transform.Find("[StickyProjectiles]") == true) {      // Does the new parent have a child container called "[StickyProjectiles]"
+			transform.parent = newParent.transform.Find("[StickyProjectiles]");
+		} else {
+			Transform newStickyProjectileContainer = new GameObject("[StickyProjectiles]").transform;
+			newStickyProjectileContainer.parent = newParent;
+			newStickyProjectileContainer.transform.localPosition = Vector3.zero;
+			newStickyProjectileContainer.transform.localEulerAngles = Vector3.zero;
+			newStickyProjectileContainer.transform.localScale = new Vector3(1 / newParent.transform.localScale.x, 1 / newParent.transform.localScale.y, 1 / newParent.transform.localScale.z);
+			transform.parent = newStickyProjectileContainer;
 		}
 	}
 

@@ -12,13 +12,6 @@ public class AudioManager : MonoBehaviour {
 
 	void Start () {
 		InitializeJukeboxes();
-
-		PlayClipAtPoint(null, new Vector3(0, 10, 0), 1);
-		PlayClipAtPoint(null, new Vector3(0, 15, 0));
-		PlayClipAtPoint(null, new Vector3(0, 15, 0));
-		PlayClipAtPoint(null, new Vector3(0, 15, 0));
-		PlayClipAtPoint(null, new Vector3(0, 15, 0));
-		PlayClipAtPoint(null, new Vector3(0, 20, 0));
 	}
 
 	void InitializeJukeboxes() {

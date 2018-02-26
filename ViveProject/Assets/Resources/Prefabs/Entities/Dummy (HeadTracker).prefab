@@ -1094,7 +1094,7 @@ Rigidbody:
   m_PrefabInternal: {fileID: 100100000}
   m_GameObject: {fileID: 1801114279628786}
   serializedVersion: 2
-  m_Mass: 15
+  m_Mass: 10
   m_Drag: 5
   m_AngularDrag: 2.5
   m_UseGravity: 1
@@ -1617,7 +1617,7 @@ SpringJoint:
   m_Damper: 100000
   m_MinDistance: 0
   m_MaxDistance: 0
-  m_Tolerance: 0.01
+  m_Tolerance: 0.001
   m_BreakForce: Infinity
   m_BreakTorque: Infinity
   m_EnableCollision: 0
@@ -1639,7 +1639,7 @@ SpringJoint:
   m_Damper: 100000
   m_MinDistance: 0
   m_MaxDistance: 0
-  m_Tolerance: 0.01
+  m_Tolerance: 0.001
   m_BreakForce: 50000
   m_BreakTorque: Infinity
   m_EnableCollision: 0
@@ -1683,7 +1683,7 @@ SpringJoint:
   m_Damper: 100000
   m_MinDistance: 0
   m_MaxDistance: 0
-  m_Tolerance: 0.01
+  m_Tolerance: 0.001
   m_BreakForce: Infinity
   m_BreakTorque: Infinity
   m_EnableCollision: 0
@@ -1705,7 +1705,7 @@ SpringJoint:
   m_Damper: 100000
   m_MinDistance: 0
   m_MaxDistance: 0
-  m_Tolerance: 0.01
+  m_Tolerance: 0.001
   m_BreakForce: Infinity
   m_BreakTorque: Infinity
   m_EnableCollision: 0
@@ -1727,7 +1727,7 @@ SpringJoint:
   m_Damper: 100000
   m_MinDistance: 0
   m_MaxDistance: 0
-  m_Tolerance: 0.01
+  m_Tolerance: 0.001
   m_BreakForce: Infinity
   m_BreakTorque: Infinity
   m_EnableCollision: 0
@@ -1749,7 +1749,7 @@ SpringJoint:
   m_Damper: 100000
   m_MinDistance: 0
   m_MaxDistance: 0
-  m_Tolerance: 0.01
+  m_Tolerance: 0.001
   m_BreakForce: Infinity
   m_BreakTorque: Infinity
   m_EnableCollision: 0
@@ -1815,7 +1815,7 @@ SpringJoint:
   m_Damper: 100000
   m_MinDistance: 0
   m_MaxDistance: 0
-  m_Tolerance: 0.01
+  m_Tolerance: 0.001
   m_BreakForce: 50000
   m_BreakTorque: Infinity
   m_EnableCollision: 0
@@ -1859,7 +1859,7 @@ SpringJoint:
   m_Damper: 100000
   m_MinDistance: 0
   m_MaxDistance: 0
-  m_Tolerance: 0.01
+  m_Tolerance: 0.001
   m_BreakForce: Infinity
   m_BreakTorque: Infinity
   m_EnableCollision: 0
@@ -1881,7 +1881,7 @@ SpringJoint:
   m_Damper: 100000
   m_MinDistance: 0
   m_MaxDistance: 0
-  m_Tolerance: 0.01
+  m_Tolerance: 0.001
   m_BreakForce: Infinity
   m_BreakTorque: Infinity
   m_EnableCollision: 0
@@ -1903,7 +1903,7 @@ SpringJoint:
   m_Damper: 100000
   m_MinDistance: 0
   m_MaxDistance: 0
-  m_Tolerance: 0.01
+  m_Tolerance: 0.001
   m_BreakForce: Infinity
   m_BreakTorque: Infinity
   m_EnableCollision: 0
@@ -1925,7 +1925,7 @@ SpringJoint:
   m_Damper: 100000
   m_MinDistance: 0
   m_MaxDistance: 0
-  m_Tolerance: 0.01
+  m_Tolerance: 0.001
   m_BreakForce: 50000
   m_BreakTorque: Infinity
   m_EnableCollision: 0
@@ -1969,7 +1969,7 @@ SpringJoint:
   m_Damper: 100000
   m_MinDistance: 0
   m_MaxDistance: 0
-  m_Tolerance: 0.01
+  m_Tolerance: 0.001
   m_BreakForce: Infinity
   m_BreakTorque: Infinity
   m_EnableCollision: 0
@@ -1991,7 +1991,7 @@ SpringJoint:
   m_Damper: 100000
   m_MinDistance: 0
   m_MaxDistance: 0
-  m_Tolerance: 0.01
+  m_Tolerance: 0.001
   m_BreakForce: 50000
   m_BreakTorque: Infinity
   m_EnableCollision: 0
@@ -2035,7 +2035,7 @@ SpringJoint:
   m_Damper: 100000
   m_MinDistance: 0
   m_MaxDistance: 0
-  m_Tolerance: 0.01
+  m_Tolerance: 0.001
   m_BreakForce: Infinity
   m_BreakTorque: Infinity
   m_EnableCollision: 0
@@ -2079,7 +2079,7 @@ SpringJoint:
   m_Damper: 100000
   m_MinDistance: 0
   m_MaxDistance: 0
-  m_Tolerance: 0.01
+  m_Tolerance: 0.001
   m_BreakForce: Infinity
   m_BreakTorque: Infinity
   m_EnableCollision: 0
@@ -2101,7 +2101,7 @@ SpringJoint:
   m_Damper: 100000
   m_MinDistance: 0
   m_MaxDistance: 0
-  m_Tolerance: 0.01
+  m_Tolerance: 0.001
   m_BreakForce: Infinity
   m_BreakTorque: Infinity
   m_EnableCollision: 0

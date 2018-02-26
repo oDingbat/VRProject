@@ -267,7 +267,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   collisionMask:
     serializedVersion: 2
-    m_Bits: 2080308681
+    m_Bits: 2067725769
   initialVelocityMagnitude: 0
   velocity: {x: 0, y: 0, z: 0}
   deceleration: 0

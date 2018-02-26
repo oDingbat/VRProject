@@ -5,6 +5,7 @@ using UnityEngine.UI;
 
 public class FPSCounter : MonoBehaviour {
 
+	public Player player;
 	Text text;
 
 	void Start () {
@@ -12,6 +13,6 @@ public class FPSCounter : MonoBehaviour {
 	}
 
 	void FixedUpdate () {
-		text.text = ((int)Mathf.Round(1.0f / Time.smoothDeltaTime)).ToString();
+		text.text = "IVP : " + player.itemGrabInfoRight.itemVelocityPercentage;
 	}
 }
