@@ -13,6 +13,6 @@ public class FPSCounter : MonoBehaviour {
 	}
 
 	void FixedUpdate () {
-		text.text = "IVP : " + player.itemGrabInfoRight.itemVelocityPercentage;
+		//text.text = "IVP : " + player.itemGrabInfoRight.itemVelocityPercentage;
 	}
 }

@@ -9,20 +9,19 @@ using System.Linq;
 public class Entity : MonoBehaviour {
 
 	[Space(10)][Header("Entity Information")]
-	public string entityName;
-	public Vitals vitals;
-	public StatusEffects statusEffects;
-	public Attributes attributes;
+	public string				entityName;
+	public Vitals				vitals;
+	public StatusEffects		statusEffects;
+	public EntityAttributes		entityAttributes;
+	public bool					isPlayer;
 
-	public bool isPlayer;
-
-	[Space(10)] [Header("Settings")]
-	public Transform head;
+	[Space(10)][Header("Settings")]
+	public Transform			head;
 
 	[Space(10)][Header("Relationships")]
 	public List<Relationship> relationships = new List<Relationship>();
-	public Relationship.Emotions defaultEmotionsEntities;
-	public Relationship.Emotions defaultEmotionsItems;
+	public Emotions defaultEmotionsEntities;
+	public Emotions defaultEmotionsItems;
 
 	public MonoBehaviour focusedMonobehaviour;
 
@@ -89,7 +88,7 @@ public class Entity : MonoBehaviour {
 				RaycastHit visionHit;
 				if (relationships[i].monobehaviour is Entity) {
 					Entity relationshipEntity = relationships[i].monobehaviour as Entity;
-					if (Physics.Raycast(head.transform.position, (relationshipEntity.head.position - head.transform.position), out visionHit, attributes.visionDistance, visionMask)) {
+					if (Physics.Raycast(head.transform.position, (relationshipEntity.head.position - head.transform.position), out visionHit, entityAttributes.visionDistance, visionMask)) {
 						if (visionHit.transform == relationships[i].monobehaviour.transform) {
 							relationships[i].lineOfSight = true;
 						} else {
@@ -100,7 +99,7 @@ public class Entity : MonoBehaviour {
 					}
 				} else if (relationships[i].monobehaviour is Item) {
 					Item relationshipItem = relationships[i].monobehaviour as Item;
-					if (Physics.Raycast(head.transform.position, (relationshipItem.transform.position - head.transform.position), out visionHit, attributes.visionDistance, visionMask)) {
+					if (Physics.Raycast(head.transform.position, (relationshipItem.transform.position - head.transform.position), out visionHit, entityAttributes.visionDistance, visionMask)) {
 						if (visionHit.transform == relationships[i].monobehaviour.transform) {
 							relationships[i].lineOfSight = true;
 						} else {
@@ -141,14 +140,14 @@ public class Entity : MonoBehaviour {
 			Entity observedEntity = observed as Entity;
 			if (observedEntity != this) {       // Make sure we're not trying to observe ourselves
 				float dist = Vector3.Distance(observedEntity.head.transform.position, head.transform.position);
-				if (dist < attributes.visionDistance) {        // Is the observed 
+				if (dist < entityAttributes.visionDistance) {        // Is the observed 
 					Vector3 directionOfObserved = observedEntity.head.transform.position - head.transform.position;
-					if (Vector3.Angle(directionOfObserved, head.transform.forward) <= attributes.visionFOV) {
+					if (Vector3.Angle(directionOfObserved, head.transform.forward) <= entityAttributes.visionFOV) {
 						RaycastHit visionHit;
-						if (Physics.Raycast(head.transform.position, directionOfObserved, out visionHit, attributes.visionDistance, visionMask)) {
+						if (Physics.Raycast(head.transform.position, directionOfObserved, out visionHit, entityAttributes.visionDistance, visionMask)) {
 							if (relationships.Any(p => p.monobehaviour == observedEntity) == false) {
 								Relationship newRelationship = new Relationship(observedEntity.transform.name, observedEntity, observedEntity.head.transform.position, Time.time, defaultEmotionsEntities);
-								newRelationship.emotions.focus = (attributes.visionDistance / dist);
+								newRelationship.emotions.focus = (entityAttributes.visionDistance / dist);
 								relationships.Add(newRelationship);
 							}
 						}
@@ -159,14 +158,14 @@ public class Entity : MonoBehaviour {
 			Item observedItem = observed as Item;
 			if (observedItem != this) {       // Make sure we're not trying to observe ourselves
 				float dist = Vector3.Distance(observedItem.transform.position, head.transform.position);
-				if (dist < attributes.visionDistance) {        // Is the observed 
+				if (dist < entityAttributes.visionDistance) {        // Is the observed 
 					Vector3 directionOfObserved = observedItem.transform.position - head.transform.position;
-					if (Vector3.Angle(directionOfObserved, head.transform.forward) <= attributes.visionFOV) {
+					if (Vector3.Angle(directionOfObserved, head.transform.forward) <=  entityAttributes.visionFOV) {
 						RaycastHit visionHit;
-						if (Physics.Raycast(head.transform.position, directionOfObserved, out visionHit, attributes.visionDistance, visionMask)) {
+						if (Physics.Raycast(head.transform.position, directionOfObserved, out visionHit, entityAttributes.visionDistance, visionMask)) {
 							if (relationships.Any(p => p.monobehaviour == observedItem) == false) {
 								Relationship newRelationship = new Relationship(observedItem.transform.name, observedItem, observedItem.transform.position, Time.time, defaultEmotionsEntities);
-								newRelationship.emotions.focus = (attributes.visionDistance / dist);
+								newRelationship.emotions.focus = (entityAttributes.visionDistance / dist);
 								relationships.Add(newRelationship);
 							}
 						}

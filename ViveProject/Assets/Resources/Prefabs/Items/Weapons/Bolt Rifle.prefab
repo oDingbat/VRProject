@@ -26,6 +26,23 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
+--- !u!1 &1121427226987264
+GameObject:
+  m_ObjectHideFlags: 1
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 100100000}
+  serializedVersion: 5
+  m_Component:
+  - component: {fileID: 4939075330645572}
+  - component: {fileID: 33728468366245844}
+  - component: {fileID: 23394740240015258}
+  m_Layer: 0
+  m_Name: (MuzzleFlash)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
 --- !u!1 &1176151668533372
 GameObject:
   m_ObjectHideFlags: 1
@@ -473,7 +490,8 @@ Transform:
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0.067, z: 0.493}
   m_LocalScale: {x: 1, y: 1, z: 1}
-  m_Children: []
+  m_Children:
+  - {fileID: 4939075330645572}
   m_Father: {fileID: 4783004861691894}
   m_RootOrder: 2
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -490,6 +508,19 @@ Transform:
   m_Father: {fileID: 4133818897950742}
   m_RootOrder: 2
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!4 &4939075330645572
+Transform:
+  m_ObjectHideFlags: 1
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 100100000}
+  m_GameObject: {fileID: 1121427226987264}
+  m_LocalRotation: {x: -0, y: 0.7071068, z: -0, w: 0.7071068}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 4923021021041662}
+  m_RootOrder: 0
+  m_LocalEulerAnglesHint: {x: 0, y: 90, z: 0}
 --- !u!4 &4953776148893048
 Transform:
   m_ObjectHideFlags: 1
@@ -571,6 +602,40 @@ MeshRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
+--- !u!23 &23394740240015258
+MeshRenderer:
+  m_ObjectHideFlags: 1
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 100100000}
+  m_GameObject: {fileID: 1121427226987264}
+  m_Enabled: 1
+  m_CastShadows: 1
+  m_ReceiveShadows: 1
+  m_DynamicOccludee: 1
+  m_MotionVectors: 1
+  m_LightProbeUsage: 1
+  m_ReflectionProbeUsage: 1
+  m_Materials:
+  - {fileID: 2100000, guid: 660cb37334f34cd45948c8affe06648c, type: 2}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_PreserveUVs: 0
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 0
+  m_SelectedEditorRenderState: 3
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0
 --- !u!33 &33231138114490356
 MeshFilter:
   m_ObjectHideFlags: 1
@@ -585,6 +650,13 @@ MeshFilter:
   m_PrefabInternal: {fileID: 100100000}
   m_GameObject: {fileID: 1560970420428776}
   m_Mesh: {fileID: 4300000, guid: 4130d2412a5003545b3ed23ff4f2d02c, type: 3}
+--- !u!33 &33728468366245844
+MeshFilter:
+  m_ObjectHideFlags: 1
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 100100000}
+  m_GameObject: {fileID: 1121427226987264}
+  m_Mesh: {fileID: 4300000, guid: e005188f346802b4eb79d3b999d7c79a, type: 3}
 --- !u!54 &54639754222976208
 Rigidbody:
   m_ObjectHideFlags: 1
@@ -597,7 +669,7 @@ Rigidbody:
   m_AngularDrag: 0.05
   m_UseGravity: 1
   m_IsKinematic: 0
-  m_Interpolate: 2
+  m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 2
 --- !u!65 &65113757979527154
@@ -891,6 +963,7 @@ MonoBehaviour:
   nonDualWieldable: 0
   isGrabbed: 0
   timeLastGrabbed: 0
+  initialCenterOfMass: {x: 0, y: 0, z: 0}
   pocketGrabNode: {fileID: 114143047582652360}
   pocketCurrent: {fileID: 0}
   pocketSize: 3
@@ -911,6 +984,7 @@ MonoBehaviour:
     constraints: 0
   attachments: []
   attachmentNodes: []
+  weaponType: 0
   triggerHeld: 0
   timeLastFired: 0
   timeLastTriggered: 0
@@ -918,7 +992,6 @@ MonoBehaviour:
   accuracyCurrent: 100
   chargeCurrent: 0
   baseAttributes:
-    damage: 48
     automatic: 1
     firerate: 4
     burstCount: 1
@@ -938,22 +1011,29 @@ MonoBehaviour:
     chargeDecrementPerShot: 0
     chargeRequired: 0
     chargeInfluenceVelocity: 0
-    projectileSpreads:
-    - {x: 0, y: 0}
-    projectileSpreadType: 0
-    projectileSpreadDeviation: 0
-    projectileRicochetCount: 0
-    projectileRicochetAngleMax: 0
-    projectileVelocity: 350
-    projectileGravity: -9.81
-    projectileDecelerationType: 0
-    projectileDeceleration: 0
-    projectileLifespan: 10
-    projectileIsSticky: 1
-    projectile: {fileID: 1087837154491904, guid: 3898f956b7a5bf246b8b70c7219ca4c7,
-      type: 2}
+    projectileAttributes:
+      prefabProjectile: {fileID: 1087837154491904, guid: 3898f956b7a5bf246b8b70c7219ca4c7,
+        type: 2}
+      damage: 1
+      ricochetCountInitial: 0
+      ricochetAngleMax: 90
+      velocityInitial: 150
+      gravity: -9.81
+      decelerationType: 0
+      deceleration: 0
+      lifespan: 10
+      isSticky: 1
+      isPhysicsBased: 0
+      subProjectileSpreadAttributes:
+        spreads: []
+        spreadType: 0
+        spreadDeviation: 0
+      subProjectile: {fileID: 0}
+    projectileSpreadAttributes:
+      spreads: []
+      spreadType: 0
+      spreadDeviation: 0
   combinedAttributes:
-    damage: 0
     automatic: 0
     firerate: 0
     burstCount: 0
@@ -973,19 +1053,29 @@ MonoBehaviour:
     chargeDecrementPerShot: 0
     chargeRequired: 0
     chargeInfluenceVelocity: 0
-    projectileSpreads: []
-    projectileSpreadType: 0
-    projectileSpreadDeviation: 0
-    projectileRicochetCount: 0
-    projectileRicochetAngleMax: 0
-    projectileVelocity: 0
-    projectileGravity: 0
-    projectileDecelerationType: 0
-    projectileDeceleration: 0
-    projectileLifespan: 0
-    projectileIsSticky: 0
-    projectile: {fileID: 0}
+    projectileAttributes:
+      prefabProjectile: {fileID: 0}
+      damage: 1
+      ricochetCountInitial: 0
+      ricochetAngleMax: 90
+      velocityInitial: 100
+      gravity: 0
+      decelerationType: 0
+      deceleration: 0
+      lifespan: 0
+      isSticky: 0
+      isPhysicsBased: 0
+      subProjectileSpreadAttributes:
+        spreads: []
+        spreadType: 0
+        spreadDeviation: 0
+      subProjectile: {fileID: 0}
+    projectileSpreadAttributes:
+      spreads: []
+      spreadType: 0
+      spreadDeviation: 0
   barrelPoint: {fileID: 0}
+  muzzleFlash: {fileID: 0}
   soundFireNormal: {fileID: 8300000, guid: 1b50830133d42e445bd833041e678f7a, type: 3}
 --- !u!135 &135094918929767106
 SphereCollider:

@@ -44,12 +44,16 @@ public class Player : MonoBehaviour {
 	public Vector3 positionLastFootstepPlayed;
 
 	[Space(10)] [Header("Item Grab Infos")]
-	public ItemGrabInformation itemGrabInfoLeft = new ItemGrabInformation();
-	public ItemGrabInformation itemGrabInfoRight = new ItemGrabInformation();
+	public GrabInformation itemGrabInfoLeft = new GrabInformation();
+	public GrabInformation itemGrabInfoRight = new GrabInformation();
+	public GrabInformation potentialItemGrabInfoLeft = new GrabInformation();
+	public GrabInformation potentialItemGrabInfoRight = new GrabInformation();
 
 	[Space(10)] [Header("Environment Grab Infos")]
-	public EnvironmentGrabInformation envGrabInfoLeft = new EnvironmentGrabInformation();
-	public EnvironmentGrabInformation envGrabInfoRight = new EnvironmentGrabInformation();
+	public GrabInformation envGrabInfoLeft = new GrabInformation();
+	public GrabInformation envGrabInfoRight = new GrabInformation();
+	public GrabInformation potentialEnvGrabInfoLeft = new GrabInformation();
+	public GrabInformation potentialEnvGrabInfoRight = new GrabInformation();
 
 	[Space(10)] [Header("Grabbing Variables")]
 	public Vector3 grabDualWieldDirection;             // The vector3 direction from handDominant to handNonDominant (ie: hand right to left direction normalized)
@@ -100,66 +104,49 @@ public class Player : MonoBehaviour {
 	public GameObject debugBall1;
 	public GameObject debugBall2;
 
-	[System.Serializable]
-	public class ItemGrabInformation {
-		public string side;                         // Which side hand is this? "Left" or "Right"
-		public Rigidbody grabbedRigidbody;          // The rigidbody of the object being currently grabbed
-		public Item grabbedItem;                    // The Item component of the object being currently grabbed
-		public GrabNode grabNode;                   // The grabNode of the object currently grabbed (for item objects)
-		public Quaternion grabRotation;             // The desired rotation of the item relative to the hand's rotation
-		public Vector3 grabOffset;                  // Stores the offset between the hand and the item which when rotated according to rotationOffset is the desired position of the object.
-		public Vector3 grabPoint;                   // (For dynamic-grabNode or non-grabNode items) records the exact point at which the item was grabbed
-		public Vector3 grabLocalPos;
-		public float itemVelocityPercentage;        // When items are first picked up their IVP = 0; over time grabbed approaches 1 linearly; this value determines the magnitude of the velocity (and angularVelocity) of the item
-		public Transform pocketCandidateLastFrame;     // The pocket candidate found last frame (null if there was none found)
-		public Transform grabbableItemLastFrame;
+	public enum GrabType { Null, Climbable, ClimbablePhysics, EnvironmnentItem, Item, Ragdoll }
 
-		public ItemGrabInformation() {
-			grabbedRigidbody = null;
-			grabbedItem = null;
-			grabNode = null;
-			grabRotation = Quaternion.Euler(0, 0, 0);
-			grabLocalPos = Vector3.zero;
-			grabOffset = Vector3.zero;
-			itemVelocityPercentage = 0;
+	// Before redux: 1739 lines
+
+	public class GrabInformation {
+		// This class is used for both envGrabInfos and itemGrabInfos
+		// Each	variable uses the class in several different ways, as described in the comments
+		//		Both:	Indicates both envGrabInfos and itemGrabInfos use that variable in an identical way
+		//		Item:	Indicates how the itemGrabInfos use the variable
+		//		Env:		Indicates how the envGrabInfos use the variable
+		//		Only:	Indicates only that respective variable uses said commented variable
+
+		public string side;									// [Both: Which side hand is this? "Left" or "Right"]
+		public GrabType grabType;                           // [Both: The type of object currently grabbed (Null if none is grabbed)]
+		public Transform grabbedTransform;                  // [Both: The transform of the grabbed object]
+		public Rigidbody grabbedRigidbody;                  // [Both: The rigidbody of the object being currently grabbed]
+		public MonoBehaviour grabbedScript;                 // [Both: The grabbedScript component of the object being currently grabbed]
+		public GrabNode itemGrabNode;                       // [Item/Ragdoll Only: The itemGrabNode of the object currently grabbed (for item objects)]
+		public Quaternion offsetRotation;                   // [Item: The desired rotation of the item relative to the hand's rotation] / [Env: The rotation of the object when first grabbed]
+		public Vector3 offsetPosition;                      // [Item: Stores the offset between the hand and the item which when rotated according to rotationOffset is the desired position of the object.] / [Env: Stores offset between hand and environmentOrigin]
+		public Vector3 offsetBodyHand;                      // The offset between the player's grabbing hand and body character controller, used to move the player while climbing
+		public Vector3 grabPoint;                           // [Item Only: The localPosition on the object where it was grabbed (Takes into account position and rotation of item)]
+		public Vector3 grabWorldPos;						// [Item Only: The world position of where the item was grabbed
+		public float rigidbodyVelocityPercentage;			// [Item Only: When items are first picked up their IVP = 0; over time grabbed approaches 1 linearly; this value determines the magnitude of the velocity (and angularVelocity) of the item]
+		public MonoBehaviour potentialGrabbedScript;        // [Both: The grabbedScript component attached to the object potentially grabbed if the player were to grab]
+
+		public GrabInformation() {
 			side = "null";
-		}
-	}
-
-	[System.Serializable]
-	public class EnvironmentGrabInformation {
-		public string side;                         // Which side hand is this? "Left" or "Right"
-		public Transform climbableGrabbed;          // The transform of the climbable object being currently grabbed
-		public Rigidbody grabbedRigidbody;          // The rigidbody of the object being currently grabbed
-		public Item grabbedItem;                    // The Item component of the object being currently grabbed
-		public GrabNode grabNode;                   // The grabNode of the object currently grabbed (for item objects)
-		public Quaternion grabRotation;             // This value is used differently depending on the case. If grabbing an item, it stores the desired rotation of the item relative to the hand's rotation. If grabbing a climbable object, it stores the rotation of the object when first grabbed.
-		public Quaternion grabRotationLastFrame;    // This value is used to record the grabRotation last frame. It is (was) used for an experimental formula which rotates the player along with it's grabbed object's rotation.		// TODO: do we still need this variable?
-		public Vector3 grabOffset;                  // This value is used differently depending on the case. If grabbing an item, it stores the offset between the hand and the item which when rotated according to rotationOffset is the desired position of the object. If grabbing a climbable object, it stores the offset between the hand and the grabbed object, to determine the desired position of the player
-		public Vector3 grabCCOffset;                // If grabbing a climbable object, this variable stores the offset between the hand and the character controller, to determine where to move the player to when climbing
-		public Vector3 grabPoint;                   // (For dynamic-grabNode or non-grabNode items) records the exact point at which the item was grabbed
-		public float itemVelocityPercentage;        // When items are first picked up their IVP = 0; over time grabbed approaches 1 linearly; this value determines the magnitude of the velocity (and angularVelocity) of the item
-		public Transform pocketCandidateLastFrame;     // The pocket candidate found last frame (null if there was none found)
-		public Transform grabbableItemLastFrame;
-
-		public EnvironmentItem environmentItem;
-
-		public EnvironmentGrabInformation() {
-			climbableGrabbed = null;
+			grabType = GrabType.Null;
+			grabbedTransform = null;
 			grabbedRigidbody = null;
-			grabbedItem = null;
-			grabNode = null;
-			grabRotation = Quaternion.Euler(0, 0, 0);
-			grabRotationLastFrame = Quaternion.Euler(0, 0, 0);
+			grabbedScript = null;
+			itemGrabNode = null;
+			offsetRotation = Quaternion.identity;
+			offsetPosition = Vector3.zero;
+			offsetBodyHand = Vector3.zero;
 			grabPoint = Vector3.zero;
-			grabOffset = Vector3.zero;
-			grabCCOffset = Vector3.zero;
-			itemVelocityPercentage = 0;
-			environmentItem = null;
-			side = "null";
+			grabWorldPos = Vector3.zero;
+			rigidbodyVelocityPercentage = 0;
+			potentialGrabbedScript = null;
 		}
 	}
-
+	
 	[System.Serializable]
 	public class HandInformation {
 		public SteamVR_TrackedObject controller;                // The SteamVR Tracked Object, used to get the position and rotation of the controller
@@ -191,7 +178,7 @@ public class Player : MonoBehaviour {
 		handInfoRight.handRigidbody = handInfoRight.handGameObject.GetComponent<Rigidbody>();
 		audioManager = GameObject.Find("AudioManager").GetComponent<AudioManager>();
 		entity = GetComponent<Entity>();
-		headlight = hmd.transform.parent.Find("Headlight").gameObject;
+		//headlight = hmd.transform.parent.Find("Headlight").gameObject;
 
 		handInfoLeft.handCollider = handInfoLeft.handGameObject.GetComponent<Collider>();
 		handInfoRight.handCollider = handInfoRight.handGameObject.GetComponent<Collider>();
@@ -204,7 +191,6 @@ public class Player : MonoBehaviour {
 
 	void Update() {
 		Time.fixedDeltaTime = Time.deltaTime;           // IMPORTANT (Fixes physics/sec hiccup) TODO: Yikes maybe move this? IDK
-
 
 		CheckSetControllers();
 		if (handInfoLeft.controllerDevice.index != 0 && handInfoRight.controllerDevice.index != 0) {
@@ -250,7 +236,7 @@ public class Player : MonoBehaviour {
 		positionLastFootstepPlayed = new Vector3(bodyCC.transform.position.x, 0, bodyCC.transform.position.z);
 	}
 
-	void UpdateControllerInput(string side, ItemGrabInformation itemGrabInfoCurrent, ItemGrabInformation itemGrabInfoOpposite, EnvironmentGrabInformation envGrabInfoCurrent, EnvironmentGrabInformation envGrabInfoOpposite, HandInformation handInfoCurrent, HandInformation handInfoOpposite) {
+	void UpdateControllerInput(string side, GrabInformation itemGrabInfoCurrent, GrabInformation itemGrabInfoOpposite, GrabInformation envGrabInfoCurrent, GrabInformation envGrabInfoOpposite, HandInformation handInfoCurrent, HandInformation handInfoOpposite) {
 		if (side == "Right") {
 			if (handInfoCurrent.controllerDevice.GetPressDown(Valve.VR.EVRButtonId.k_EButton_ApplicationMenu)) {
 				//flashlight.SetActive(!flashlight.activeSelf);
@@ -260,14 +246,14 @@ public class Player : MonoBehaviour {
 		// Grip Down and Held functionality
 		if (handInfoCurrent.controllerDevice.GetPress(Valve.VR.EVRButtonId.k_EButton_Grip)) {    // Grip Being Held
 			if (handInfoCurrent.controllerDevice.GetPressDown(Valve.VR.EVRButtonId.k_EButton_Grip)) {  // Grip Down
-				if (itemGrabInfoCurrent.grabbedRigidbody == true && itemGrabInfoCurrent.grabbedItem && (itemGrabInfoCurrent.grabbedItem is Misc) == false) {
+				if (itemGrabInfoCurrent.grabbedRigidbody == true && itemGrabInfoCurrent.grabbedScript && (itemGrabInfoCurrent.grabbedScript is Misc) == false) {
 					handInfoCurrent.itemReleasingDisabled = false;
 				} else {
 					handInfoCurrent.itemReleasingDisabled = true;
 				}
 				Grab(side, itemGrabInfoCurrent, itemGrabInfoOpposite, envGrabInfoCurrent, envGrabInfoOpposite, handInfoCurrent, handInfoOpposite);
 
-				if (envGrabInfoCurrent.climbableGrabbed == null && itemGrabInfoCurrent.grabbedItem == null) { // If we didn't grab any environments or items
+				if (envGrabInfoCurrent.grabbedTransform == null && itemGrabInfoCurrent.grabbedScript == null) { // If we didn't grab any environments or items
 					if (Vector3.Distance(handInfoCurrent.controller.transform.position, hmd.transform.position + hmd.transform.forward * -0.15f) < 0.2125f) {
 						headlight.SetActive(!headlight.activeSelf);
 					}
@@ -281,13 +267,13 @@ public class Player : MonoBehaviour {
 		// Grip Up
 		if (handInfoCurrent.controllerDevice.GetPressUp(Valve.VR.EVRButtonId.k_EButton_Grip)) {
 			handInfoCurrent.grabbingDisabled = false;
-			if (envGrabInfoCurrent.climbableGrabbed == true || itemGrabInfoCurrent.grabbedItem == false || ((itemGrabInfoCurrent.grabbedItem && itemGrabInfoCurrent.grabbedItem is Misc) || handInfoCurrent.itemReleasingDisabled == false)) {
+			if (envGrabInfoCurrent.grabbedTransform == true || itemGrabInfoCurrent.grabbedScript == false || ((itemGrabInfoCurrent.grabbedScript && itemGrabInfoCurrent.grabbedScript is Misc) || handInfoCurrent.itemReleasingDisabled == false)) {
 				ReleaseAll(side, itemGrabInfoCurrent, itemGrabInfoOpposite, envGrabInfoCurrent, envGrabInfoOpposite, handInfoCurrent, handInfoOpposite);
 			}
 		}
 
 		// Trigger functionality
-		if (itemGrabInfoCurrent.grabbedItem != null && itemGrabInfoCurrent.grabNode != null) {
+		if (itemGrabInfoCurrent.grabbedScript != null && itemGrabInfoCurrent.itemGrabNode != null) {
 			if (handInfoCurrent.controllerDevice.GetHairTriggerDown()) {
 				TriggerDown(side, itemGrabInfoCurrent, envGrabInfoCurrent, handInfoCurrent);
 			}
@@ -306,8 +292,8 @@ public class Player : MonoBehaviour {
 		// Interact button functionality
 		if (handInfoCurrent.controllerDevice.GetPress(EVRButtonId.k_EButton_ApplicationMenu)) {
 			if (handInfoCurrent.controllerDevice.GetPress(EVRButtonId.k_EButton_Grip)) {
-				if (itemGrabInfoCurrent.grabbedItem is Attachment) {        // If this Item is an attachment
-					if (itemGrabInfoCurrent.grabbedItem.transform.GetComponent<Rigidbody>() == null) {  // If this attachment does not have a Rigidbody Component
+				if (itemGrabInfoCurrent.grabbedScript is Attachment) {        // If this Item is an attachment
+					if (itemGrabInfoCurrent.grabbedScript.transform.GetComponent<Rigidbody>() == null) {  // If this attachment does not have a Rigidbody Component
 						handInfoCurrent.itemReleasingDisabled = true;
 						DetachAttachment(itemGrabInfoCurrent, handInfoCurrent);
 					}
@@ -315,23 +301,23 @@ public class Player : MonoBehaviour {
 			}
 		}
 
-		// Handling grabNode interaction (ie: flashlights, lasersights, etc)
-		if (itemGrabInfoCurrent.grabNode) {
-			if (itemGrabInfoCurrent.grabNode.interactionType == GrabNode.InteractionType.Toggle) {
+		// Handling itemGrabNode interaction (ie: flashlights, lasersights, etc)
+		if (itemGrabInfoCurrent.itemGrabNode) {
+			if (itemGrabInfoCurrent.itemGrabNode.interactionType == GrabNode.InteractionType.Toggle) {
 				if (handInfoCurrent.controllerDevice.GetPressDown(EVRButtonId.k_EButton_ApplicationMenu)) {
-					itemGrabInfoCurrent.grabNode.TriggerInteraction(!itemGrabInfoCurrent.grabNode.interactionOn);
+					itemGrabInfoCurrent.itemGrabNode.TriggerInteraction(!itemGrabInfoCurrent.itemGrabNode.interactionOn);
 					
 				}
 			} else {
 				if (handInfoCurrent.controllerDevice.GetPress(EVRButtonId.k_EButton_ApplicationMenu)) {
-					itemGrabInfoCurrent.grabNode.TriggerInteraction(true);
+					itemGrabInfoCurrent.itemGrabNode.TriggerInteraction(true);
 				} else {
-					itemGrabInfoCurrent.grabNode.TriggerInteraction(false);
+					itemGrabInfoCurrent.itemGrabNode.TriggerInteraction(false);
 				}
 			}
 		}
 
-		if (itemGrabInfoCurrent.grabbedItem == true || envGrabInfoCurrent.grabbedRigidbody == true || envGrabInfoCurrent.climbableGrabbed == true) {
+		if (itemGrabInfoCurrent.grabbedScript == true || envGrabInfoCurrent.grabbedRigidbody == true || envGrabInfoCurrent.grabbedTransform == true) {
 			handInfoCurrent.handCollider.enabled = false;
 		} else {
 			Collider[] handHitColliders = Physics.OverlapSphere(handInfoCurrent.handGameObject.transform.position, 0.065f, physicsGrabLayerMask);
@@ -341,14 +327,14 @@ public class Player : MonoBehaviour {
 		}
 	}
 
-	AttachmentNodePair GetAttachmentConnection (ItemGrabInformation itemGrabInfoCurrent, HandInformation handInfoCurrent) {
+	AttachmentNodePair GetAttachmentConnection (GrabInformation itemGrabInfoCurrent, HandInformation handInfoCurrent) {
 		// This method Checks whether an item 'itemGrabInfoCurrent' can currently be attached to any other items
 		// It will then return an ATtachmentNodePair object with the attachmentNode of the held item and the attachmentNode of a item it will attach to
 
 		AttachmentNodePair chosenANP = null;
 
-		Transform attachmentNodesContainer = itemGrabInfoCurrent.grabbedItem.transform.Find("(AttachmentNodes)");   // The attachmentNode container on this item which contains all attachmentNodes this item has
-		if (itemGrabInfoCurrent.grabbedItem is Attachment && attachmentNodesContainer != null) {        // 1: Is this item an attachment? 2: Does this item contain attachmentNodes
+		Transform attachmentNodesContainer = itemGrabInfoCurrent.grabbedScript.transform.Find("(AttachmentNodes)");   // The attachmentNode container on this item which contains all attachmentNodes this item has
+		if (itemGrabInfoCurrent.grabbedScript is Attachment && attachmentNodesContainer != null) {        // 1: Is this item an attachment? 2: Does this item contain attachmentNodes
 			List<AttachmentNodePair> possibleAttachmentNodePairs = new List<AttachmentNodePair>();		// List containing all possible pairs of attachmentNodes
 
 			// Find all possible matching attachmentNodes
@@ -358,7 +344,7 @@ public class Player : MonoBehaviour {
 					Collider[] hitNodes = Physics.OverlapSphere(heldNode.transform.position, 0.1f, attachmentNodeMask);
 
 					foreach (Collider hitNodeCollider in hitNodes) {
-						if (hitNodeCollider.transform.parent.parent != itemGrabInfoCurrent.grabbedItem.transform) {        // Make sure the hit attachmentNode is not a child of this item
+						if (hitNodeCollider.transform.parent.parent != itemGrabInfoCurrent.grabbedScript.transform) {        // Make sure the hit attachmentNode is not a child of this item
 							AttachmentNode hitNode = hitNodeCollider.GetComponent<AttachmentNode>();
 							if (hitNode != null && hitNode.isAttached == false && hitNode.attachmentType == heldNode.attachmentType && hitNode.attachmentGender != heldNode.attachmentGender) {
 								possibleAttachmentNodePairs.Add(new AttachmentNodePair(heldNode, hitNode));
@@ -386,7 +372,7 @@ public class Player : MonoBehaviour {
 		return chosenANP;
 	}
 
-	void InitiateAttachment (AttachmentNodePair attachmentNodePair, ItemGrabInformation itemGrabInfoCurrent) {
+	void InitiateAttachment (AttachmentNodePair attachmentNodePair, GrabInformation itemGrabInfoCurrent) {
 		// This method initiates an attachment between to attachmentNodes contained in 'attachmentNodePair'
 		if (attachmentNodePair != null) {
 			// Set attachmentNode variables
@@ -400,7 +386,7 @@ public class Player : MonoBehaviour {
 			attachmentNodePair.nodeChild.item.attachments.Add(attachmentNodePair.nodeParent.item);
 			attachmentNodePair.nodeChild.item.isGrabbed = false;
 
-			// Update grabNode information
+			// Update itemGrabNode information
 			if (attachmentNodePair.nodeParent.associatedGrabNode && attachmentNodePair.nodeChild.associatedGrabNode) {
 				attachmentNodePair.nodeParent.associatedGrabNode.grabNodeChildren.Add(attachmentNodePair.nodeChild.associatedGrabNode);
 				attachmentNodePair.nodeChild.associatedGrabNode.grabNodeParent = attachmentNodePair.nodeParent.associatedGrabNode;
@@ -415,25 +401,25 @@ public class Player : MonoBehaviour {
 				(attachmentNodePair.nodeChild.item as Attachment).timeAttached = Time.timeSinceLevelLoad;
 			}
 
-			itemGrabInfoCurrent.grabbedItem.transform.parent = attachmentNodePair.nodeParent.transform.parent.parent.Find("(Attachments)");
+			itemGrabInfoCurrent.grabbedScript.transform.parent = attachmentNodePair.nodeParent.transform.parent.parent.Find("(Attachments)");
 
 			Quaternion nodeChildInvertedRotation = Quaternion.AngleAxis(180, attachmentNodePair.nodeParent.transform.right) * attachmentNodePair.nodeParent.transform.rotation;
-			Quaternion rotationDelta = Quaternion.Inverse(itemGrabInfoCurrent.grabbedItem.transform.rotation) * nodeChildInvertedRotation;
+			Quaternion rotationDelta = Quaternion.Inverse(itemGrabInfoCurrent.grabbedScript.transform.rotation) * nodeChildInvertedRotation;
 
-			//itemGrabInfoCurrent.grabbedItem.transform.rotation *= rotationDelta * Quaternion.Inverse(attachmentNodePair.nodeChild.transform.localRotation);
-			//itemGrabInfoCurrent.grabbedItem.transform.position = attachmentNodePair.nodeParent.transform.position + (itemGrabInfoCurrent.grabbedItem.transform.rotation * rotationDelta * Quaternion.Inverse(attachmentNodePair.nodeChild.transform.localRotation) * -attachmentNodePair.nodeChild.transform.localPosition);
-			Attachment grabbedAttachment = itemGrabInfoCurrent.grabbedItem as Attachment;
-			grabbedAttachment.desiredRotation = Quaternion.Inverse(itemGrabInfoCurrent.grabbedItem.transform.parent.rotation) * itemGrabInfoCurrent.grabbedItem.transform.rotation * rotationDelta * Quaternion.Inverse(attachmentNodePair.nodeChild.transform.localRotation);
-			grabbedAttachment.desiredPosition = Quaternion.Inverse(itemGrabInfoCurrent.grabbedItem.transform.parent.rotation) * ((attachmentNodePair.nodeParent.transform.position + (itemGrabInfoCurrent.grabbedItem.transform.rotation * rotationDelta * Quaternion.Inverse(attachmentNodePair.nodeChild.transform.localRotation) * -attachmentNodePair.nodeChild.transform.localPosition)) - itemGrabInfoCurrent.grabbedItem.transform.parent.position); // TODO: clean this ugly ass calculation
+			//itemGrabInfoCurrent.grabbedScript.transform.rotation *= rotationDelta * Quaternion.Inverse(attachmentNodePair.nodeChild.transform.localRotation);
+			//itemGrabInfoCurrent.grabbedScript.transform.position = attachmentNodePair.nodeParent.transform.position + (itemGrabInfoCurrent.grabbedScript.transform.rotation * rotationDelta * Quaternion.Inverse(attachmentNodePair.nodeChild.transform.localRotation) * -attachmentNodePair.nodeChild.transform.localPosition);
+			Attachment grabbedAttachment = itemGrabInfoCurrent.grabbedScript as Attachment;
+			grabbedAttachment.desiredRotation = Quaternion.Inverse(itemGrabInfoCurrent.grabbedScript.transform.parent.rotation) * itemGrabInfoCurrent.grabbedScript.transform.rotation * rotationDelta * Quaternion.Inverse(attachmentNodePair.nodeChild.transform.localRotation);
+			grabbedAttachment.desiredPosition = Quaternion.Inverse(itemGrabInfoCurrent.grabbedScript.transform.parent.rotation) * ((attachmentNodePair.nodeParent.transform.position + (itemGrabInfoCurrent.grabbedScript.transform.rotation * rotationDelta * Quaternion.Inverse(attachmentNodePair.nodeChild.transform.localRotation) * -attachmentNodePair.nodeChild.transform.localPosition)) - itemGrabInfoCurrent.grabbedScript.transform.parent.position); // TODO: clean this ugly ass calculation
 
-			itemGrabInfoCurrent.grabbedItem.rigidbodyCopy = new RigidbodyCopy(itemGrabInfoCurrent.grabbedRigidbody);
+			(itemGrabInfoCurrent.grabbedScript as Item).rigidbodyCopy = new RigidbodyCopy(itemGrabInfoCurrent.grabbedRigidbody);	// TODO: Sloppy 'as' use
 			Destroy(itemGrabInfoCurrent.grabbedRigidbody);
 		}
 	}
 
-	void DetachAttachment (ItemGrabInformation itemGrabInfoCurrent, HandInformation handInfoCurrent) {
+	void DetachAttachment (GrabInformation itemGrabInfoCurrent, HandInformation handInfoCurrent) {
 		// This method is used to fully detach any parent items this item is attached to. It does not detach items that are children of it, it only detaches itself from it's parent
-		Transform attachmentNodesContainer = itemGrabInfoCurrent.grabbedItem.transform.Find("(AttachmentNodes)");
+		Transform attachmentNodesContainer = itemGrabInfoCurrent.grabbedScript.transform.Find("(AttachmentNodes)");
 		if (attachmentNodesContainer) {
 			foreach (Transform itemAttNodeTransform in attachmentNodesContainer) {
 				AttachmentNode nodeObject = itemAttNodeTransform.GetComponent<AttachmentNode>();
@@ -447,7 +433,7 @@ public class Player : MonoBehaviour {
 						(nodeObject.connectedNode.item as Weapon).UpdateCombinedAttributes();
 					}
 
-					// Update grabNode information
+					// Update itemGrabNode information
 					if (nodeObject.associatedGrabNode && nodeObject.associatedGrabNode.grabNodeParent) {
 						nodeObject.associatedGrabNode.grabNodeParent.grabNodeChildren.Remove(nodeObject.associatedGrabNode);
 						nodeObject.associatedGrabNode.grabNodeParent = null;
@@ -463,30 +449,30 @@ public class Player : MonoBehaviour {
 
 			// Unparent attachment
 			Transform ItemManager = GameObject.Find("ItemManager").transform;
-			itemGrabInfoCurrent.grabbedItem.transform.parent = ItemManager;
+			itemGrabInfoCurrent.grabbedScript.transform.parent = ItemManager;
 
 			// Reapply rigidbody
-			itemGrabInfoCurrent.grabbedItem.gameObject.AddComponent<Rigidbody>();
-			Rigidbody newRigidbody = itemGrabInfoCurrent.grabbedItem.gameObject.GetComponent<Rigidbody>();
+			itemGrabInfoCurrent.grabbedScript.gameObject.AddComponent<Rigidbody>();
+			Rigidbody newRigidbody = itemGrabInfoCurrent.grabbedScript.gameObject.GetComponent<Rigidbody>();
 
 			// Copy RigidbodyCopy's values over to the newly created rigidbody
-			RigidbodyCopy.SetRigidbodyValues(newRigidbody, itemGrabInfoCurrent.grabbedItem.rigidbodyCopy);
+			RigidbodyCopy.SetRigidbodyValues(newRigidbody, (itemGrabInfoCurrent.grabbedScript as Item).rigidbodyCopy);
 
-			itemGrabInfoCurrent.grabbedItem.itemRigidbody = newRigidbody;
+			(itemGrabInfoCurrent.grabbedScript as Item).itemRigidbody = newRigidbody;
 
 			// Reset grab information
 			itemGrabInfoCurrent.grabbedRigidbody = newRigidbody;
 
-			if (itemGrabInfoCurrent.grabNode) {
-				if (itemGrabInfoCurrent.grabNode.grabType == GrabNode.GrabType.FixedPositionRotation) {
-					itemGrabInfoCurrent.grabOffset = Quaternion.Euler(itemGrabInfoCurrent.grabNode.rotation) * ((Quaternion.Inverse(itemGrabInfoCurrent.grabbedItem.transform.rotation) * -(itemGrabInfoCurrent.grabNode.transform.position - itemGrabInfoCurrent.grabbedItem.transform.position)) - itemGrabInfoCurrent.grabNode.offset);
-					itemGrabInfoCurrent.grabRotation = Quaternion.Euler(itemGrabInfoCurrent.grabNode.rotation);
-					itemGrabInfoCurrent.grabLocalPos = itemGrabInfoCurrent.grabNode.transform.position + (itemGrabInfoCurrent.grabbedRigidbody.transform.rotation * itemGrabInfoCurrent.grabNode.offset);
-				} else if (itemGrabInfoCurrent.grabNode.grabType == GrabNode.GrabType.FixedPosition) {
-					itemGrabInfoCurrent.grabOffset = Quaternion.Euler(itemGrabInfoCurrent.grabNode.rotation) * (-itemGrabInfoCurrent.grabNode.transform.localPosition - itemGrabInfoCurrent.grabNode.offset);
-					itemGrabInfoCurrent.grabRotation = Quaternion.Inverse(handInfoCurrent.controller.transform.rotation) * itemGrabInfoCurrent.grabbedRigidbody.transform.rotation;
-					itemGrabInfoCurrent.grabLocalPos = itemGrabInfoCurrent.grabNode.transform.position + (itemGrabInfoCurrent.grabbedRigidbody.transform.rotation * itemGrabInfoCurrent.grabNode.offset);
-				} else if (itemGrabInfoCurrent.grabNode.grabType == GrabNode.GrabType.Dynamic || itemGrabInfoCurrent.grabNode.grabType == GrabNode.GrabType.Referral) {
+			if (itemGrabInfoCurrent.itemGrabNode) {
+				if (itemGrabInfoCurrent.itemGrabNode.grabType == GrabNode.GrabType.FixedPositionRotation) {
+					itemGrabInfoCurrent.offsetPosition = Quaternion.Euler(itemGrabInfoCurrent.itemGrabNode.rotation) * ((Quaternion.Inverse(itemGrabInfoCurrent.grabbedScript.transform.rotation) * -(itemGrabInfoCurrent.itemGrabNode.transform.position - itemGrabInfoCurrent.grabbedScript.transform.position)) - itemGrabInfoCurrent.itemGrabNode.offset);
+					itemGrabInfoCurrent.offsetRotation = Quaternion.Euler(itemGrabInfoCurrent.itemGrabNode.rotation);
+					itemGrabInfoCurrent.grabPoint = itemGrabInfoCurrent.itemGrabNode.transform.position + (itemGrabInfoCurrent.grabbedRigidbody.transform.rotation * itemGrabInfoCurrent.itemGrabNode.offset);
+				} else if (itemGrabInfoCurrent.itemGrabNode.grabType == GrabNode.GrabType.FixedPosition) {
+					itemGrabInfoCurrent.offsetPosition = Quaternion.Euler(itemGrabInfoCurrent.itemGrabNode.rotation) * (-itemGrabInfoCurrent.itemGrabNode.transform.localPosition - itemGrabInfoCurrent.itemGrabNode.offset);
+					itemGrabInfoCurrent.offsetRotation = Quaternion.Inverse(handInfoCurrent.controller.transform.rotation) * itemGrabInfoCurrent.grabbedRigidbody.transform.rotation;
+					itemGrabInfoCurrent.grabPoint = itemGrabInfoCurrent.itemGrabNode.transform.position + (itemGrabInfoCurrent.grabbedRigidbody.transform.rotation * itemGrabInfoCurrent.itemGrabNode.offset);
+				} else if (itemGrabInfoCurrent.itemGrabNode.grabType == GrabNode.GrabType.Dynamic || itemGrabInfoCurrent.itemGrabNode.grabType == GrabNode.GrabType.Referral) {
 					GetDynamicItemGrabInfo(ref itemGrabInfoCurrent, ref handInfoCurrent);
 				}
 			} else {
@@ -517,16 +503,17 @@ public class Player : MonoBehaviour {
 		rig.transform.rotation = rig.transform.rotation * rot;
 	}
 
-	void Grab(string side, ItemGrabInformation itemGrabInfoCurrent, ItemGrabInformation itemGrabInfoOpposite, EnvironmentGrabInformation envGrabInfoCurrent, EnvironmentGrabInformation envGrabInfoOpposite, HandInformation handInfoCurrent, HandInformation handInfoOpposite) {
-		if (envGrabInfoCurrent.climbableGrabbed == false && envGrabInfoOpposite.climbableGrabbed == false) {      // Are we currently climbing?
+	void Grab(string side, GrabInformation itemGrabInfoCurrent, GrabInformation itemGrabInfoOpposite, GrabInformation envGrabInfoCurrent, GrabInformation envGrabInfoOpposite, HandInformation handInfoCurrent, HandInformation handInfoOpposite) {
+		// This method handles deciding which type of grab to do, either an itemGrab or an environmentGrab
+		if (envGrabInfoCurrent.grabbedTransform == false && envGrabInfoOpposite.grabbedTransform == false) {      // Are we currently climbing?
 			if (itemGrabInfoCurrent.grabbedRigidbody == null) {      // Are we currently not holding an item
 				GrabItem(side, itemGrabInfoCurrent, itemGrabInfoOpposite, handInfoCurrent, handInfoOpposite);
 			}
-			if (envGrabInfoCurrent.climbableGrabbed == null) {      // Are we currently not climbing something
+			if (envGrabInfoCurrent.grabbedTransform == null) {      // Are we currently not climbing something
 				GrabEnvironment(side, envGrabInfoCurrent, envGrabInfoOpposite, handInfoCurrent, handInfoOpposite);
 			}
 		} else {
-			if (envGrabInfoCurrent.climbableGrabbed == null) {      // Are we currently not climbing something
+			if (envGrabInfoCurrent.grabbedTransform == null) {      // Are we currently not climbing something
 				GrabEnvironment(side, envGrabInfoCurrent, envGrabInfoOpposite, handInfoCurrent, handInfoOpposite);
 			}
 			if (itemGrabInfoCurrent.grabbedRigidbody == null) {      // Are we currently not holding an item
@@ -535,11 +522,13 @@ public class Player : MonoBehaviour {
 		}
 	}
 
-	void GrabItem (string side, ItemGrabInformation itemGrabInfoCurrent, ItemGrabInformation itemGrabInfoOpposite, HandInformation handInfoCurrent, HandInformation handInfoOpposite) {
-		if (handInfoCurrent.grabbingDisabled == false) {
-			// Try and grab something
-			Vector3 originPosition = handInfoCurrent.handGameObject.transform.position;
-			Collider[] itemColliders = Physics.OverlapSphere(originPosition, 0.2f, itemGrabLayerMask);
+	void GrabItem (string side, GrabInformation itemGrabInfoCurrent, GrabInformation itemGrabInfoOpposite, HandInformation handInfoCurrent, HandInformation handInfoOpposite) {
+		// This method handles grabbing items and ragdolls
+
+		if (handInfoCurrent.grabbingDisabled == false) {	// Is grabbing currently disabled on this hand?
+
+			Vector3 originPosition = handInfoCurrent.handGameObject.transform.position;						// Origin of the current hand
+			Collider[] itemColliders = Physics.OverlapSphere(originPosition, 0.2f, itemGrabLayerMask);		// Colliders found in a spherecast around the current hand
 			List<ItemAndNode> itemAndNodes = new List<ItemAndNode>();
 
 			// Search through all hit colliders to find possible items & nodes
@@ -555,7 +544,7 @@ public class Player : MonoBehaviour {
 					}
 
 					if (itemCurrent != null) {
-						GrabNode nodeCurrent = hitItem.GetComponent<GrabNode>();        // nodeCurrent will be set to the grabNode that was hit, unless there is no node, which will set it to null
+						GrabNode nodeCurrent = hitItem.GetComponent<GrabNode>();        // nodeCurrent will be set to the itemGrabNode that was hit, unless there is no node, which will set it to null
 						if (nodeCurrent && nodeCurrent.referralNode != null) {
 							nodeCurrent = nodeCurrent.referralNode;
 						}
@@ -583,7 +572,7 @@ public class Player : MonoBehaviour {
 				}
 
 				if (chosenIAN != null) {
-					// Check to see if nodeCurrent is attached to another grabNode with higher dominance
+					// Check to see if nodeCurrent is attached to another itemGrabNode with higher dominance
 					if (chosenIAN.node) {
 						if (chosenIAN.node.grabThisNodeFirst == false) {
 							if (chosenIAN.node.grabNodeParent != null && chosenIAN.node.grabNodeParent.grabThisNodeFirst == true) { // If this node is attached to a parent, and it has nodeFirst, make that node the currentNode
@@ -607,17 +596,17 @@ public class Player : MonoBehaviour {
 						}
 					}
 
-					itemGrabInfoCurrent.grabbedItem = chosenIAN.item;
-					itemGrabInfoCurrent.grabbedItem.isGrabbed = true;
-					itemGrabInfoCurrent.grabbedItem.timeLastGrabbed = Time.timeSinceLevelLoad;
-					itemGrabInfoCurrent.grabNode = chosenIAN.node;
+					itemGrabInfoCurrent.grabbedScript = chosenIAN.item;
+					(itemGrabInfoCurrent.grabbedScript as Item).isGrabbed = true;
+					(itemGrabInfoCurrent.grabbedScript as Item).timeLastGrabbed = Time.timeSinceLevelLoad;
+					itemGrabInfoCurrent.itemGrabNode = chosenIAN.node;
 
 					// Set correct rigidbody
-					if (itemGrabInfoCurrent.grabbedItem.transform.GetComponent<Rigidbody>() == null) {
+					if (itemGrabInfoCurrent.grabbedScript.transform.GetComponent<Rigidbody>() == null) {
 
 						// If this item is an attachment
-						if (itemGrabInfoCurrent.grabbedItem.transform.parent.name == "(Attachments)") {
-							Transform grabbedItemParentItem = itemGrabInfoCurrent.grabbedItem.transform.parent.parent;
+						if (itemGrabInfoCurrent.grabbedScript.transform.parent.name == "(Attachments)") {
+							Transform grabbedItemParentItem = itemGrabInfoCurrent.grabbedScript.transform.parent.parent;
 							while (true) {
 								// if this new grabbedItemParentItem has a rigidbody, end the loop
 								Rigidbody rigidbodySearch = grabbedItemParentItem.GetComponent<Rigidbody>();
@@ -640,9 +629,9 @@ public class Player : MonoBehaviour {
 						itemGrabInfoCurrent.grabbedRigidbody = chosenIAN.item.transform.GetComponent<Rigidbody>();
 					}
 					
-					if (itemGrabInfoCurrent.grabbedItem.pocketCurrent != null) {
-						itemGrabInfoCurrent.grabbedItem.pocketCurrent.ReleaseItem();
-						itemGrabInfoCurrent.grabbedItem.pocketCurrent = null;
+					if ((itemGrabInfoCurrent.grabbedScript as Item).pocketCurrent != null) {
+						(itemGrabInfoCurrent.grabbedScript as Item).pocketCurrent.ReleaseItem();
+						(itemGrabInfoCurrent.grabbedScript as Item).pocketCurrent = null;
 					}
 
 					itemGrabInfoCurrent.grabbedRigidbody.useGravity = false;
@@ -650,20 +639,20 @@ public class Player : MonoBehaviour {
 						itemGrabInfoCurrent.grabbedRigidbody.transform.GetComponent<Weapon>().UpdateCombinedAttributes();
 					}
 
-					if (itemGrabInfoCurrent.grabNode) {
-						if (itemGrabInfoCurrent.grabNode.grabType == GrabNode.GrabType.FixedPositionRotation) {
+					if (itemGrabInfoCurrent.itemGrabNode) {
+						if (itemGrabInfoCurrent.itemGrabNode.grabType == GrabNode.GrabType.FixedPositionRotation) {
 							Vector3 attachmentOffset = Vector3.zero;
-							if (itemGrabInfoCurrent.grabbedItem.transform.parent && itemGrabInfoCurrent.grabbedItem.transform.parent.name == "(Attachments)") {
-								attachmentOffset = itemGrabInfoCurrent.grabbedItem.transform.localPosition;
+							if (itemGrabInfoCurrent.grabbedScript.transform.parent && itemGrabInfoCurrent.grabbedScript.transform.parent.name == "(Attachments)") {
+								attachmentOffset = itemGrabInfoCurrent.grabbedScript.transform.localPosition;
 							}
-							itemGrabInfoCurrent.grabOffset = Quaternion.Euler(itemGrabInfoCurrent.grabNode.rotation) * -(attachmentOffset + itemGrabInfoCurrent.grabNode.transform.localPosition + itemGrabInfoCurrent.grabNode.offset);
-							itemGrabInfoCurrent.grabRotation = Quaternion.Euler(itemGrabInfoCurrent.grabNode.rotation);
-							itemGrabInfoCurrent.grabLocalPos = itemGrabInfoCurrent.grabNode.transform.localPosition + itemGrabInfoCurrent.grabNode.offset;
-						} else if (itemGrabInfoCurrent.grabNode.grabType == GrabNode.GrabType.FixedPosition) {
-							itemGrabInfoCurrent.grabOffset = Quaternion.Euler(itemGrabInfoCurrent.grabNode.rotation) * (-itemGrabInfoCurrent.grabNode.transform.localPosition - itemGrabInfoCurrent.grabNode.offset);
-							itemGrabInfoCurrent.grabRotation = Quaternion.Inverse(handInfoCurrent.controller.transform.rotation) * itemGrabInfoCurrent.grabbedRigidbody.transform.rotation;
-							itemGrabInfoCurrent.grabLocalPos = itemGrabInfoCurrent.grabNode.transform.localPosition + itemGrabInfoCurrent.grabNode.offset;
-						} else if (itemGrabInfoCurrent.grabNode.grabType == GrabNode.GrabType.Dynamic || itemGrabInfoCurrent.grabNode.grabType == GrabNode.GrabType.Referral) {
+							itemGrabInfoCurrent.offsetPosition = Quaternion.Euler(itemGrabInfoCurrent.itemGrabNode.rotation) * -(attachmentOffset + itemGrabInfoCurrent.itemGrabNode.transform.localPosition + itemGrabInfoCurrent.itemGrabNode.offset);
+							itemGrabInfoCurrent.offsetRotation = Quaternion.Euler(itemGrabInfoCurrent.itemGrabNode.rotation);
+							itemGrabInfoCurrent.grabPoint = itemGrabInfoCurrent.itemGrabNode.transform.localPosition + itemGrabInfoCurrent.itemGrabNode.offset;
+						} else if (itemGrabInfoCurrent.itemGrabNode.grabType == GrabNode.GrabType.FixedPosition) {
+							itemGrabInfoCurrent.offsetPosition = Quaternion.Euler(itemGrabInfoCurrent.itemGrabNode.rotation) * (-itemGrabInfoCurrent.itemGrabNode.transform.localPosition - itemGrabInfoCurrent.itemGrabNode.offset);
+							itemGrabInfoCurrent.offsetRotation = Quaternion.Inverse(handInfoCurrent.controller.transform.rotation) * itemGrabInfoCurrent.grabbedRigidbody.transform.rotation;
+							itemGrabInfoCurrent.grabPoint = itemGrabInfoCurrent.itemGrabNode.transform.localPosition + itemGrabInfoCurrent.itemGrabNode.offset;
+						} else if (itemGrabInfoCurrent.itemGrabNode.grabType == GrabNode.GrabType.Dynamic || itemGrabInfoCurrent.itemGrabNode.grabType == GrabNode.GrabType.Referral) {
 							// Here
 							GetDynamicItemGrabInfo(ref itemGrabInfoCurrent, ref handInfoCurrent);
 						}
@@ -671,25 +660,34 @@ public class Player : MonoBehaviour {
 						GetDynamicItemGrabInfo(ref itemGrabInfoCurrent, ref handInfoCurrent);
 					}
 
+					// Set grabbed Item centerOfMass
+					if (itemGrabInfoCurrent.grabbedScript) {
+						if (itemGrabInfoCurrent.grabbedScript != itemGrabInfoOpposite.grabbedScript) {
+							itemGrabInfoCurrent.grabbedRigidbody.centerOfMass = itemGrabInfoCurrent.grabPoint;
+						} else {
+							itemGrabInfoCurrent.grabbedRigidbody.centerOfMass = (itemGrabInfoCurrent.grabPoint + itemGrabInfoOpposite.grabPoint) / 2;
+						}
+					}
+
 					if (itemGrabInfoCurrent.grabbedRigidbody == itemGrabInfoOpposite.grabbedRigidbody) {      // Is the other hand already holding this item?
-						itemGrabInfoCurrent.itemVelocityPercentage = 0;
-						itemGrabInfoOpposite.itemVelocityPercentage = 0;
-						if (itemGrabInfoCurrent.grabNode && itemGrabInfoOpposite.grabNode) {
-							if (itemGrabInfoCurrent.grabNode.dominance > itemGrabInfoOpposite.grabNode.dominance) {
+						itemGrabInfoCurrent.rigidbodyVelocityPercentage = 0;
+						itemGrabInfoOpposite.rigidbodyVelocityPercentage = 0;
+						if (itemGrabInfoCurrent.itemGrabNode && itemGrabInfoOpposite.itemGrabNode) {
+							if (itemGrabInfoCurrent.itemGrabNode.dominance > itemGrabInfoOpposite.itemGrabNode.dominance) {
 								grabDualWieldDominantHand = side;
-								grabDualWieldDirection = Quaternion.Euler(itemGrabInfoCurrent.grabNode.rotation) * Quaternion.Inverse(itemGrabInfoCurrent.grabbedRigidbody.transform.rotation) * (GetGrabWorldPosition(itemGrabInfoOpposite) - GetGrabWorldPosition(itemGrabInfoCurrent));
-							} else if (itemGrabInfoCurrent.grabNode.dominance <= itemGrabInfoOpposite.grabNode.dominance) {
+								grabDualWieldDirection = Quaternion.Euler(itemGrabInfoCurrent.itemGrabNode.rotation) * Quaternion.Inverse(itemGrabInfoCurrent.grabbedRigidbody.transform.rotation) * (GetGrabWorldPosition(itemGrabInfoOpposite) - GetGrabWorldPosition(itemGrabInfoCurrent));
+							} else if (itemGrabInfoCurrent.itemGrabNode.dominance <= itemGrabInfoOpposite.itemGrabNode.dominance) {
 								grabDualWieldDominantHand = (side == "Right" ? "Left" : "Right");
-								if (itemGrabInfoCurrent.grabPoint != Vector3.zero) {
-									grabDualWieldDirection = Quaternion.Inverse(handInfoOpposite.handRigidbody.transform.rotation) * (itemGrabInfoCurrent.grabPoint - handInfoOpposite.handRigidbody.transform.position);
+								if (itemGrabInfoCurrent.grabWorldPos != Vector3.zero) {
+									grabDualWieldDirection = Quaternion.Inverse(handInfoOpposite.handRigidbody.transform.rotation) * (itemGrabInfoCurrent.grabWorldPos - handInfoOpposite.handRigidbody.transform.position);
 								} else {
 									grabDualWieldDirection = Quaternion.Inverse(handInfoOpposite.handRigidbody.transform.rotation) * (handInfoCurrent.handRigidbody.transform.position - handInfoOpposite.handRigidbody.transform.position);
 								}
 							}
 						} else {
 							grabDualWieldDominantHand = (side == "Right" ? "Left" : "Right");
-							if (itemGrabInfoCurrent.grabPoint != Vector3.zero) {
-								grabDualWieldDirection = Quaternion.Inverse(handInfoOpposite.handRigidbody.transform.rotation) * (itemGrabInfoCurrent.grabPoint - handInfoOpposite.handRigidbody.transform.position);
+							if (itemGrabInfoCurrent.grabWorldPos != Vector3.zero) {
+								grabDualWieldDirection = Quaternion.Inverse(handInfoOpposite.handRigidbody.transform.rotation) * (itemGrabInfoCurrent.grabWorldPos - handInfoOpposite.handRigidbody.transform.position);
 							} else {
 								grabDualWieldDirection = Quaternion.Inverse(handInfoOpposite.handRigidbody.transform.rotation) * (handInfoCurrent.handRigidbody.transform.position - handInfoOpposite.handRigidbody.transform.position);
 							}
@@ -702,18 +700,18 @@ public class Player : MonoBehaviour {
 		}
 	}
 
-	Vector3 GetGrabWorldPosition (ItemGrabInformation itemGrabInfoCurrent) {
+	Vector3 GetGrabWorldPosition (GrabInformation itemGrabInfoCurrent) {
 		Vector3 grabWorldPos = Vector3.zero;
 
 		if (itemGrabInfoCurrent != null) {
-			grabWorldPos = itemGrabInfoCurrent.grabbedRigidbody.transform.position + itemGrabInfoCurrent.grabbedRigidbody.transform.rotation * (Quaternion.Inverse(itemGrabInfoCurrent.grabRotation) * -itemGrabInfoCurrent.grabOffset);
+			grabWorldPos = itemGrabInfoCurrent.grabbedRigidbody.transform.position + itemGrabInfoCurrent.grabbedRigidbody.transform.rotation * (Quaternion.Inverse(itemGrabInfoCurrent.offsetRotation) * -itemGrabInfoCurrent.offsetPosition);
 		}
 		return grabWorldPos;
 	}
 
-	void GrabEnvironment(string side, EnvironmentGrabInformation envGrabInfoCurrent, EnvironmentGrabInformation envGrabInfoOpposite, HandInformation handInfoCurrent, HandInformation handInfoOpposite) {
+	void GrabEnvironment(string side, GrabInformation envGrabInfoCurrent, GrabInformation envGrabInfoOpposite, HandInformation handInfoCurrent, HandInformation handInfoOpposite) {
 		if (handInfoCurrent.grabbingDisabled == false) {
-			if (envGrabInfoCurrent.grabbedRigidbody == false && envGrabInfoCurrent.climbableGrabbed == false) {
+			if (envGrabInfoCurrent.grabbedRigidbody == false && envGrabInfoCurrent.grabbedTransform == false) {
 				Vector3 originPosition = handInfoCurrent.handGameObject.transform.position;
 
 				// For grabbing environmentItems
@@ -721,11 +719,11 @@ public class Player : MonoBehaviour {
 				foreach (Collider hitItem in envItemColliders) {
 					if (hitItem.transform.gameObject.layer == LayerMask.NameToLayer("EnvironmentItem")) {
 						if (hitItem.transform.GetComponent<Rigidbody>()) {
-							envGrabInfoCurrent.grabOffset = Quaternion.Inverse(hitItem.transform.rotation) * (originPosition - hitItem.transform.position);
+							envGrabInfoCurrent.offsetPosition = Quaternion.Inverse(hitItem.transform.rotation) * (originPosition - hitItem.transform.position);
 							envGrabInfoCurrent.grabbedRigidbody = hitItem.transform.GetComponent<Rigidbody>();
 							if (hitItem.transform.GetComponent<EnvironmentItem>()) {
-								envGrabInfoCurrent.environmentItem = hitItem.transform.GetComponent<EnvironmentItem>();
-								envGrabInfoCurrent.environmentItem.OnGrab(this, side);
+								envGrabInfoCurrent.grabbedScript = hitItem.transform.GetComponent<EnvironmentItem>();
+								(envGrabInfoCurrent.grabbedScript as EnvironmentItem).OnGrab(this, side);
 							}
 							return;
 						}
@@ -735,11 +733,11 @@ public class Player : MonoBehaviour {
 							Rigidbody hitItemRigidbody = hitItem.attachedRigidbody;
 							if (hitItemRigidbody) {
 								Debug.Log("yes3");
-								envGrabInfoCurrent.grabOffset = Quaternion.Inverse(hitItemRigidbody.transform.rotation) * (originPosition - hitItemRigidbody.transform.position);
+								envGrabInfoCurrent.offsetPosition = Quaternion.Inverse(hitItemRigidbody.transform.rotation) * (originPosition - hitItemRigidbody.transform.position);
 								envGrabInfoCurrent.grabbedRigidbody = hitItemRigidbody;
 								if (hitItemRigidbody.transform.GetComponent<EnvironmentItem>()) {
-									envGrabInfoCurrent.environmentItem = hitItemRigidbody.transform.GetComponent<EnvironmentItem>();
-									envGrabInfoCurrent.environmentItem.OnGrab(this, side);
+									envGrabInfoCurrent.grabbedScript = hitItemRigidbody.transform.GetComponent<EnvironmentItem>();
+									(envGrabInfoCurrent.grabbedScript as EnvironmentItem).OnGrab(this, side);
 								}
 								return;
 							}
@@ -751,12 +749,24 @@ public class Player : MonoBehaviour {
 				Collider[] climbColliders = Physics.OverlapSphere(originPosition, 0.065f, envGrabLayerMask);
 				foreach (Collider hitClimb in climbColliders) {
 					if (hitClimb.transform.gameObject.layer == LayerMask.NameToLayer("Climbable") || hitClimb.transform.gameObject.layer == LayerMask.NameToLayer("ClimbablePhysics") || hitClimb.transform.gameObject.layer == LayerMask.NameToLayer("VehicleClimbable") || (hitClimb.transform.gameObject.layer == LayerMask.NameToLayer("Environment") && (hmd.transform.position.y - rig.transform.position.y < heightCutoffCrouching))) {
-						envGrabInfoCurrent.grabOffset = bodyCC.transform.position - hitClimb.transform.position;
-						envGrabInfoCurrent.grabRotation = hitClimb.transform.rotation;
-						envGrabInfoCurrent.grabCCOffset = handInfoCurrent.controller.transform.position - bodyCC.transform.position;
-						envGrabInfoCurrent.climbableGrabbed = hitClimb.transform;
+						envGrabInfoCurrent.offsetPosition = bodyCC.transform.position - hitClimb.transform.position;
+						envGrabInfoCurrent.offsetRotation = hitClimb.transform.rotation;
+						envGrabInfoCurrent.offsetBodyHand = handInfoCurrent.controller.transform.position - bodyCC.transform.position;
+						envGrabInfoCurrent.grabbedTransform = hitClimb.transform;
+						envGrabInfoCurrent.grabPoint = Quaternion.Inverse(envGrabInfoCurrent.grabbedTransform.rotation) * (hitClimb.ClosestPoint(originPosition) - envGrabInfoCurrent.grabbedTransform.position);
 						StartCoroutine(TriggerHapticFeedback(handInfoCurrent.controllerDevice, 3999, 0.1f));
 						handInfoCurrent.grabbingDisabled = true;
+
+						Rigidbody hitClimbRigidbody = hitClimb.GetComponent<Rigidbody>();
+						if (hitClimbRigidbody != null) {
+							envGrabInfoCurrent.grabType = GrabType.ClimbablePhysics;
+							envGrabInfoCurrent.grabbedRigidbody = hitClimbRigidbody;
+							envGrabInfoCurrent.grabbedRigidbody.mass *= 10f;
+							if (envGrabInfoOpposite.grabbedTransform == false || (envGrabInfoOpposite.grabbedTransform == true && envGrabInfoCurrent.grabbedTransform.parent != envGrabInfoOpposite.grabbedTransform.parent)) {
+								envGrabInfoCurrent.grabbedRigidbody.AddForceAtPosition(velocityCurrent * 2500, hitClimb.ClosestPoint(originPosition));
+							}
+						}
+
 						return;
 					}
 				}
@@ -769,10 +779,10 @@ public class Player : MonoBehaviour {
 						RaycastHit environmentHit;
 						if (Physics.Raycast(currentOrigin + new Vector3(0, 0.05f, 0), Vector3.down, out environmentHit, 0.1f, envGrabLayerMask)) {
 							if (Vector3.Angle(environmentHit.normal, Vector3.up) < 45) {
-								envGrabInfoCurrent.grabOffset = bodyCC.transform.position - environmentHit.transform.position;
-								envGrabInfoCurrent.grabRotation = environmentHit.transform.rotation;
-								envGrabInfoCurrent.grabCCOffset = handInfoCurrent.controller.transform.position - bodyCC.transform.position;
-								envGrabInfoCurrent.climbableGrabbed = environmentHit.transform;
+								envGrabInfoCurrent.offsetPosition = bodyCC.transform.position - environmentHit.transform.position;
+								envGrabInfoCurrent.offsetRotation = environmentHit.transform.rotation;
+								envGrabInfoCurrent.offsetBodyHand = handInfoCurrent.controller.transform.position - bodyCC.transform.position;
+								envGrabInfoCurrent.grabbedTransform = environmentHit.transform;
 								StartCoroutine(TriggerHapticFeedback(handInfoCurrent.controllerDevice, 3999, 0.1f));
 								handInfoCurrent.grabbingDisabled = true;
 								return;
@@ -784,23 +794,23 @@ public class Player : MonoBehaviour {
 		}
 	}
 
-	void GetDynamicItemGrabInfo (ref ItemGrabInformation itemGrabInfoCurrent, ref HandInformation handInfoCurrent) {
+	void GetDynamicItemGrabInfo (ref GrabInformation itemGrabInfoCurrent, ref HandInformation handInfoCurrent) {
 		// The purpose of this method is to make items grabbed by dual weilding and items that do not have grabNodes be grabbed on their surfaces rather than being suspended away from the hands.
 
 		Vector3 closestColliderPoint = Vector3.zero;
-		if (itemGrabInfoCurrent.grabNode == true) {
-			closestColliderPoint = itemGrabInfoCurrent.grabNode.transform.GetComponent<Collider>().ClosestPoint(handInfoCurrent.handRigidbody.transform.position);
+		if (itemGrabInfoCurrent.itemGrabNode == true) {
+			closestColliderPoint = itemGrabInfoCurrent.itemGrabNode.transform.GetComponent<Collider>().ClosestPoint(handInfoCurrent.handRigidbody.transform.position);
 		} else {
-			if (itemGrabInfoCurrent.grabbedItem.transform.GetComponent<Collider>() == null) {
+			if (itemGrabInfoCurrent.grabbedScript.transform.GetComponent<Collider>() == null) {
 
 			}
-			closestColliderPoint = itemGrabInfoCurrent.grabbedItem.transform.GetComponent<Collider>().ClosestPoint(handInfoCurrent.handRigidbody.transform.position);
+			closestColliderPoint = itemGrabInfoCurrent.grabbedScript.transform.GetComponent<Collider>().ClosestPoint(handInfoCurrent.handRigidbody.transform.position);
 		}
 
-		itemGrabInfoCurrent.grabPoint = closestColliderPoint;
-		itemGrabInfoCurrent.grabOffset = Quaternion.Inverse(handInfoCurrent.handGameObject.transform.rotation) * Quaternion.AngleAxis(0, handInfoCurrent.controller.transform.right) * (itemGrabInfoCurrent.grabbedRigidbody.transform.position - itemGrabInfoCurrent.grabPoint);
-		itemGrabInfoCurrent.grabRotation = Quaternion.Inverse(handInfoCurrent.handGameObject.transform.rotation) * Quaternion.AngleAxis(0, handInfoCurrent.controller.transform.right) * itemGrabInfoCurrent.grabbedRigidbody.transform.rotation;
-		itemGrabInfoCurrent.grabLocalPos = Quaternion.Inverse(itemGrabInfoCurrent.grabbedRigidbody.transform.rotation) * (itemGrabInfoCurrent.grabPoint - itemGrabInfoCurrent.grabbedRigidbody.transform.position);
+		itemGrabInfoCurrent.grabWorldPos = closestColliderPoint;
+		itemGrabInfoCurrent.offsetPosition = Quaternion.Inverse(handInfoCurrent.handGameObject.transform.rotation) * Quaternion.AngleAxis(0, handInfoCurrent.controller.transform.right) * (itemGrabInfoCurrent.grabbedRigidbody.transform.position - itemGrabInfoCurrent.grabWorldPos);
+		itemGrabInfoCurrent.offsetRotation = Quaternion.Inverse(handInfoCurrent.handGameObject.transform.rotation) * Quaternion.AngleAxis(0, handInfoCurrent.controller.transform.right) * itemGrabInfoCurrent.grabbedRigidbody.transform.rotation;
+		itemGrabInfoCurrent.grabPoint = Quaternion.Inverse(itemGrabInfoCurrent.grabbedRigidbody.transform.rotation) * (itemGrabInfoCurrent.grabWorldPos - itemGrabInfoCurrent.grabbedRigidbody.transform.position);
 
 	}
 
@@ -819,8 +829,8 @@ public class Player : MonoBehaviour {
 		}
 	}
 
-	void ReleaseAll(string side, ItemGrabInformation itemGrabInfoCurrent, ItemGrabInformation itemGrabInfoOpposite, EnvironmentGrabInformation envGrabInfoCurrent, EnvironmentGrabInformation envGrabInfoOpposite, HandInformation handInfoCurrent, HandInformation handInfoOpposite) {
-		if (envGrabInfoCurrent.climbableGrabbed == true || envGrabInfoCurrent.grabbedRigidbody == true) {      // Is the current hand currently grabbing a climbable object?
+	void ReleaseAll(string side, GrabInformation itemGrabInfoCurrent, GrabInformation itemGrabInfoOpposite, GrabInformation envGrabInfoCurrent, GrabInformation envGrabInfoOpposite, HandInformation handInfoCurrent, HandInformation handInfoOpposite) {
+		if (envGrabInfoCurrent.grabbedTransform == true || envGrabInfoCurrent.grabbedRigidbody == true) {      // Is the current hand currently grabbing a climbable object?
 			// Release: EnvironmentGrab Object
 			ReleaseEnvironment(side, envGrabInfoCurrent, envGrabInfoOpposite, handInfoCurrent, handInfoOpposite);
 		} else {
@@ -829,29 +839,42 @@ public class Player : MonoBehaviour {
 		}
 	}
 
-	void ReleaseEnvironment (string side, EnvironmentGrabInformation envGrabInfoCurrent, EnvironmentGrabInformation envGrabInfoOpposite, HandInformation handInfoCurrent, HandInformation handInfoOpposite) {
+	void ReleaseEnvironment (string side, GrabInformation envGrabInfoCurrent, GrabInformation envGrabInfoOpposite, HandInformation handInfoCurrent, HandInformation handInfoOpposite) {
 		// Release: EnvironmentGrab Object
-		envGrabInfoCurrent.grabOffset = Vector3.zero;
-		envGrabInfoCurrent.grabCCOffset = Vector3.zero;
-
-		if (envGrabInfoCurrent.environmentItem != null && envGrabInfoCurrent.environmentItem is HingeEnvironmentItem) {
-			envGrabInfoCurrent.environmentItem.OnRelease();
-		}
-
-		envGrabInfoCurrent.climbableGrabbed = null;
-		envGrabInfoCurrent.grabbedRigidbody = null;
-		envGrabInfoCurrent.environmentItem = null;
 		
-		if (envGrabInfoCurrent.climbableGrabbed == null && envGrabInfoOpposite.climbableGrabbed == null) {
-			velocityCurrent = Vector3.ClampMagnitude(velocityCurrent, 5f);
+		if (envGrabInfoCurrent.grabbedScript != null && envGrabInfoCurrent.grabbedScript is HingeEnvironmentItem) {
+			(envGrabInfoCurrent.grabbedScript as HingeEnvironmentItem).OnRelease();				// TODO: Sloppy
 		}
+
+		// Apply velocity
+		if (envGrabInfoOpposite.grabbedTransform == null) {
+			velocityCurrent = Vector3.ClampMagnitude(velocityCurrent, (envGrabInfoCurrent.grabbedRigidbody ? Mathf.Clamp(envGrabInfoCurrent.grabbedRigidbody.velocity.magnitude + 5f, 5, 100) : 5f));
+		}
+
+		if (envGrabInfoCurrent.grabbedRigidbody == true) {
+			envGrabInfoCurrent.grabbedRigidbody.mass *= 0.1f;
+			envGrabInfoCurrent.grabbedRigidbody.ResetCenterOfMass();
+			if (envGrabInfoOpposite.grabbedTransform == false || (envGrabInfoOpposite.grabbedTransform == true && envGrabInfoCurrent.grabbedTransform.parent != envGrabInfoOpposite.grabbedTransform.parent)) {
+				envGrabInfoCurrent.grabbedRigidbody.AddForceAtPosition(-velocityCurrent * 2500, envGrabInfoCurrent.grabbedTransform.position + (envGrabInfoCurrent.grabbedTransform.rotation * envGrabInfoCurrent.grabPoint));
+			}
+		}
+
+		envGrabInfoCurrent.offsetPosition = Vector3.zero;
+		envGrabInfoCurrent.offsetBodyHand = Vector3.zero;
+		envGrabInfoCurrent.grabPoint = Vector3.zero;
+		envGrabInfoCurrent.grabbedTransform = null;
+		envGrabInfoCurrent.grabbedRigidbody = null;
+		envGrabInfoCurrent.grabbedScript = null;
+		envGrabInfoCurrent.grabType = GrabType.Null;
+		
+		
 	}
 
-	void ReleaseItem (string side, ItemGrabInformation itemGrabInfoCurrent, ItemGrabInformation itemGrabInfoOpposite, HandInformation handInfoCurrent, HandInformation handInfoOpposite) {
+	void ReleaseItem (string side, GrabInformation itemGrabInfoCurrent, GrabInformation itemGrabInfoOpposite, HandInformation handInfoCurrent, HandInformation handInfoOpposite) {
 		// Release: ItemGrab Object
 		if (itemGrabInfoCurrent.grabbedRigidbody == true) {
-			itemGrabInfoCurrent.itemVelocityPercentage = 0.25f;
-			itemGrabInfoOpposite.itemVelocityPercentage = 0.25f;
+			itemGrabInfoCurrent.rigidbodyVelocityPercentage = 0.25f;
+			itemGrabInfoOpposite.rigidbodyVelocityPercentage = 0.25f;
 
 			if (itemGrabInfoOpposite.grabbedRigidbody != itemGrabInfoCurrent.grabbedRigidbody) {
 				AttachmentNodePair attachmentNodePairInfo = GetAttachmentConnection(itemGrabInfoCurrent, handInfoCurrent);		// Get possible attachmentNodePair for current item (null if no pairs are available)
@@ -862,24 +885,24 @@ public class Player : MonoBehaviour {
 				}
 			} else {
 				// For items without grabNodes:
-				if (itemGrabInfoOpposite.grabNode == null) {
+				if (itemGrabInfoOpposite.itemGrabNode == null) {
 					if (grabDualWieldDominantHand != itemGrabInfoCurrent.side) {		// If the opposite hand is the dominant hand
 						GetDynamicItemGrabInfo(ref itemGrabInfoOpposite, ref handInfoOpposite);
 					} else {
-						itemGrabInfoOpposite.grabOffset = Quaternion.Inverse(handInfoOpposite.handGameObject.transform.rotation) * (itemGrabInfoOpposite.grabbedRigidbody.transform.position - handInfoOpposite.handGameObject.transform.position);
-						itemGrabInfoOpposite.grabRotation = Quaternion.Inverse(handInfoOpposite.handGameObject.transform.rotation) * itemGrabInfoOpposite.grabbedRigidbody.transform.rotation;
+						itemGrabInfoOpposite.offsetPosition = Quaternion.Inverse(handInfoOpposite.handGameObject.transform.rotation) * (itemGrabInfoOpposite.grabbedRigidbody.transform.position - handInfoOpposite.handGameObject.transform.position);
+						itemGrabInfoOpposite.offsetRotation = Quaternion.Inverse(handInfoOpposite.handGameObject.transform.rotation) * itemGrabInfoOpposite.grabbedRigidbody.transform.rotation;
 					}
 				} else {
-					if (itemGrabInfoOpposite.grabNode.grabType == GrabNode.GrabType.Dynamic) {
+					if (itemGrabInfoOpposite.itemGrabNode.grabType == GrabNode.GrabType.Dynamic) {
 						GetDynamicItemGrabInfo(ref itemGrabInfoOpposite, ref handInfoOpposite);
-						//itemGrabInfoOpposite.grabOffset = Quaternion.Inverse(handInfoOpposite.handGameObject.transform.rotation) * (itemGrabInfoOpposite.grabbedRigidbody.transform.position - handInfoOpposite.handGameObject.transform.position);
-						//itemGrabInfoOpposite.grabRotation = Quaternion.Inverse(handInfoOpposite.handGameObject.transform.rotation) * itemGrabInfoOpposite.grabbedRigidbody.transform.rotation;
+						//itemGrabInfoOpposite.offsetPosition = Quaternion.Inverse(handInfoOpposite.handGameObject.transform.rotation) * (itemGrabInfoOpposite.grabbedRigidbody.transform.position - handInfoOpposite.handGameObject.transform.position);
+						//itemGrabInfoOpposite.offsetRotation = Quaternion.Inverse(handInfoOpposite.handGameObject.transform.rotation) * itemGrabInfoOpposite.grabbedRigidbody.transform.rotation;
 					}
 				}
 			}
 
 			// If theres a weapon, update it's combined attributes
-			itemGrabInfoCurrent.grabbedItem.isGrabbed = false;
+			(itemGrabInfoCurrent.grabbedScript as Item).isGrabbed = false;
 			if (itemGrabInfoCurrent.grabbedRigidbody.transform.GetComponent<Item>() is Weapon) {
 				itemGrabInfoCurrent.grabbedRigidbody.transform.GetComponent<Weapon>().UpdateCombinedAttributes();
 			}
@@ -906,32 +929,32 @@ public class Player : MonoBehaviour {
 		
 		// Release item infos
 		itemGrabInfoCurrent.grabbedRigidbody = null;
-		itemGrabInfoCurrent.grabbedItem = null;
-		itemGrabInfoCurrent.grabNode = null;
+		itemGrabInfoCurrent.grabbedScript = null;
+		itemGrabInfoCurrent.itemGrabNode = null;
 		itemGrabInfoCurrent.grabPoint = Vector3.zero;
 	}
 
-	void TriggerDown(string side, ItemGrabInformation itemGrabInfoCurrent, EnvironmentGrabInformation envGrabInfoCurrent, HandInformation handInfoCurrent) {
-		if (itemGrabInfoCurrent.grabbedItem is Weapon) {
-			Weapon currentWeapon = itemGrabInfoCurrent.grabbedItem as Weapon;
+	void TriggerDown(string side, GrabInformation itemGrabInfoCurrent, GrabInformation envGrabInfoCurrent, HandInformation handInfoCurrent) {
+		if (itemGrabInfoCurrent.grabbedScript is Weapon) {
+			Weapon currentWeapon = itemGrabInfoCurrent.grabbedScript as Weapon;
 			currentWeapon.timeLastTriggered = Time.timeSinceLevelLoad;
 			currentWeapon.AdjustAmmo(0);
-			if (itemGrabInfoCurrent.grabNode.triggerType == GrabNode.TriggerType.Fire) {
+			if (itemGrabInfoCurrent.itemGrabNode.triggerType == GrabNode.TriggerType.Fire) {
 				if (currentWeapon.combinedAttributes.chargingEnabled == false) {
-					AttemptToFireWeapon(side, itemGrabInfoCurrent.grabbedItem, handInfoCurrent);
+					AttemptToFireWeapon(side, (itemGrabInfoCurrent.grabbedScript as Weapon), handInfoCurrent);
 				}
 			}
 		}
 	}
 
-	void TriggerHold(string side, ItemGrabInformation itemGrabInfoCurrent, EnvironmentGrabInformation envGrabInfoCurrent, HandInformation handInfoCurrent) {
-		if (itemGrabInfoCurrent.grabbedItem is Weapon) {
-			Weapon currentWeapon = itemGrabInfoCurrent.grabbedItem as Weapon;
+	void TriggerHold(string side, GrabInformation itemGrabInfoCurrent, GrabInformation envGrabInfoCurrent, HandInformation handInfoCurrent) {
+		if (itemGrabInfoCurrent.grabbedScript is Weapon) {
+			Weapon currentWeapon = itemGrabInfoCurrent.grabbedScript as Weapon;
 			currentWeapon.triggerHeld = true;
 			currentWeapon.timeLastTriggered = Time.timeSinceLevelLoad;
-			if (itemGrabInfoCurrent.grabNode.triggerType == GrabNode.TriggerType.Fire) {
+			if (itemGrabInfoCurrent.itemGrabNode.triggerType == GrabNode.TriggerType.Fire) {
 				if (currentWeapon.combinedAttributes.automatic == true) {
-					AttemptToFireWeapon(side, itemGrabInfoCurrent.grabbedItem, handInfoCurrent);
+					AttemptToFireWeapon(side, currentWeapon, handInfoCurrent);
 				}
 				if (currentWeapon.combinedAttributes.chargingEnabled == true) {
 					currentWeapon.chargeCurrent = Mathf.Clamp01(currentWeapon.chargeCurrent + (currentWeapon.combinedAttributes.chargeIncrement * Time.deltaTime));
@@ -940,21 +963,21 @@ public class Player : MonoBehaviour {
 		}
 	}
 
-	void TriggerUp(string side, ItemGrabInformation itemGrabInfoCurrent, EnvironmentGrabInformation envGrabInfoCurrent, HandInformation handInfoCurrent) {
-		if (itemGrabInfoCurrent.grabbedItem is Weapon) {
-			Weapon currentWeapon = itemGrabInfoCurrent.grabbedItem as Weapon;
+	void TriggerUp(string side, GrabInformation itemGrabInfoCurrent, GrabInformation envGrabInfoCurrent, HandInformation handInfoCurrent) {
+		if (itemGrabInfoCurrent.grabbedScript is Weapon) {
+			Weapon currentWeapon = itemGrabInfoCurrent.grabbedScript as Weapon;
 			currentWeapon.triggerHeld = false;
-			if (itemGrabInfoCurrent.grabNode.triggerType == GrabNode.TriggerType.Fire) {
+			if (itemGrabInfoCurrent.itemGrabNode.triggerType == GrabNode.TriggerType.Fire) {
 				if (currentWeapon.combinedAttributes.chargingEnabled == true) {
-					AttemptToFireWeapon(side, itemGrabInfoCurrent.grabbedItem, handInfoCurrent);
+					AttemptToFireWeapon(side, (itemGrabInfoCurrent.grabbedScript as Weapon), handInfoCurrent);
 				}
 			}
 		}
 	}
 
-	void TriggerNull(string side, ItemGrabInformation itemGrabInfoCurrent, EnvironmentGrabInformation envGrabInfoCurrent) {
-		if (itemGrabInfoCurrent.grabbedItem is Weapon) {
-			Weapon currentWeapon = itemGrabInfoCurrent.grabbedItem as Weapon;
+	void TriggerNull(string side, GrabInformation itemGrabInfoCurrent, GrabInformation envGrabInfoCurrent) {
+		if (itemGrabInfoCurrent.grabbedScript is Weapon) {
+			Weapon currentWeapon = itemGrabInfoCurrent.grabbedScript as Weapon;
 			currentWeapon.triggerHeld = false;
 		}
 	}
@@ -996,7 +1019,7 @@ public class Player : MonoBehaviour {
 				}
 
 				// Step 2: Apply velocity and angular velocity to weapon
-				if (itemGrabInfoLeft.grabbedItem == itemGrabInfoRight.grabbedItem) {
+				if (itemGrabInfoLeft.grabbedScript == itemGrabInfoRight.grabbedScript) {
 					handInfoLeft.handOffsetPosition = Vector3.ClampMagnitude(handInfoLeft.handOffsetPosition + currentItem.transform.rotation * new Vector3(0, 0, -currentWeapon.combinedAttributes.recoilLinear), handOffsetPositionMax);
 					handInfoRight.handOffsetPosition = Vector3.ClampMagnitude(handInfoRight.handOffsetPosition + currentItem.transform.rotation * new Vector3(0, 0, -currentWeapon.combinedAttributes.recoilLinear), handOffsetPositionMax);
 					handInfoLeft.handOffsetRotation += new Vector3(Random.Range(-currentWeapon.combinedAttributes.recoilAngular, currentWeapon.combinedAttributes.recoilAngular), Random.Range(0, currentWeapon.combinedAttributes.recoilAngular), 0);
@@ -1015,95 +1038,102 @@ public class Player : MonoBehaviour {
 				float angleMax = Mathf.Abs(currentWeapon.accuracyCurrent - 1) * 5f;
 				Quaternion randomAccuracy = Quaternion.Euler(Random.Range(-angleMax, angleMax), Random.Range(-angleMax, angleMax), Random.Range(-angleMax, angleMax));
 
-				for (int j = 0; (j < currentWeapon.combinedAttributes.projectileSpreads.Length || (currentWeapon.combinedAttributes.projectileSpreads.Length == 0 && j == 0)); j++) {
+				for (int j = 0; (j < currentWeapon.combinedAttributes.projectileSpreadAttributes.spreads.Length || (currentWeapon.combinedAttributes.projectileSpreadAttributes.spreads.Length == 0 && j == 0)); j++) {
+					currentWeapon.muzzleFlash.gameObject.SetActive(true);
 
 					// Step 5: Get random spread deviations
-					Quaternion projectileSpreadDeviation = Quaternion.Euler(Random.Range(-currentWeapon.combinedAttributes.projectileSpreadDeviation, currentWeapon.combinedAttributes.projectileSpreadDeviation), Random.Range(-currentWeapon.combinedAttributes.projectileSpreadDeviation, currentWeapon.combinedAttributes.projectileSpreadDeviation), 0);
+					Quaternion projectileSpreadDeviation = Quaternion.Euler(Random.Range(-currentWeapon.combinedAttributes.projectileSpreadAttributes.spreadDeviation, currentWeapon.combinedAttributes.projectileSpreadAttributes.spreadDeviation), Random.Range(-currentWeapon.combinedAttributes.projectileSpreadAttributes.spreadDeviation, currentWeapon.combinedAttributes.projectileSpreadAttributes.spreadDeviation), 0);
 
 					// Step 4: Create new projectile
-					GameObject newProjectile = (GameObject)Instantiate(currentWeapon.combinedAttributes.projectile, currentWeapon.barrelPoint.position + currentWeapon.barrelPoint.forward * 0.01f, currentItem.transform.rotation * randomAccuracy);
-					if (currentWeapon.combinedAttributes.projectileSpreads.Length > 0) {
-						if (currentWeapon.combinedAttributes.projectileSpreadType == Weapon.SpreadType.Circular) {
-							newProjectile.transform.rotation *= projectileSpreadDeviation * Quaternion.Euler(0, 0, currentWeapon.combinedAttributes.projectileSpreads[j].x) * Quaternion.Euler(currentWeapon.combinedAttributes.projectileSpreads[j].y, 0, 0);
+					GameObject newProjectile = (GameObject)Instantiate(currentWeapon.combinedAttributes.projectileAttributes.prefabProjectile, currentWeapon.barrelPoint.position + currentWeapon.barrelPoint.forward * 0.01f, currentItem.transform.rotation * randomAccuracy);
+					if (currentWeapon.combinedAttributes.projectileSpreadAttributes.spreads.Length > 0) {
+						if (currentWeapon.combinedAttributes.projectileSpreadAttributes.spreadType == Projectile.ProjectileSpreadAttributes.SpreadType.Circular) {
+							newProjectile.transform.rotation *= projectileSpreadDeviation * Quaternion.Euler(0, 0, currentWeapon.combinedAttributes.projectileSpreadAttributes.spreads[j].x) * Quaternion.Euler(currentWeapon.combinedAttributes.projectileSpreadAttributes.spreads[j].y, 0, 0);
 						} else {
-							newProjectile.transform.rotation *= Quaternion.Euler(currentWeapon.combinedAttributes.projectileSpreads[j].y, currentWeapon.combinedAttributes.projectileSpreads[j].x, 0);
+							newProjectile.transform.rotation *= Quaternion.Euler(currentWeapon.combinedAttributes.projectileSpreadAttributes.spreads[j].y, currentWeapon.combinedAttributes.projectileSpreadAttributes.spreads[j].x, 0);
 						}
 					}
 					Projectile newProjectileClass = newProjectile.GetComponent<Projectile>();
+					// Apply velocity
 					if (currentWeapon.combinedAttributes.chargingEnabled == true) {
-						newProjectileClass.velocity = newProjectile.transform.forward * (currentWeapon.combinedAttributes.projectileVelocity - (currentWeapon.combinedAttributes.projectileVelocity * currentWeapon.combinedAttributes.chargeInfluenceVelocity * Mathf.Abs(currentWeapon.chargeCurrent - 1)));
+						newProjectileClass.velocityCurrent = newProjectile.transform.forward * (currentWeapon.combinedAttributes.projectileAttributes.velocityInitial - (currentWeapon.combinedAttributes.projectileAttributes.velocityInitial * currentWeapon.combinedAttributes.chargeInfluenceVelocity * Mathf.Abs(currentWeapon.chargeCurrent - 1)));
 					} else {
-						newProjectileClass.velocity = newProjectile.transform.forward * currentWeapon.combinedAttributes.projectileVelocity;
+						newProjectileClass.velocityCurrent = newProjectile.transform.forward * currentWeapon.combinedAttributes.projectileAttributes.velocityInitial;
 					}
-					newProjectileClass.deceleration = currentWeapon.combinedAttributes.projectileDeceleration;
-					newProjectileClass.decelerationType = currentWeapon.combinedAttributes.projectileDecelerationType;
-					newProjectileClass.gravity = currentWeapon.combinedAttributes.projectileGravity;
-					newProjectileClass.ricochetCount = currentWeapon.combinedAttributes.projectileRicochetCount;
-					newProjectileClass.ricochetAngleMax = currentWeapon.combinedAttributes.projectileRicochetAngleMax;
-					newProjectileClass.baseDamage = currentWeapon.combinedAttributes.projectileBaseDamage;
-					newProjectileClass.lifespan = currentWeapon.combinedAttributes.projectileLifespan;
-					newProjectileClass.sticky = currentWeapon.combinedAttributes.projectileIsSticky;
+					newProjectileClass.projectileAttributes.deceleration = currentWeapon.combinedAttributes.projectileAttributes.deceleration;
+					newProjectileClass.projectileAttributes.decelerationType = currentWeapon.combinedAttributes.projectileAttributes.decelerationType;
+					newProjectileClass.projectileAttributes.gravity = currentWeapon.combinedAttributes.projectileAttributes.gravity;
+					newProjectileClass.ricochetCount = currentWeapon.combinedAttributes.projectileAttributes.ricochetCountInitial;
+					newProjectileClass.projectileAttributes.ricochetAngleMax = currentWeapon.combinedAttributes.projectileAttributes.ricochetAngleMax;
+					newProjectileClass.projectileAttributes.damage = currentWeapon.combinedAttributes.projectileAttributes.damage;
+					newProjectileClass.projectileAttributes.lifespan = currentWeapon.combinedAttributes.projectileAttributes.lifespan;
+					newProjectileClass.projectileAttributes.isSticky = currentWeapon.combinedAttributes.projectileAttributes.isSticky;
 					audioManager.PlayClipAtPoint(currentWeapon.soundFireNormal, currentWeapon.barrelPoint.position, 2f);
 
 				}
 			} else {
 				// TODO: Dry shot
 			}
-			yield return new WaitForSeconds(currentWeapon.combinedAttributes.burstDelay);
+			yield return new WaitForSeconds(0.01f);
+
+			currentWeapon.muzzleFlash.gameObject.SetActive(false);
+
+			yield return new WaitForSeconds(currentWeapon.combinedAttributes.burstDelay - 0.01f);
 		}
+
+		currentWeapon.muzzleFlash.gameObject.SetActive(false);
 
 		if (currentWeapon.combinedAttributes.chargingEnabled == true) {
 			currentWeapon.chargeCurrent = Mathf.Clamp01(currentWeapon.chargeCurrent - currentWeapon.combinedAttributes.chargeDecrementPerShot);
 		}
 	}
 
-	void ThrowItem(HandInformation handInfoCurrent, ItemGrabInformation itemGrabInfoCurrent, Vector3 velocity) {
-		// If we are currently grabbing (throwing) an item that is an attachment on another item, set the current item to that parent item
-		Item mainItem = itemGrabInfoCurrent.grabbedItem;
-		while (mainItem.transform.parent != null && mainItem.transform.parent.name == "(Attachments)") {     // If this is an attachment that is currently attached (repeat until we are no longer in an attached attachment)
-			mainItem = mainItem.transform.parent.parent.GetComponent<Item>();
-		}
+	void ThrowItem(HandInformation handInfoCurrent, GrabInformation itemGrabInfoCurrent, Vector3 velocity) {
+		Item grabbedItem = itemGrabInfoCurrent.grabbedScript as Item;       // Cast the script as an Item (null if not an item)
 
-		itemGrabInfoCurrent.grabbedRigidbody.velocity += velocityCurrent;
-		itemGrabInfoCurrent.grabbedRigidbody.useGravity = true;
-		itemGrabInfoCurrent.grabbableItemLastFrame = mainItem.transform;
+		if (grabbedItem != null) {				// Is the grabbedScript an Item?
 
-		if (itemGrabInfoCurrent.grabbedRigidbody.transform.GetComponent<Item>() != null) {
-			if (itemGrabInfoCurrent.grabbedRigidbody.GetComponent<Item>() is Weapon) {
-				(itemGrabInfoCurrent.grabbedRigidbody.transform.GetComponent<Item>() as Weapon).triggerHeld = false;
-			}
-		}
+			itemGrabInfoCurrent.grabbedRigidbody.velocity += velocityCurrent;
+			itemGrabInfoCurrent.grabbedRigidbody.useGravity = true;
+			itemGrabInfoCurrent.grabbedRigidbody.ResetCenterOfMass();       // Reset the grabbedItem's center of mass
 
-		// Check for pockets
-		Collider[] pockets = Physics.OverlapSphere(handInfoCurrent.handRigidbody.transform.position, 0.2f, pocketMask);
-		if (pockets.Length > 0) {
-			List<Pocket> availablePockets = new List<Pocket>();
-
-			// Find pockets that are currently available and add them to availablePockets list
-			for (int i = 0; i < pockets.Length; i++) {
-				if (pockets[i].GetComponent<Pocket>()) {
-					Pocket currentPocketObject = pockets[i].GetComponent<Pocket>();
-					if (currentPocketObject.GetAvailability() == true && currentPocketObject.pocketSize == mainItem.pocketSize && Vector3.Angle(itemGrabInfoCurrent.grabbedRigidbody.transform.forward, currentPocketObject.transform.forward) <= currentPocketObject.angleRange) {
-						availablePockets.Add(currentPocketObject);
-					}
-				}
+			Weapon grabbedWeapon = grabbedItem as Weapon;
+			if (grabbedWeapon != null) {        // Is the grabbedItem a Weapon?
+				grabbedWeapon.triggerHeld = false;	// Unhold the trigger
 			}
 
-			if (availablePockets.Count > 0) {
-				// Find closest pocket
-				Pocket chosenPocket = availablePockets[0];
-				float closestPocketDistance = Vector3.Distance(handInfoCurrent.handRigidbody.transform.position, chosenPocket.transform.position);
-				for (int j = 1; j < availablePockets.Count; j++) {
-					if (Vector3.Distance(handInfoCurrent.handRigidbody.transform.position, availablePockets[j].transform.position) < closestPocketDistance) {
-						chosenPocket = availablePockets[j];
+			//		TODO: redo pocketing to act more like a cube around the item?
+
+			// Check for pockets
+			Collider[] pockets = Physics.OverlapSphere(handInfoCurrent.handRigidbody.transform.position, 0.2f, pocketMask);
+			if (pockets.Length > 0) {
+				List<Pocket> availablePockets = new List<Pocket>();
+
+				// Find pockets that are currently available and add them to availablePockets list
+				for (int i = 0; i < pockets.Length; i++) {
+					if (pockets[i].GetComponent<Pocket>()) {
+						Pocket currentPocketObject = pockets[i].GetComponent<Pocket>();
+						if (currentPocketObject.GetAvailability() == true && currentPocketObject.pocketSize == grabbedItem.pocketSize && Vector3.Angle(itemGrabInfoCurrent.grabbedRigidbody.transform.forward, currentPocketObject.transform.forward) <= currentPocketObject.angleRange) {
+							availablePockets.Add(currentPocketObject);
+						}
 					}
 				}
 
-				// Asign Pocket Info
-				chosenPocket.PocketItem(mainItem);
+				if (availablePockets.Count > 0) {
+					// Find closest pocket
+					Pocket chosenPocket = availablePockets[0];
+					float closestPocketDistance = Vector3.Distance(handInfoCurrent.handRigidbody.transform.position, chosenPocket.transform.position);
+					for (int j = 1; j < availablePockets.Count; j++) {
+						if (Vector3.Distance(handInfoCurrent.handRigidbody.transform.position, availablePockets[j].transform.position) < closestPocketDistance) {
+							chosenPocket = availablePockets[j];
+						}
+					}
+
+					// Asign Pocket Info
+					chosenPocket.PocketItem(grabbedItem);
+				}
 			}
 		}
-
 	}
 
 	public IEnumerator TriggerHapticFeedback(SteamVR_Controller.Device device, ushort strength, float duration) {
@@ -1127,7 +1157,7 @@ public class Player : MonoBehaviour {
 		moveSpeedCurrent = Mathf.Lerp(moveSpeedCurrent, (bodyCC.height > heightCutoffStanding ? moveSpeedStanding : (bodyCC.height > heightCutoffCrouching ? moveSpeedCrouching : moveSpeedLaying)), 5 * Time.deltaTime);
 		velocityDesired = new Vector3(handInfoLeft.controllerDevice.GetAxis(Valve.VR.EVRButtonId.k_EButton_SteamVR_Touchpad).x, velocityDesired.y, handInfoLeft.controllerDevice.GetAxis(Valve.VR.EVRButtonId.k_EButton_SteamVR_Touchpad).y) * moveSpeedCurrent;
 		velocityDesired = Quaternion.LookRotation(new Vector3(hmd.transform.forward.x, 0, hmd.transform.forward.z), Vector3.up) * velocityDesired;
-		if (envGrabInfoLeft.climbableGrabbed == null && envGrabInfoRight.climbableGrabbed == null) {
+		if (envGrabInfoLeft.grabbedTransform == null && envGrabInfoRight.grabbedTransform == null) {
 			isClimbing = false;
 			if (grounded == true) {
 				velocityCurrent = Vector3.Lerp(velocityCurrent, new Vector3(velocityDesired.x, velocityCurrent.y, velocityDesired.z), 12.5f * Time.deltaTime * Mathf.Clamp01(groundedTime));
@@ -1143,30 +1173,28 @@ public class Player : MonoBehaviour {
 			Quaternion climbRotationRight = Quaternion.Euler(0, 0, 0);
 			int climbCount = 0;
 
-			if (envGrabInfoLeft.climbableGrabbed == true) {
-				climbRotationLeft = Quaternion.Inverse(envGrabInfoLeft.grabRotation) * envGrabInfoLeft.climbableGrabbed.rotation;
+			if (envGrabInfoLeft.grabbedTransform == true) {
+				climbRotationLeft = Quaternion.Inverse(envGrabInfoLeft.offsetRotation) * envGrabInfoLeft.grabbedTransform.rotation;
 			}
 
-			if (envGrabInfoRight.climbableGrabbed == true) {
-				climbRotationRight = Quaternion.Inverse(envGrabInfoRight.grabRotation) * envGrabInfoRight.climbableGrabbed.rotation;
+			if (envGrabInfoRight.grabbedTransform == true) {
+				climbRotationRight = Quaternion.Inverse(envGrabInfoRight.offsetRotation) * envGrabInfoRight.grabbedTransform.rotation;
 			}
 
-			if (envGrabInfoLeft.climbableGrabbed == true) {
-				combinedClimbPositions += (envGrabInfoLeft.climbableGrabbed.position + climbRotationLeft * envGrabInfoLeft.grabOffset) + (climbRotationLeft * envGrabInfoLeft.grabCCOffset - (handInfoLeft.controller.transform.position - bodyCC.transform.position));
+			if (envGrabInfoLeft.grabbedTransform == true) {
+				combinedClimbPositions += (envGrabInfoLeft.grabbedTransform.position + climbRotationLeft * envGrabInfoLeft.offsetPosition) + (climbRotationLeft * envGrabInfoLeft.offsetBodyHand - (handInfoLeft.controller.transform.position - bodyCC.transform.position));
 				climbCount++;
 			}
 
-			if (envGrabInfoRight.climbableGrabbed == true) {
-				combinedClimbPositions += (envGrabInfoRight.climbableGrabbed.position + climbRotationRight * envGrabInfoRight.grabOffset) + (climbRotationRight * envGrabInfoRight.grabCCOffset - (handInfoRight.controller.transform.position - bodyCC.transform.position));
+			if (envGrabInfoRight.grabbedTransform == true) {
+				combinedClimbPositions += (envGrabInfoRight.grabbedTransform.position + climbRotationRight * envGrabInfoRight.offsetPosition) + (climbRotationRight * envGrabInfoRight.offsetBodyHand - (handInfoRight.controller.transform.position - bodyCC.transform.position));
 				climbCount++;
 			}
-
+			
 			combinedClimbPositions = combinedClimbPositions / climbCount;
 
 			velocityCurrent = Vector3.Lerp(velocityCurrent, (combinedClimbPositions - bodyCC.transform.position) / Time.deltaTime, Mathf.Clamp01(50 * Time.deltaTime));
 
-			envGrabInfoLeft.grabRotationLastFrame = climbRotationLeft;
-			envGrabInfoRight.grabRotationLastFrame = climbRotationRight;
 			isClimbing = true;
 		}
 		handInfoLeft.handPosLastFrame = handInfoLeft.controller.transform.position;
@@ -1241,7 +1269,7 @@ public class Player : MonoBehaviour {
 		//Vector3 headToHmdDelta = ((hmd.transform.position - ((verticalPusher.transform.localPosition) * Mathf.Clamp01(Time.deltaTime * 5))) - headCC.transform.position);     // Delta position moving from headCC to HMD (smoothing applied through the verticalPusher)
 		Vector3 headToHmdDelta = (hmd.transform.position - headCC.transform.position);     // Delta position moving from headCC to HMD (smoothing applied through the verticalPusher)
 		headCC.Move(headToHmdDelta); // Attempt to move the headCC			
-		if (envGrabInfoLeft.climbableGrabbed == null && envGrabInfoRight.climbableGrabbed == null) { // Are we not climbing?
+		if (envGrabInfoLeft.grabbedTransform == null && envGrabInfoRight.grabbedTransform == null) { // Are we not climbing?
 			verticalPusher.transform.position += new Vector3(0, (headCC.transform.position - hmd.transform.position).y, 0); // Move the vertical pusher to accomodate for HMD moving too far vertically through geometry (ie: down into box, up into desk)
 		}
 
@@ -1260,7 +1288,7 @@ public class Player : MonoBehaviour {
 		Vector3 headToHmdDelta2 = (hmd.transform.position - headCC.transform.position);     // Delta position moving from headCC to HMD (smoothing applied through the verticalPusher)
 		headToHmdDelta2.x = 0; headToHmdDelta2.z = 0;
 		headCC.Move(headToHmdDelta2); // Attempt to move the headCC			
-		if (envGrabInfoLeft.climbableGrabbed == null && envGrabInfoRight.climbableGrabbed == null) { // Are we not climbing?
+		if (envGrabInfoLeft.grabbedTransform == null && envGrabInfoRight.grabbedTransform == null) { // Are we not climbing?
 			verticalPusher.transform.position += new Vector3(0, (headCC.transform.position - hmd.transform.position).y, 0); // Move the vertical pusher to accomodate for HMD moving too far vertically through geometry (ie: down into box, up into desk)
 		}
 
@@ -1453,9 +1481,9 @@ public class Player : MonoBehaviour {
 		Weapon weaponLeft = null;
 		Weapon weaponRight = null;
 
-		if (itemGrabInfoLeft.grabbedItem is Weapon) {
-			weaponLeft = itemGrabInfoLeft.grabbedItem as Weapon;
-			weaponRight = itemGrabInfoRight.grabbedItem as Weapon;
+		if (itemGrabInfoLeft.grabbedScript is Weapon) {
+			weaponLeft = itemGrabInfoLeft.grabbedScript as Weapon;
+			weaponRight = itemGrabInfoRight.grabbedScript as Weapon;
 		}
 
 		// Item Physics
@@ -1465,7 +1493,7 @@ public class Player : MonoBehaviour {
 			Rigidbody handDominant = (grabDualWieldDominantHand == "Left") ? handInfoLeft.handRigidbody : handInfoRight.handRigidbody;
 			Vector3 dualWieldDirectionCurrent = (((grabDualWieldDominantHand == "Left") ? handInfoRight.handRigidbody.transform.position : handInfoLeft.handRigidbody.transform.position) - ((grabDualWieldDominantHand == "Left") ? handInfoLeft.handRigidbody.transform.position : handInfoRight.handRigidbody.transform.position));
 			Quaternion dualWieldDirectionChangeRotation = Quaternion.FromToRotation(handDominant.transform.rotation * grabDualWieldDirection, dualWieldDirectionCurrent);
-			Quaternion rotationDeltaItem = (dualWieldDirectionChangeRotation * handDominant.transform.rotation * ((grabDualWieldDominantHand == "Left") ? itemGrabInfoLeft.grabRotation : itemGrabInfoRight.grabRotation)) * Quaternion.Inverse(itemGrabInfoLeft.grabbedRigidbody.transform.rotation);
+			Quaternion rotationDeltaItem = (dualWieldDirectionChangeRotation * handDominant.transform.rotation * ((grabDualWieldDominantHand == "Left") ? itemGrabInfoLeft.offsetRotation : itemGrabInfoRight.offsetRotation)) * Quaternion.Inverse(itemGrabInfoLeft.grabbedRigidbody.transform.rotation);
 
 			float angleItem;
 			Vector3 axisItem;
@@ -1474,21 +1502,21 @@ public class Player : MonoBehaviour {
 				angleItem -= 360;
 			}
 
-			itemGrabInfoLeft.grabbedRigidbody.velocity = Vector3.Lerp(itemGrabInfoLeft.grabbedRigidbody.velocity, Vector3.ClampMagnitude(((handDominant.transform.position + (dualWieldDirectionChangeRotation * handDominant.transform.rotation * ((grabDualWieldDominantHand == "Left") ? itemGrabInfoLeft.grabOffset : itemGrabInfoRight.grabOffset))) - grabbedItemDominant.transform.position) / Time.fixedDeltaTime, (grabbedItemDominant.GetComponent<HingeJoint>()) ? 1 : 100) * Mathf.Lerp(itemGrabInfoLeft.itemVelocityPercentage, itemGrabInfoRight.itemVelocityPercentage, 0.5f), Mathf.Clamp01(50 * Time.deltaTime));
+			itemGrabInfoLeft.grabbedRigidbody.velocity = Vector3.Lerp(itemGrabInfoLeft.grabbedRigidbody.velocity, Vector3.ClampMagnitude(((handDominant.transform.position + (dualWieldDirectionChangeRotation * handDominant.transform.rotation * ((grabDualWieldDominantHand == "Left") ? itemGrabInfoLeft.offsetPosition : itemGrabInfoRight.offsetPosition))) - grabbedItemDominant.transform.position) / Time.fixedDeltaTime, (grabbedItemDominant.GetComponent<HingeJoint>()) ? 1 : 100) * Mathf.Lerp(itemGrabInfoLeft.rigidbodyVelocityPercentage, itemGrabInfoRight.rigidbodyVelocityPercentage, 0.5f), Mathf.Clamp01(50 * Time.deltaTime));
 
 			if (angleItem != float.NaN) {
-				itemGrabInfoLeft.grabbedRigidbody.maxAngularVelocity = Mathf.Infinity;
-				itemGrabInfoLeft.grabbedRigidbody.angularVelocity = Vector3.Lerp(itemGrabInfoLeft.grabbedRigidbody.angularVelocity, (angleItem * axisItem) * Mathf.Lerp(itemGrabInfoLeft.itemVelocityPercentage, itemGrabInfoRight.itemVelocityPercentage, 0.5f) * 0.95f, Mathf.Clamp01(50 * Time.deltaTime));
+				itemGrabInfoLeft.grabbedRigidbody.maxAngularVelocity = 100f;
+				itemGrabInfoLeft.grabbedRigidbody.angularVelocity = Vector3.Lerp(itemGrabInfoLeft.grabbedRigidbody.angularVelocity, (angleItem * axisItem) * Mathf.Lerp(itemGrabInfoLeft.rigidbodyVelocityPercentage, itemGrabInfoRight.rigidbodyVelocityPercentage, 0.5f) * 1f, Mathf.Clamp01(50 * Time.deltaTime));
 			}
 
 			// Accuracy - Dual Wield
-			if (itemGrabInfoLeft.grabbedItem is Weapon) {
+			if (itemGrabInfoLeft.grabbedScript is Weapon) {
 				weaponLeft.accuracyCurrent = Mathf.Clamp(weaponLeft.accuracyCurrent + (weaponLeft.combinedAttributes.accuracyIncrement * Time.deltaTime), weaponLeft.combinedAttributes.accuracyMin, weaponLeft.combinedAttributes.accuracyMax);
 			}
 
 		} else {
 			// Physics - Left
-			if (itemGrabInfoLeft.grabbedItem) {
+			if (itemGrabInfoLeft.grabbedScript) {
 				UpdateItemPhysics("Left", itemGrabInfoLeft, itemGrabInfoRight, envGrabInfoLeft, envGrabInfoRight, handInfoLeft, handInfoRight);
 				if (weaponLeft) {
 					weaponLeft.accuracyCurrent = Mathf.Clamp(weaponLeft.accuracyCurrent + (weaponLeft.combinedAttributes.accuracyIncrement * Time.deltaTime), weaponLeft.combinedAttributes.accuracyMin, weaponLeft.combinedAttributes.accuracyMax);
@@ -1497,7 +1525,7 @@ public class Player : MonoBehaviour {
 
 			
 			// Physics - Right
-			if (itemGrabInfoRight.grabbedItem) {
+			if (itemGrabInfoRight.grabbedScript) {
 				UpdateItemPhysics("Right", itemGrabInfoRight, itemGrabInfoLeft, envGrabInfoRight, envGrabInfoLeft, handInfoRight, handInfoLeft);
 				if (weaponRight) {
 					weaponRight.accuracyCurrent = Mathf.Clamp(weaponRight.accuracyCurrent + (weaponRight.combinedAttributes.accuracyIncrement * Time.deltaTime), weaponRight.combinedAttributes.accuracyMin, weaponRight.combinedAttributes.accuracyMax);
@@ -1506,8 +1534,8 @@ public class Player : MonoBehaviour {
 		}
 	}
 
-	void UpdateHandPhysics(string side, HandInformation handInfoCurrent, ItemGrabInformation itemGrabInfoCurrent) {
-		itemGrabInfoCurrent.itemVelocityPercentage = Mathf.Clamp01(itemGrabInfoCurrent.itemVelocityPercentage + Time.deltaTime * (itemGrabInfoCurrent.grabbedRigidbody != null ? 2 : -10));
+	void UpdateHandPhysics(string side, HandInformation handInfoCurrent, GrabInformation itemGrabInfoCurrent) {
+		itemGrabInfoCurrent.rigidbodyVelocityPercentage = Mathf.Clamp01(itemGrabInfoCurrent.rigidbodyVelocityPercentage + Time.deltaTime * (itemGrabInfoCurrent.grabbedRigidbody != null ? 2 : -10));
 
 		Vector3 handOffsetDefault = Quaternion.Euler(handInfoCurrent.handOffsetRotation) * handInfoCurrent.controller.transform.rotation * new Vector3(handRigidbodyPositionOffset.x * (side == "Left" ? 1 : -1), handRigidbodyPositionOffset.y, handRigidbodyPositionOffset.z);
 		Vector3 handOffsetKick = handInfoCurrent.handOffsetPosition;
@@ -1519,8 +1547,8 @@ public class Player : MonoBehaviour {
 		handInfoCurrent.handOffsetRotation = Vector3.Lerp(handInfoCurrent.handOffsetRotation, new Vector3(0, 0, 0), 10 * Time.deltaTime);
 
 		Quaternion rotationDelta = Quaternion.Euler(0, 0, 0);
-		if (itemGrabInfoCurrent.grabbedRigidbody != null && itemGrabInfoCurrent.grabNode != null && (itemGrabInfoCurrent.grabNode.grabType != GrabNode.GrabType.Dynamic && itemGrabInfoCurrent.grabNode.grabType != GrabNode.GrabType.FixedPosition)) {
-			rotationDelta = (Quaternion.Euler(handInfoCurrent.handOffsetRotation) * Quaternion.AngleAxis(-30, handInfoCurrent.controller.transform.right) * handInfoCurrent.controller.transform.rotation * Quaternion.Euler(itemGrabInfoCurrent.grabNode.rotation)) * Quaternion.Inverse(handInfoCurrent.handRigidbody.transform.rotation);
+		if (itemGrabInfoCurrent.grabbedRigidbody != null && itemGrabInfoCurrent.itemGrabNode != null && (itemGrabInfoCurrent.itemGrabNode.grabType != GrabNode.GrabType.Dynamic && itemGrabInfoCurrent.itemGrabNode.grabType != GrabNode.GrabType.FixedPosition)) {
+			rotationDelta = (Quaternion.Euler(handInfoCurrent.handOffsetRotation) * Quaternion.AngleAxis(-30, handInfoCurrent.controller.transform.right) * handInfoCurrent.controller.transform.rotation * Quaternion.Euler(itemGrabInfoCurrent.itemGrabNode.rotation)) * Quaternion.Inverse(handInfoCurrent.handRigidbody.transform.rotation);
 		} else {
 			rotationDelta = (Quaternion.Euler(handInfoCurrent.handOffsetRotation) * Quaternion.AngleAxis(30, handInfoCurrent.controller.transform.right) * handInfoCurrent.controller.transform.rotation) * Quaternion.Inverse(handInfoCurrent.handRigidbody.transform.rotation);
 		}
@@ -1538,23 +1566,21 @@ public class Player : MonoBehaviour {
 		}
 	}
 
-	void UpdateItemPhysics(string hand, ItemGrabInformation itemGrabInfoCurrent, ItemGrabInformation itemGrabInfoOpposite, EnvironmentGrabInformation envGrabInfoCurrent, EnvironmentGrabInformation envGrabInfoOpposite, HandInformation handInfoCurrent, HandInformation handInfoOpposite) {
+	void UpdateItemPhysics(string hand, GrabInformation itemGrabInfoCurrent, GrabInformation itemGrabInfoOpposite, GrabInformation envGrabInfoCurrent, GrabInformation envGrabInfoOpposite, HandInformation handInfoCurrent, HandInformation handInfoOpposite) {
 		if (itemGrabInfoCurrent.grabbedRigidbody.gameObject.layer == LayerMask.NameToLayer("Item")) {
-			Vector3 grabOffsetCurrent = (handInfoCurrent.handRigidbody.transform.rotation * itemGrabInfoCurrent.grabOffset);
+			Vector3 grabOffsetCurrent = (handInfoCurrent.handRigidbody.transform.rotation * itemGrabInfoCurrent.offsetPosition);
+			
+			//debugBall1.transform.position = itemGrabInfoCurrent.grabbedRigidbody.transform.position + (itemGrabInfoCurrent.grabbedRigidbody.transform.rotation * itemGrabInfoCurrent.grabPoint);
 
-			UpdateItemPocketingModel(handInfoCurrent, itemGrabInfoCurrent);
-
-			//debugBall1.transform.position = itemGrabInfoCurrent.grabbedRigidbody.transform.position + (itemGrabInfoCurrent.grabbedRigidbody.transform.rotation * itemGrabInfoCurrent.grabLocalPos);
-
-			Vector3 grabWorldPosition = itemGrabInfoCurrent.grabbedRigidbody.transform.position + (itemGrabInfoCurrent.grabbedRigidbody.transform.rotation * itemGrabInfoCurrent.grabLocalPos);
+			Vector3 grabWorldPosition = itemGrabInfoCurrent.grabbedRigidbody.transform.position + (itemGrabInfoCurrent.grabbedRigidbody.transform.rotation * itemGrabInfoCurrent.grabPoint);
 			if (Vector3.Distance(grabWorldPosition, handInfoCurrent.handRigidbody.transform.position + grabOffsetCurrent) > 0.5f) {
 				ReleaseAll(hand, itemGrabInfoCurrent, itemGrabInfoOpposite, envGrabInfoCurrent, envGrabInfoOpposite, handInfoCurrent, handInfoOpposite);		// TODO : hey this is why you fall when dropping a weapon due to distance while also climbing
 			} else {
-				itemGrabInfoCurrent.grabbedRigidbody.velocity = Vector3.Lerp(itemGrabInfoCurrent.grabbedRigidbody.velocity, Vector3.ClampMagnitude(((handInfoCurrent.handRigidbody.position + grabOffsetCurrent) - itemGrabInfoCurrent.grabbedRigidbody.transform.position) / Time.fixedDeltaTime, 500) * itemGrabInfoCurrent.itemVelocityPercentage, 1);
-				//grabInfoCurrent.grabbedRigidbody.velocity = Vector3.Lerp(grabInfoCurrent.grabbedRigidbody.velocity, Vector3.ClampMagnitude(((handInfoCurrent.handRigidbody.transform.position + (dualWieldDirectionChangeRotation * handDominant.transform.rotation * ((grabDualWieldDominantHand == "Left") ? itemGrabInfoLeft.grabOffset : itemGrabInfoRight.grabOffset))) - grabbedItemDominant.transform.position) / Time.fixedDeltaTime, (grabbedItemDominant.GetComponent<HingeJoint>()) ? 1 : 100) * Mathf.Lerp(itemGrabInfoLeft.itemVelocityPercentage, itemGrabInfoRight.itemVelocityPercentage, 0.5f), Mathf.Clamp01(50 * Time.deltaTime));
+				itemGrabInfoCurrent.grabbedRigidbody.velocity = Vector3.Lerp(itemGrabInfoCurrent.grabbedRigidbody.velocity, Vector3.ClampMagnitude(((handInfoCurrent.handRigidbody.position + grabOffsetCurrent) - itemGrabInfoCurrent.grabbedRigidbody.transform.position) / Time.fixedDeltaTime, 500) * itemGrabInfoCurrent.rigidbodyVelocityPercentage, 1);
+				//grabInfoCurrent.grabbedRigidbody.velocity = Vector3.Lerp(grabInfoCurrent.grabbedRigidbody.velocity, Vector3.ClampMagnitude(((handInfoCurrent.handRigidbody.transform.position + (dualWieldDirectionChangeRotation * handDominant.transform.rotation * ((grabDualWieldDominantHand == "Left") ? itemGrabInfoLeft.offsetPosition : itemGrabInfoRight.offsetPosition))) - grabbedItemDominant.transform.position) / Time.fixedDeltaTime, (grabbedItemDominant.GetComponent<HingeJoint>()) ? 1 : 100) * Mathf.Lerp(itemGrabInfoLeft.rigidbodyVelocityPercentage, itemGrabInfoRight.rigidbodyVelocityPercentage, 0.5f), Mathf.Clamp01(50 * Time.deltaTime));
 				
 				if (!itemGrabInfoCurrent.grabbedRigidbody.GetComponent<HingeJoint>()) {		// TODO: Do we still need this?
-					Quaternion rotationDeltaItem = (handInfoCurrent.handRigidbody.transform.rotation * itemGrabInfoCurrent.grabRotation) * Quaternion.Inverse(itemGrabInfoCurrent.grabbedRigidbody.transform.rotation);
+					Quaternion rotationDeltaItem = (handInfoCurrent.handRigidbody.transform.rotation * itemGrabInfoCurrent.offsetRotation) * Quaternion.Inverse(itemGrabInfoCurrent.grabbedRigidbody.transform.rotation);
 					float angleItem;
 					Vector3 axisItem;
 					rotationDeltaItem.ToAngleAxis(out angleItem, out axisItem);
@@ -1564,31 +1590,31 @@ public class Player : MonoBehaviour {
 
 					if (angleItem != float.NaN) {
 						itemGrabInfoCurrent.grabbedRigidbody.maxAngularVelocity = Mathf.Infinity;
-						itemGrabInfoCurrent.grabbedRigidbody.angularVelocity = Vector3.Lerp(itemGrabInfoCurrent.grabbedRigidbody.angularVelocity, (angleItem * axisItem) * itemGrabInfoCurrent.itemVelocityPercentage, 1);
+						itemGrabInfoCurrent.grabbedRigidbody.angularVelocity = Vector3.Lerp(itemGrabInfoCurrent.grabbedRigidbody.angularVelocity, (angleItem * axisItem) * itemGrabInfoCurrent.rigidbodyVelocityPercentage, 1);
 					}
 				}
 			}
 		}
 	}
 
-	void UpdateEnvironmentItemPhysics (string hand, ItemGrabInformation itemGrabInfoCurrent, ItemGrabInformation itemGrabInfoOpposite, EnvironmentGrabInformation envGrabInfoCurrent, EnvironmentGrabInformation envGrabInfoOpposite, HandInformation handInfoCurrent, HandInformation handInfoOpposite) {
+	void UpdateEnvironmentItemPhysics (string hand, GrabInformation itemGrabInfoCurrent, GrabInformation itemGrabInfoOpposite, GrabInformation envGrabInfoCurrent, GrabInformation envGrabInfoOpposite, HandInformation handInfoCurrent, HandInformation handInfoOpposite) {
 		// Handles physics updates for environment items being grabbed (ie: doors, levers, etc)
 		
 		if (envGrabInfoCurrent.grabbedRigidbody != null) {
 
-			Vector3 grabWorldPos = envGrabInfoCurrent.grabbedRigidbody.transform.position + (envGrabInfoCurrent.grabbedRigidbody.transform.rotation * envGrabInfoCurrent.grabOffset);
+			Vector3 grabWorldPos = envGrabInfoCurrent.grabbedTransform.transform.position + (envGrabInfoCurrent.grabbedRigidbody.transform.rotation * envGrabInfoCurrent.offsetPosition);
 			Vector3 handPos = handInfoCurrent.controller.transform.position;
 
-			if (envGrabInfoCurrent.environmentItem is SimpleEnvironmentItem) {       // Is the environmentItem a simpleEnvironmentItem?
-				SimpleEnvironmentItem currentHingeItem = (envGrabInfoCurrent.environmentItem as SimpleEnvironmentItem);
+			if (envGrabInfoCurrent.grabbedScript is SimpleEnvironmentItem) {       // Is the grabbedScript a simpleEnvironmentItem?
+				SimpleEnvironmentItem currentHingeItem = (envGrabInfoCurrent.grabbedScript as SimpleEnvironmentItem);
 				
 				Vector3 velocityDesired = (handPos - grabWorldPos);
 				velocityDesired = Vector3.ClampMagnitude(velocityDesired * 5000, velocityDesired.magnitude * 25000);
 				velocityDesired *= Mathf.Sqrt(envGrabInfoCurrent.grabbedRigidbody.mass);
 
 				envGrabInfoCurrent.grabbedRigidbody.AddForceAtPosition(velocityDesired, grabWorldPos);
-			} else if (envGrabInfoCurrent.environmentItem is HingeEnvironmentItem) {		// Is the environmentItem a hingeEnvironmentItem?
-				HingeEnvironmentItem currentHingeItem = (envGrabInfoCurrent.environmentItem as HingeEnvironmentItem);
+			} else if (envGrabInfoCurrent.grabbedScript is HingeEnvironmentItem) {		// Is the grabbedScript a hingeEnvironmentItem?
+				HingeEnvironmentItem currentHingeItem = (envGrabInfoCurrent.grabbedScript as HingeEnvironmentItem);
 
 				Vector3 anchorPos = (envGrabInfoCurrent.grabbedRigidbody.transform.position + (envGrabInfoCurrent.grabbedRigidbody.transform.rotation * currentHingeItem.hingeJoint.anchor));
 				Vector3 handPosOffset = handInfoCurrent.controller.transform.position - anchorPos;
@@ -1604,90 +1630,13 @@ public class Player : MonoBehaviour {
 				Debug.DrawRay(grabWorldPos, velocityDirection, Color.red);
 			
 				envGrabInfoCurrent.grabbedRigidbody.AddForceAtPosition(envGrabInfoCurrent.grabbedRigidbody.mass * velocityDirection * 200, grabWorldPos);
+			} else {
+				envGrabInfoCurrent.grabbedRigidbody.centerOfMass = ((envGrabInfoCurrent.grabbedRigidbody.transform.position + new Vector3(bodyCC.transform.position.x, envGrabInfoCurrent.grabbedRigidbody.transform.position.y, bodyCC.transform.position.z)) / 2) - envGrabInfoCurrent.grabbedTransform.position;
 			}
 
 			// If the distance between the grabbed object and the grabbing hand is greater than maxEnvironmentItemGrabDistance, release that item
-			if (Vector3.Distance(grabWorldPos, handPos) > maxEnvironmentItemGrabDistance) {
+			if (envGrabInfoCurrent.grabType != GrabType.ClimbablePhysics && Vector3.Distance(grabWorldPos, handPos) > maxEnvironmentItemGrabDistance) {
 				ReleaseEnvironment(hand, envGrabInfoCurrent, envGrabInfoOpposite, handInfoCurrent, handInfoOpposite);
-			}
-		}
-	}
-
-	void UpdateItemPocketingModel(HandInformation handInfoCurrent, ItemGrabInformation itemGrabInfoCurrent) {
-		if (handInfoCurrent.itemReleasingDisabled == false || !handInfoCurrent.controllerDevice.GetPress(Valve.VR.EVRButtonId.k_EButton_Grip)) {
-			// If this item is an attachment on another item, set the current item to that parent item
-			Item mainItem = itemGrabInfoCurrent.grabbedItem;
-			while (mainItem.transform.parent != null && mainItem.transform.parent.name == "(Attachments)") {     // If this is an attachment that is currently attached (repeat until we are no longer in an attached attachment)
-				mainItem = mainItem.transform.parent.parent.GetComponent<Item>();
-			}
-
-			AttachmentNodePair chosenANP = GetAttachmentConnection(itemGrabInfoCurrent, handInfoCurrent);
-			if (chosenANP == null) {        // If the attachment item doesn't currently have a possible attachment
-				Collider[] pockets = Physics.OverlapSphere(handInfoCurrent.handRigidbody.transform.position, 0.2f, pocketMask);
-				if (pockets.Length > 0) {
-					List<Pocket> availablePockets = new List<Pocket>();
-
-					// Find pockets that are currently available and add them to availablePockets list
-					for (int i = 0; i < pockets.Length; i++) {
-						if (pockets[i].GetComponent<Pocket>()) {
-							Pocket currentPocketObject = pockets[i].GetComponent<Pocket>();
-							if (currentPocketObject.GetAvailability() == true && currentPocketObject.pocketSize == mainItem.pocketSize && Vector3.Angle(itemGrabInfoCurrent.grabbedRigidbody.transform.forward, currentPocketObject.transform.forward) <= currentPocketObject.angleRange) {
-								availablePockets.Add(currentPocketObject);
-							}
-						}
-					}
-
-					if (availablePockets.Count > 0) {
-						// Find closest pocket
-						Pocket chosenPocket = availablePockets[0];
-						float closestPocketDistance = Vector3.Distance(handInfoCurrent.handRigidbody.transform.position, chosenPocket.transform.position);
-						for (int j = 1; j < availablePockets.Count; j++) {
-							if (Vector3.Distance(handInfoCurrent.handRigidbody.transform.position, availablePockets[j].transform.position) < closestPocketDistance) {
-								chosenPocket = availablePockets[j];
-							}
-						}
-
-						if (itemGrabInfoCurrent.pocketCandidateLastFrame != chosenPocket.transform) {       // If the chosenPocket is different from the one found last frame, trigger haptic feedback
-							StartCoroutine(TriggerHapticFeedback(handInfoCurrent.controllerDevice, 1000, 0.05f, 2));
-							itemGrabInfoCurrent.pocketCandidateLastFrame = chosenPocket.transform;
-						}
-
-						// Set item's pocketCandidate information
-						mainItem.pocketCandidate = chosenPocket.transform;
-						mainItem.pocketCandidateTime = Time.timeSinceLevelLoad;
-						mainItem.pocketingModel.parent = chosenPocket.transform;
-
-						if (mainItem.pocketGrabNode) {
-							mainItem.pocketingModel.transform.position = mainItem.pocketCandidate.transform.position - (mainItem.pocketingModel.transform.rotation * mainItem.pocketGrabNode.transform.localPosition);
-							mainItem.pocketingModel.transform.rotation = mainItem.pocketCandidate.transform.rotation;
-						} else {
-							mainItem.pocketingModel.transform.position = mainItem.pocketCandidate.transform.position;
-							mainItem.pocketingModel.transform.rotation = mainItem.pocketCandidate.transform.rotation;
-						}
-					} else {
-						itemGrabInfoCurrent.pocketCandidateLastFrame = null;
-					}
-				} else {
-					itemGrabInfoCurrent.pocketCandidateLastFrame = null;
-				}
-			} else {
-				// Pocketing onto attachment slots
-				if (itemGrabInfoCurrent.pocketCandidateLastFrame != chosenANP.nodeParent.transform) {   // If the chosenPocket is different from the one found last frame, trigger haptic feedback
-					StartCoroutine(TriggerHapticFeedback(handInfoCurrent.controllerDevice, 1000, 0.05f, 2));
-					itemGrabInfoCurrent.pocketCandidateLastFrame = chosenANP.nodeParent.transform;
-				}
-
-				itemGrabInfoCurrent.grabbedItem.pocketCandidate = chosenANP.nodeParent.transform;
-				itemGrabInfoCurrent.grabbedItem.pocketCandidateTime = Time.timeSinceLevelLoad;
-				itemGrabInfoCurrent.grabbedItem.pocketingModel.parent = chosenANP.nodeParent.transform;
-
-				itemGrabInfoCurrent.grabbedItem.pocketingModel.parent = chosenANP.nodeParent.transform.parent.parent.Find("(Attachments)");
-
-				Quaternion nodeChildInvertedRotation = Quaternion.AngleAxis(180, chosenANP.nodeParent.transform.right) * chosenANP.nodeParent.transform.rotation;
-				Quaternion rotationDelta = Quaternion.Inverse(itemGrabInfoCurrent.grabbedItem.pocketingModel.rotation) * nodeChildInvertedRotation;
-
-				itemGrabInfoCurrent.grabbedItem.pocketingModel.rotation *= rotationDelta * Quaternion.Inverse(chosenANP.nodeChild.transform.localRotation);
-				itemGrabInfoCurrent.grabbedItem.pocketingModel.position = chosenANP.nodeParent.transform.position + (itemGrabInfoCurrent.grabbedItem.pocketingModel.rotation * -chosenANP.nodeChild.transform.localPosition);
 			}
 		}
 	}

@@ -6,6 +6,10 @@ using System;
 [System.Serializable]
 public class Weapon : Item {
 
+	[Space(10)][Header("Weapon Information")]
+	public WeaponType weaponType = WeaponType.Melee;
+	public enum WeaponType { Melee, Gun };
+
 	[Space(10)][Header("Firing Variables")]
 	public bool triggerHeld;
 	public float timeLastFired;
@@ -26,6 +30,7 @@ public class Weapon : Item {
 
 	[Space(10)][Header("Position Attributes")]
 	public Transform barrelPoint;
+	public Transform muzzleFlash;
 
 	[System.Serializable]
 	public class WeaponAttributes {
@@ -35,50 +40,35 @@ public class Weapon : Item {
 		public int burstCount;
 		public float burstDelay;
 
-		[Space(10)]
-		[Header("Ammo Attributes")]
+		[Space(10)][Header("Ammo Attributes")]
 		public int ammoMax;
 		public int consumption;
 		public bool consumePerBurst;
 
-		[Space(10)]
-		[Header("Accuracy Attributes")]
+		[Space(10)][Header("Accuracy Attributes")]
 		[Range(0, 1)]
-		public float accuracyMax;                       // The maximum accuracy the weapon can have
+		public float accuracyMax;							// The maximum accuracy the weapon can have
 		[Range(0, 1)]
-		public float accuracyMin;                       // The minimum accuracy the weapon can have
-		public float accuracyIncrement;                 // The amount of accuracy added to accuracyCurrent per second
-		public float accuracyDecrement;                 // The amount of accuracy subtracted from accuracyCurrent per fire
+		public float accuracyMin;							// The minimum accuracy the weapon can have
+		public float accuracyIncrement;						// The amount of accuracy added to accuracyCurrent per second
+		public float accuracyDecrement;						// The amount of accuracy subtracted from accuracyCurrent per fire
 
 		[Space(10)]
 		[Header("Recoil Attributes")]
-		public float recoilLinear;                      // The amount of velocity added to the weapon when fired
-		public float recoilAngular;                     // The amount of angularVelocity added to the weapon when fired
+		public float recoilLinear;							// The amount of velocity added to the weapon when fired
+		public float recoilAngular;							// The amount of angularVelocity added to the weapon when fired
 
-		[Space(10)]
-		[Header("Charge Attributes")]
-		public bool chargingEnabled;                    // Does the weapon use charging?
-		public float chargeIncrement;                   // The amount charge increases per second
-		public float chargeDecrement;                   // The amount charge decreases per second
-		public float chargeDecrementPerShot;            // The amount of charge lost once the weapon is fired
-		public float chargeRequired;                    // The amount of charge required to fire
-		public float chargeInfluenceVelocity;           // The percentage of influence the charge amount has on projectile velocity
+		[Space(10)][Header("Charge Attributes")]
+		public bool chargingEnabled;						// Does the weapon use charging?
+		public float chargeIncrement;						// The amount charge increases per second
+		public float chargeDecrement;						// The amount charge decreases per second
+		public float chargeDecrementPerShot;				// The amount of charge lost once the weapon is fired
+		public float chargeRequired;						// The amount of charge required to fire
+		public float chargeInfluenceVelocity;				// The percentage of influence the charge amount has on projectile velocity
 
-		[Space(10)]
-		[Header("Projectile Attributes")]
-		public int projectileBaseDamage;				// The base damage of the projectile
-		public Vector2[] projectileSpreads;             // The projectile spreads of the weapon. Each index represents an individual spread the the rotation of that index being applied to it. Used for multi-projectile based weapons (ie: shotguns)
-		public SpreadType projectileSpreadType;
-		public float projectileSpreadDeviation;         // The random rotation deviation given to each projectile in projectile spreads
-		public int projectileRicochetCount;             // The maximum number of times a projectile can ricochet
-		public float projectileRicochetAngleMax;        // The maximum angle projectiles can ricochet off of
-		public float projectileVelocity;                // The forward velocity applied to all projectiles when fired
-		public float projectileGravity;                 // The percentage of gravity the projectile has
-		public Projectile.DecelerationType projectileDecelerationType;  // The deceleration type of the projectile (normal or logarithmic)
-		public float projectileDeceleration;            // The deceleration applied to the projectiles
-		public float projectileLifespan;
-		public bool projectileIsSticky;
-		public GameObject projectile;                   // The projectile prefab which is instantiated when firing the weapon
+		[Space(10)][Header("Projectile Attributes & Spread Attributes")]
+		public ProjectileAttributes projectileAttributes = new ProjectileAttributes();
+		public Projectile.ProjectileSpreadAttributes projectileSpreadAttributes;
 
 		public WeaponAttributes(WeaponAttributes copiedAttributes) {
 			automatic = copiedAttributes.automatic;
@@ -100,19 +90,9 @@ public class Weapon : Item {
 			chargeDecrementPerShot = copiedAttributes.chargeDecrementPerShot;
 			chargeRequired = copiedAttributes.chargeRequired;
 			chargeInfluenceVelocity = copiedAttributes.chargeInfluenceVelocity;
-			projectileBaseDamage = copiedAttributes.projectileBaseDamage;
-			projectileSpreads = copiedAttributes.projectileSpreads;
-			projectileSpreadType = copiedAttributes.projectileSpreadType;
-			projectileSpreadDeviation = copiedAttributes.projectileSpreadDeviation;
-			projectileRicochetCount = copiedAttributes.projectileRicochetCount;
-			projectileRicochetAngleMax = copiedAttributes.projectileRicochetAngleMax;
-			projectileVelocity = copiedAttributes.projectileVelocity;
-			projectileGravity = copiedAttributes.projectileGravity;
-			projectileDecelerationType = copiedAttributes.projectileDecelerationType;
-			projectileDeceleration = copiedAttributes.projectileDeceleration;
-			projectileLifespan = copiedAttributes.projectileLifespan;
-			projectileIsSticky = copiedAttributes.projectileIsSticky;
-			projectile = copiedAttributes.projectile;
+			projectileAttributes = new ProjectileAttributes(copiedAttributes.projectileAttributes);
+			projectileSpreadAttributes = new Projectile.ProjectileSpreadAttributes(copiedAttributes.projectileSpreadAttributes);
+			projectileAttributes.prefabProjectile = copiedAttributes.projectileAttributes.prefabProjectile;
 		}
 
 		public WeaponAttributes() {
@@ -122,9 +102,9 @@ public class Weapon : Item {
 			automatic = false;
 			consumePerBurst = false;
 			chargingEnabled = false;
-			projectileSpreadType = SpreadType.Circular;
-			projectileDecelerationType = Projectile.DecelerationType.Normal;
-			projectileIsSticky = false;
+			projectileSpreadAttributes.spreadType = Projectile.ProjectileSpreadAttributes.SpreadType.Circular;
+			projectileAttributes.decelerationType = ProjectileAttributes.DecelerationType.Normal;
+			projectileAttributes.isSticky = false;
 
 			// percentages
 			firerate = 0;
@@ -140,21 +120,21 @@ public class Weapon : Item {
 			chargeDecrementPerShot = 0;
 			chargeRequired = 0;
 			chargeInfluenceVelocity = 0;
-			projectileBaseDamage = 0;
-			projectileSpreadDeviation = 0;
-			projectileRicochetAngleMax = 0;
-			projectileVelocity = 0;
-			projectileGravity = 0;
-			projectileDeceleration = 0;
-			projectileLifespan = 0;
+			projectileAttributes.damage = 0;
+			projectileSpreadAttributes.spreadDeviation = 0;
+			projectileAttributes.ricochetAngleMax = 0;
+			projectileAttributes.velocityInitial = 0;
+			projectileAttributes.gravity = 0;
+			projectileAttributes.deceleration = 0;
+			projectileAttributes.lifespan = 0;
 
 			// additions
 			burstCount = 0;
 			ammoMax = 0;
 			consumption = 0;
-			projectileRicochetCount = 0;
+			projectileAttributes.ricochetCountInitial = 0;
 
-			projectile = null;
+			projectileAttributes.prefabProjectile = null;
 			//projectileSpreads = copiedAttributes.projectileSpreads;
 		}
 
@@ -165,9 +145,9 @@ public class Weapon : Item {
 			automatic = false;
 			consumePerBurst = false;
 			chargingEnabled = false;
-			projectileSpreadType = SpreadType.Circular;
-			projectileDecelerationType = Projectile.DecelerationType.Normal;
-			projectileIsSticky = false;
+			projectileSpreadAttributes.spreadType = Projectile.ProjectileSpreadAttributes.SpreadType.Circular;
+			projectileAttributes.decelerationType = ProjectileAttributes.DecelerationType.Normal;
+			projectileAttributes.isSticky = false;
 
 			// percentages
 			
@@ -184,32 +164,34 @@ public class Weapon : Item {
 			chargeDecrementPerShot = 1;
 			chargeRequired = 1;
 			chargeInfluenceVelocity = 1;
-			projectileBaseDamage = 1;
-			projectileSpreadDeviation = 1;
-			projectileRicochetAngleMax = 1;
-			projectileVelocity = 1;
-			projectileGravity = 1;
-			projectileDeceleration = 1;
-			projectileLifespan = 1;
+			projectileAttributes.damage = 1;
+			projectileSpreadAttributes.spreadDeviation = 1;
+			projectileAttributes.ricochetAngleMax = 1;
+			projectileAttributes.velocityInitial = 1;
+			projectileAttributes.gravity = 1;
+			projectileAttributes.deceleration = 1;
+			projectileAttributes.lifespan = 1;
 
 			// additions
 			burstCount = 0;
 			ammoMax = 0;
 			consumption = 0;
-			projectileRicochetCount = 0;
+			projectileAttributes.ricochetCountInitial = 0;
 
 			//projectileSpreads = copiedAttributes.projectileSpreads;
-			projectile = null;
+			projectileAttributes.prefabProjectile = null;
 		}
 	}
-
-	public enum SpreadType { Circular, Custom }
-
+	
 	[Space(10)][Header("Audio Info")]
 	public AudioClip		soundFireNormal;                // The normal audio clip player when firing the weapon
 
 	// Events
 	public event Action eventAdjustAmmo;
+
+	void Start () {
+		UpdateCombinedAttributes();
+	}
 
 	protected override void OnItemUpdate () {
 		if (triggerHeld == false) {
@@ -229,8 +211,14 @@ public class Weapon : Item {
 	public void UpdateCombinedAttributes () {
 		// Set combinedAttributes equal to the weapon's base attributes first
 		combinedAttributes = new WeaponAttributes(baseAttributes);
-
-		barrelPoint = transform.Find("(BarrelPoint)");
+		
+		if (transform.Find("(BarrelPoint)")) {
+			
+			barrelPoint = transform.Find("(BarrelPoint)");
+			if (barrelPoint.Find("(MuzzleFlash)")) {
+				muzzleFlash = barrelPoint.Find("(MuzzleFlash)");
+			}
+		}
 
 		if (attachments.Count > 0) {
 			List<WeaponAttributes> allAttributes = new List<WeaponAttributes>();
@@ -270,9 +258,9 @@ public class Weapon : Item {
 				combinedAttachmentAttributes.automatic = allAttributes[j].automatic == true ? allAttributes[j].automatic : combinedAttachmentAttributes.automatic;
 				combinedAttachmentAttributes.consumePerBurst = allAttributes[j].consumePerBurst == true ? allAttributes[j].consumePerBurst : combinedAttachmentAttributes.consumePerBurst;
 				combinedAttachmentAttributes.chargingEnabled = allAttributes[j].chargingEnabled == true ? allAttributes[j].chargingEnabled : combinedAttachmentAttributes.chargingEnabled;
-				combinedAttachmentAttributes.projectileSpreadType = allAttributes[j].projectileSpreadType == SpreadType.Custom ? allAttributes[j].projectileSpreadType : combinedAttachmentAttributes.projectileSpreadType;
-				combinedAttachmentAttributes.projectileDecelerationType = allAttributes[j].projectileDecelerationType == Projectile.DecelerationType.Smooth ? allAttributes[j].projectileDecelerationType : combinedAttachmentAttributes.projectileDecelerationType;
-				combinedAttachmentAttributes.projectileIsSticky = allAttributes[j].projectileIsSticky == true ? allAttributes[j].projectileIsSticky : combinedAttachmentAttributes.projectileIsSticky;
+				combinedAttachmentAttributes.projectileSpreadAttributes.spreadType = allAttributes[j].projectileSpreadAttributes.spreadType == Projectile.ProjectileSpreadAttributes.SpreadType.Custom ? allAttributes[j].projectileSpreadAttributes.spreadType : combinedAttachmentAttributes.projectileSpreadAttributes.spreadType;
+				combinedAttachmentAttributes.projectileAttributes.decelerationType = allAttributes[j].projectileAttributes.decelerationType == ProjectileAttributes.DecelerationType.Smooth ? allAttributes[j].projectileAttributes.decelerationType : combinedAttachmentAttributes.projectileAttributes.decelerationType;
+				combinedAttachmentAttributes.projectileAttributes.isSticky = allAttributes[j].projectileAttributes.isSticky == true ? allAttributes[j].projectileAttributes.isSticky : combinedAttachmentAttributes.projectileAttributes.isSticky;
 
 				// percentages
 				combinedAttachmentAttributes.firerate += allAttributes[j].firerate;
@@ -288,22 +276,22 @@ public class Weapon : Item {
 				combinedAttachmentAttributes.chargeDecrementPerShot += allAttributes[j].chargeDecrementPerShot;
 				combinedAttachmentAttributes.chargeRequired += allAttributes[j].chargeRequired;
 				combinedAttachmentAttributes.chargeInfluenceVelocity += allAttributes[j].chargeInfluenceVelocity;
-				combinedAttachmentAttributes.projectileBaseDamage += allAttributes[j].projectileBaseDamage;
-				combinedAttachmentAttributes.projectileSpreadDeviation += allAttributes[j].projectileSpreadDeviation;
-				combinedAttachmentAttributes.projectileRicochetAngleMax += allAttributes[j].projectileRicochetAngleMax;
-				combinedAttachmentAttributes.projectileVelocity += allAttributes[j].projectileVelocity;
-				combinedAttachmentAttributes.projectileGravity += allAttributes[j].projectileGravity;
-				combinedAttachmentAttributes.projectileDeceleration += allAttributes[j].projectileDeceleration;
-				combinedAttachmentAttributes.projectileLifespan += allAttributes[j].projectileLifespan;
+				combinedAttachmentAttributes.projectileAttributes.damage += allAttributes[j].projectileAttributes.damage;
+				combinedAttachmentAttributes.projectileSpreadAttributes.spreadDeviation += allAttributes[j].projectileSpreadAttributes.spreadDeviation;
+				combinedAttachmentAttributes.projectileAttributes.ricochetAngleMax += allAttributes[j].projectileAttributes.ricochetAngleMax;
+				combinedAttachmentAttributes.projectileAttributes.velocityInitial += allAttributes[j].projectileAttributes.velocityInitial;
+				combinedAttachmentAttributes.projectileAttributes.gravity += allAttributes[j].projectileAttributes.gravity;
+				combinedAttachmentAttributes.projectileAttributes.deceleration += allAttributes[j].projectileAttributes.deceleration;
+				combinedAttachmentAttributes.projectileAttributes.lifespan += allAttributes[j].projectileAttributes.lifespan;
 
 				// additions
 				combinedAttachmentAttributes.burstCount += allAttributes[j].burstCount;
 				combinedAttachmentAttributes.ammoMax += allAttributes[j].ammoMax;
 				combinedAttachmentAttributes.consumption += allAttributes[j].consumption;
-				combinedAttachmentAttributes.projectileRicochetCount += allAttributes[j].projectileRicochetCount;
+				combinedAttachmentAttributes.projectileAttributes.ricochetCountInitial += allAttributes[j].projectileAttributes.ricochetCountInitial;
 
 				// Prefabs
-				combinedAttachmentAttributes.projectile = allAttributes[j].projectile != null ? allAttributes[j].projectile : combinedAttachmentAttributes.projectile;
+				combinedAttachmentAttributes.projectileAttributes.prefabProjectile = allAttributes[j].projectileAttributes.prefabProjectile != null ? allAttributes[j].projectileAttributes.prefabProjectile : combinedAttachmentAttributes.projectileAttributes.prefabProjectile;
 
 				//projectileSpreads = copiedAttributes.projectileSpreads;
 			}
@@ -313,9 +301,9 @@ public class Weapon : Item {
 			combinedAttributes.automatic = combinedAttachmentAttributes.automatic == true ? combinedAttachmentAttributes.automatic : combinedAttributes.automatic;
 			combinedAttributes.consumePerBurst = combinedAttachmentAttributes.consumePerBurst == true ? combinedAttachmentAttributes.consumePerBurst : combinedAttributes.consumePerBurst;
 			combinedAttributes.chargingEnabled = combinedAttachmentAttributes.chargingEnabled == true ? combinedAttachmentAttributes.chargingEnabled : combinedAttributes.chargingEnabled;
-			combinedAttributes.projectileSpreadType = combinedAttachmentAttributes.projectileSpreadType == SpreadType.Custom ? combinedAttachmentAttributes.projectileSpreadType : combinedAttributes.projectileSpreadType;
-			combinedAttributes.projectileDecelerationType = combinedAttachmentAttributes.projectileDecelerationType == Projectile.DecelerationType.Smooth ? combinedAttachmentAttributes.projectileDecelerationType : combinedAttributes.projectileDecelerationType;
-			combinedAttributes.projectileIsSticky = combinedAttachmentAttributes.projectileIsSticky == true ? combinedAttachmentAttributes.projectileIsSticky : combinedAttributes.projectileIsSticky;
+			combinedAttributes.projectileSpreadAttributes.spreadType = combinedAttachmentAttributes.projectileSpreadAttributes.spreadType == Projectile.ProjectileSpreadAttributes.SpreadType.Custom ? combinedAttachmentAttributes.projectileSpreadAttributes.spreadType : combinedAttributes.projectileSpreadAttributes.spreadType;
+			combinedAttributes.projectileAttributes.decelerationType = combinedAttachmentAttributes.projectileAttributes.decelerationType == ProjectileAttributes.DecelerationType.Smooth ? combinedAttachmentAttributes.projectileAttributes.decelerationType : combinedAttributes.projectileAttributes.decelerationType;
+			combinedAttributes.projectileAttributes.isSticky = combinedAttachmentAttributes.projectileAttributes.isSticky == true ? combinedAttachmentAttributes.projectileAttributes.isSticky : combinedAttributes.projectileAttributes.isSticky;
 
 			// percentages
 			combinedAttributes.firerate *= combinedAttachmentAttributes.firerate;
@@ -331,22 +319,22 @@ public class Weapon : Item {
 			combinedAttributes.chargeDecrementPerShot *= combinedAttachmentAttributes.chargeDecrementPerShot;
 			combinedAttributes.chargeRequired *= combinedAttachmentAttributes.chargeRequired;
 			combinedAttributes.chargeInfluenceVelocity *= combinedAttachmentAttributes.chargeInfluenceVelocity;
-			combinedAttributes.projectileBaseDamage *= combinedAttachmentAttributes.projectileBaseDamage;
-			combinedAttributes.projectileSpreadDeviation *= combinedAttachmentAttributes.projectileSpreadDeviation;
-			combinedAttributes.projectileRicochetAngleMax *= combinedAttachmentAttributes.projectileRicochetAngleMax;
-			combinedAttributes.projectileVelocity *= combinedAttachmentAttributes.projectileVelocity;
-			combinedAttributes.projectileGravity *= combinedAttachmentAttributes.projectileGravity;
-			combinedAttributes.projectileDeceleration *= combinedAttachmentAttributes.projectileDeceleration;
-			combinedAttributes.projectileLifespan *= combinedAttachmentAttributes.projectileLifespan;
+			combinedAttributes.projectileAttributes.damage *= combinedAttachmentAttributes.projectileAttributes.damage;
+			combinedAttributes.projectileSpreadAttributes.spreadDeviation *= combinedAttachmentAttributes.projectileSpreadAttributes.spreadDeviation;
+			combinedAttributes.projectileAttributes.ricochetAngleMax *= combinedAttachmentAttributes.projectileAttributes.ricochetAngleMax;
+			combinedAttributes.projectileAttributes.velocityInitial *= combinedAttachmentAttributes.projectileAttributes.velocityInitial;
+			combinedAttributes.projectileAttributes.gravity *= combinedAttachmentAttributes.projectileAttributes.gravity;
+			combinedAttributes.projectileAttributes.deceleration *= combinedAttachmentAttributes.projectileAttributes.deceleration;
+			combinedAttributes.projectileAttributes.lifespan *= combinedAttachmentAttributes.projectileAttributes.lifespan;
 
 			// additions
 			combinedAttributes.burstCount += combinedAttachmentAttributes.burstCount;
 			combinedAttributes.ammoMax += combinedAttachmentAttributes.ammoMax;
 			combinedAttributes.consumption += combinedAttachmentAttributes.consumption;
-			combinedAttributes.projectileRicochetCount += combinedAttachmentAttributes.projectileRicochetCount;
+			combinedAttributes.projectileAttributes.ricochetCountInitial += combinedAttachmentAttributes.projectileAttributes.ricochetCountInitial;
 
 			//projectileSpreads = copiedAttributes.projectileSpreads;
-			combinedAttributes.projectile = combinedAttachmentAttributes.projectile != null ? combinedAttachmentAttributes.projectile : combinedAttributes.projectile;
+			combinedAttributes.projectileAttributes.prefabProjectile = combinedAttachmentAttributes.projectileAttributes.prefabProjectile != null ? combinedAttachmentAttributes.projectileAttributes.prefabProjectile : combinedAttributes.projectileAttributes.prefabProjectile;
 		}
 	}
 

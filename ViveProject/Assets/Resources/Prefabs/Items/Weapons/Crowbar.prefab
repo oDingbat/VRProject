@@ -471,10 +471,10 @@ Rigidbody:
   serializedVersion: 2
   m_Mass: 20
   m_Drag: 0
-  m_AngularDrag: 0.05
+  m_AngularDrag: 0
   m_UseGravity: 1
   m_IsKinematic: 0
-  m_Interpolate: 0
+  m_Interpolate: 1
   m_Constraints: 0
   m_CollisionDetection: 2
 --- !u!65 &65159867600679038
@@ -667,19 +667,27 @@ MonoBehaviour:
     chargeDecrementPerShot: 0
     chargeRequired: 0
     chargeInfluenceVelocity: 0
-    projectileBaseDamage: 0
-    projectileSpreads: []
-    projectileSpreadType: 0
-    projectileSpreadDeviation: 0
-    projectileRicochetCount: 0
-    projectileRicochetAngleMax: 0
-    projectileVelocity: 0
-    projectileGravity: 0
-    projectileDecelerationType: 0
-    projectileDeceleration: 0
-    projectileLifespan: 0
-    projectileIsSticky: 0
-    projectile: {fileID: 0}
+    projectileAttributes:
+      prefabProjectile: {fileID: 0}
+      damage: 1
+      ricochetCountInitial: 0
+      ricochetAngleMax: 90
+      velocityInitial: 100
+      gravity: 0
+      decelerationType: 0
+      deceleration: 0
+      lifespan: 0
+      isSticky: 0
+      isPhysicsBased: 0
+      subProjectileSpreadAttributes:
+        spreads: []
+        spreadType: 0
+        spreadDeviation: 0
+      subProjectile: {fileID: 0}
+    projectileSpreadAttributes:
+      spreads: []
+      spreadType: 0
+      spreadDeviation: 0
   combinedAttributes:
     automatic: 0
     firerate: 0
@@ -700,20 +708,29 @@ MonoBehaviour:
     chargeDecrementPerShot: 0
     chargeRequired: 0
     chargeInfluenceVelocity: 0
-    projectileBaseDamage: 0
-    projectileSpreads: []
-    projectileSpreadType: 0
-    projectileSpreadDeviation: 0
-    projectileRicochetCount: 0
-    projectileRicochetAngleMax: 0
-    projectileVelocity: 0
-    projectileGravity: 0
-    projectileDecelerationType: 0
-    projectileDeceleration: 0
-    projectileLifespan: 0
-    projectileIsSticky: 0
-    projectile: {fileID: 0}
+    projectileAttributes:
+      prefabProjectile: {fileID: 0}
+      damage: 1
+      ricochetCountInitial: 0
+      ricochetAngleMax: 90
+      velocityInitial: 100
+      gravity: 0
+      decelerationType: 0
+      deceleration: 0
+      lifespan: 0
+      isSticky: 0
+      isPhysicsBased: 0
+      subProjectileSpreadAttributes:
+        spreads: []
+        spreadType: 0
+        spreadDeviation: 0
+      subProjectile: {fileID: 0}
+    projectileSpreadAttributes:
+      spreads: []
+      spreadType: 0
+      spreadDeviation: 0
   barrelPoint: {fileID: 0}
+  muzzleFlash: {fileID: 0}
   soundFireNormal: {fileID: 0}
 --- !u!114 &114592009177289978
 MonoBehaviour:
@@ -758,7 +775,7 @@ MonoBehaviour:
   dominance: 0
   grabThisNodeFirst: 0
   interactionOn: 0
-  grabType: 2
+  grabType: 0
   triggerType: 0
   interactionType: 0
 --- !u!114 &114629022457524318

@@ -10,6 +10,7 @@ public abstract class Item : MonoBehaviour {
 	public bool					nonDualWieldable;
 	public bool					isGrabbed;								// Is this item currently being grabbed?
 	public float				timeLastGrabbed;						// The time at which the item was last grabbed
+	public Vector3				initialCenterOfMass;
 
 	[Space(10)][Header("Pocketing Info")]
 	public GrabNode				pocketGrabNode;
@@ -37,6 +38,7 @@ public abstract class Item : MonoBehaviour {
 	void Start () {
 		itemRigidbody = GetComponent<Rigidbody>();
 		rigidbodyCopy = new RigidbodyCopy(itemRigidbody);
+		initialCenterOfMass = itemRigidbody.centerOfMass;
 
 		// Create list of attachmentNodes
 		if (transform.Find("(AttachmentNodes")) {

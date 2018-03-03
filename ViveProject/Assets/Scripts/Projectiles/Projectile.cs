@@ -5,34 +5,45 @@ using UnityEngine.UI;
 
 public class Projectile : MonoBehaviour {
 
-	public LayerMask	collisionMask;
+	[Space(10)][Header("Collision Masks")]
+	public LayerMask			collisionMask;
 
-	public float				initialVelocityMagnitude;
-	public Vector3				velocity;
-	public float				deceleration;
-	public DecelerationType		decelerationType;
-	public enum					DecelerationType { Normal, Smooth }
-	public float				gravity;
-	public bool					sticky;
-	public int					baseDamage;
-	public float				lifespan = 5;
+	[Space(10)][Header("Attributes")]
+	public ProjectileAttributes			projectileAttributes;
+	public ProjectileSpreadAttributes	projectileSpreadAttributes;
 
+	[Space(10)][Header("Variables")]
+	public Vector3				velocityCurrent;
 	public Collider				projectileCollider;
+	public int					ricochetCount;
+	public bool					isBroken;
 
-	public int			ricochetCount;
-	public float		ricochetAngleMax;
-	bool				broken;
-
+	[Space(10)][Header("Prefabs")]
 	public GameObject prefabProjectileShattered;
 	public GameObject prefabDamageText;
 
+	[System.Serializable]
+	public class ProjectileSpreadAttributes {
+		// Information regarding the spreads of projectiles
+		public Vector2[] spreads;						// The spreads of the weapon/projectile
+		public SpreadType spreadType;               // The type of spread this projectile has
+		public float spreadDeviation;               // The random rotation deviation given to each projectile in projectile spreads
+
+		public enum SpreadType { Circular, Custom, Spherical }
+
+		public ProjectileSpreadAttributes (Projectile.ProjectileSpreadAttributes copiedProjectileSpreadAttributes) {
+			spreads = copiedProjectileSpreadAttributes.spreads;
+			spreadType = copiedProjectileSpreadAttributes.spreadType;
+			spreadDeviation = copiedProjectileSpreadAttributes.spreadDeviation;
+		}
+	}
+
 	void Start () {
-		initialVelocityMagnitude = velocity.magnitude;
 		StartCoroutine(AutoDestroy());
 	}
 
 	IEnumerator AutoDestroy () {
-		yield return new WaitForSeconds(lifespan);
+		yield return new WaitForSeconds(projectileAttributes.lifespan);
 		if (prefabProjectileShattered == true) {
 			GameObject newProjectileShattered = (GameObject)Instantiate(prefabProjectileShattered, transform.position, transform.rotation);
 			if (newProjectileShattered.transform.Find("(Pieces)") && newProjectileShattered.transform.Find("(Pieces)").Find("(StationaryPiece)")) {
@@ -50,36 +61,36 @@ public class Projectile : MonoBehaviour {
 	}
 
 	void Update () {
-		if (broken == false) {
+		if (isBroken == false) {
 			UpdateProjectileMovement();
 		}
 	}
 
 	public void UpdateProjectileMovement () {
 		RaycastHit hit;
-		if (Physics.Raycast(transform.position, velocity.normalized, out hit, velocity.magnitude * Time.deltaTime, collisionMask)) {
+		if (Physics.Raycast(transform.position, velocityCurrent.normalized, out hit, velocityCurrent.magnitude * Time.deltaTime, collisionMask)) {
 
 			EntityBone hitEntityBone = hit.transform.GetComponent<EntityBone>();
 			Rigidbody hitRigidbody = hit.transform.GetComponent<Rigidbody>();
-			Vector3 normalPerpendicular = velocity.normalized - hit.normal * Vector3.Dot(velocity.normalized, hit.normal);
+			Vector3 normalPerpendicular = velocityCurrent.normalized - hit.normal * Vector3.Dot(velocityCurrent.normalized, hit.normal);
 			
 			if (hitEntityBone == true) {        // If the object we hit has an EntityBone component, damage it's entity
 				DamageHitEntity(hit, hitEntityBone);
 			}
 
 			if (hitRigidbody == true) {         // If the object we hit has a rigidbody component, apply a force at the hit position
-				hitRigidbody.AddForceAtPosition(velocity.normalized * Mathf.Sqrt(velocity.magnitude) * Mathf.Sqrt(Vector3.Angle(normalPerpendicular, velocity.normalized) * 5000f), hit.point);
+				hitRigidbody.AddForceAtPosition(velocityCurrent.normalized * Mathf.Sqrt(velocityCurrent.magnitude) * Mathf.Sqrt(Vector3.Angle(normalPerpendicular, velocityCurrent.normalized) * 5000f), hit.point);
 			}
 			
-			if (ricochetCount > 0 && Vector3.Angle(normalPerpendicular, velocity.normalized) <= ricochetAngleMax) {  // Does this projectile have ricochets left and is the contact and less than or equal to the ricochetAngleMax?
+			if (ricochetCount > 0 && Vector3.Angle(normalPerpendicular, velocityCurrent.normalized) <= projectileAttributes.ricochetAngleMax) {  // Does this projectile have ricochets left and is the contact and less than or equal to the ricochetAngleMax?
 				// Ricochet
 				ricochetCount--;		// Subtract one ricochet from the total amount left
 				transform.position = hit.point + (hit.normal * 0.001f);
-				transform.rotation = Quaternion.LookRotation(Vector3.Reflect(velocity.normalized, hit.normal));
-				velocity = Vector3.Reflect(velocity, hit.normal);
+				transform.rotation = Quaternion.LookRotation(Vector3.Reflect(velocityCurrent.normalized, hit.normal));
+				velocityCurrent = Vector3.Reflect(velocityCurrent, hit.normal);
 			} else {	// Don't have any ricochets left or the angle bad?
 				
-				if (sticky == true) {       // Is this projectile sticky?
+				if (projectileAttributes.isSticky == true) {       // Is this projectile sticky?
 					
 					projectileCollider.enabled = true;      // Enable the projectile's collider
 					SetProjectileLayer("Climbable");
@@ -132,14 +143,14 @@ public class Projectile : MonoBehaviour {
 			}
 		} else {
 			// If the projectile did not hit anything
-			transform.position += velocity * Time.deltaTime;
-			velocity += new Vector3(0, gravity * Time.deltaTime, 0);
-			if (decelerationType == DecelerationType.Normal) {
-				velocity = velocity.normalized * Mathf.Clamp(velocity.magnitude - (deceleration * Time.deltaTime), 0, Mathf.Infinity);
+			transform.position += velocityCurrent * Time.deltaTime;
+			velocityCurrent += new Vector3(0, projectileAttributes.gravity * Time.deltaTime, 0);
+			if (projectileAttributes.decelerationType == ProjectileAttributes.DecelerationType.Normal) {
+				velocityCurrent = velocityCurrent.normalized * Mathf.Clamp(velocityCurrent.magnitude - (projectileAttributes.deceleration * Time.deltaTime), 0, Mathf.Infinity);
 			} else {
-				velocity = Vector3.Lerp(velocity, Vector3.zero, deceleration * Time.deltaTime);
+				velocityCurrent = Vector3.Lerp(velocityCurrent, Vector3.zero, projectileAttributes.deceleration * Time.deltaTime);
 			}
-			if (velocity.magnitude <= 5 && initialVelocityMagnitude > 50) {
+			if (velocityCurrent.magnitude <= 5 && projectileAttributes.velocityInitial > 50) {
 				StartCoroutine(BreakProjectile(transform.position));
 			}
 		}
@@ -166,21 +177,61 @@ public class Projectile : MonoBehaviour {
 	}
 
 	void DamageHitEntity (RaycastHit hit, EntityBone hitEntityBone) {
-		int damageCalculated = (int)Mathf.Round((float)baseDamage * hitEntityBone.damageMultiplier);
+		int damageCalculated = (int)Mathf.Round((float)projectileAttributes.damage * hitEntityBone.damageMultiplier);
 		hitEntityBone.entity.TakeDamage(damageCalculated, (damageCalculated / 25) * hitEntityBone.stunMultiplier, hit.point, hit.normal);
 		StartCoroutine(BreakProjectile(transform.position));
 	}
 
 	IEnumerator BreakProjectile(Vector3 finalPos) {
-		if (broken == false) {
+		if (isBroken == false) {
 			transform.position = finalPos;
-			broken = true;
-			//yield return new WaitForSeconds(GetComponent<TrailRenderer>().time * 0.9f);
-			if (sticky == false) {
+			isBroken = true;
+			yield return new WaitForSeconds(GetComponent<TrailRenderer>().time * 0.9f);
+
+			// Shoot sub-Projectiles
+			if (projectileAttributes.subProjectile != null && projectileAttributes.subProjectileAttributes != null) {
+				FireSubProjectiles();
+			}
+			
+			if (projectileAttributes.isSticky == false) {
 				Destroy(gameObject);
 			}
 		} else {
 			yield return null;
+		}
+	}
+
+	void FireSubProjectiles () {
+		for (int j = 0; (j < (projectileSpreadAttributes.spreadType == ProjectileSpreadAttributes.SpreadType.Spherical ? 12 : projectileSpreadAttributes.spreads.Length) || (projectileSpreadAttributes.spreads.Length == 0 && j == 0)); j++) {
+			
+			// Get random spread deviations
+			Quaternion projectileSpreadDeviation = Quaternion.Euler(Random.Range(-projectileSpreadAttributes.spreadDeviation, projectileSpreadAttributes.spreadDeviation), Random.Range(-projectileSpreadAttributes.spreadDeviation, projectileSpreadAttributes.spreadDeviation), 0);
+
+			// Step 4: Create new projectile
+			GameObject newProjectile = (GameObject)Instantiate(projectileAttributes.prefabProjectile, transform.position + transform.forward * 0.01f, transform.rotation);
+			if (projectileSpreadAttributes.spreads.Length > 0) {
+				if (projectileSpreadAttributes.spreadType == Projectile.ProjectileSpreadAttributes.SpreadType.Circular) {
+					newProjectile.transform.rotation *= projectileSpreadDeviation * Quaternion.Euler(0, 0, projectileSpreadAttributes.spreads[j].x) * Quaternion.Euler(projectileSpreadAttributes.spreads[j].y, 0, 0);
+				} else if (projectileSpreadAttributes.spreadType == Projectile.ProjectileSpreadAttributes.SpreadType.Custom) {
+					newProjectile.transform.rotation *= Quaternion.Euler(projectileSpreadAttributes.spreads[j].y, projectileSpreadAttributes.spreads[j].x, 0);
+				} else if (projectileSpreadAttributes.spreadType == Projectile.ProjectileSpreadAttributes.SpreadType.Spherical) {
+					Vector3[] icosphereVectors = IcosphereGenerator.GetIcosphereVectors();
+					newProjectile.transform.rotation *= Quaternion.LookRotation(icosphereVectors[j], Vector3.up);
+				}
+			}
+			Projectile newProjectileClass = newProjectile.GetComponent<Projectile>();
+			// Apply velocity
+			newProjectileClass.velocityCurrent = newProjectile.transform.forward * projectileAttributes.velocityInitial;
+			newProjectileClass.projectileAttributes.deceleration = projectileAttributes.deceleration;
+			newProjectileClass.projectileAttributes.decelerationType = projectileAttributes.decelerationType;
+			newProjectileClass.projectileAttributes.gravity = projectileAttributes.gravity;
+			newProjectileClass.ricochetCount = projectileAttributes.ricochetCountInitial;
+			newProjectileClass.projectileAttributes.ricochetAngleMax = projectileAttributes.ricochetAngleMax;
+			newProjectileClass.projectileAttributes.damage = projectileAttributes.damage;
+			newProjectileClass.projectileAttributes.lifespan = projectileAttributes.lifespan;
+			newProjectileClass.projectileAttributes.isSticky = projectileAttributes.isSticky;
+			//audioManager.PlayClipAtPoint(currentWeapon.soundFireNormal, currentWeapon.barrelPoint.position, 2f);
+
 		}
 	}
 
